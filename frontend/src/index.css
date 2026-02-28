@@ -1,3 +1,23 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    font-family: "Manrope", "Plus Jakarta Sans", sans-serif;
+    color: #0f172a;
+    background: #f8fafc;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #f8fafc;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}

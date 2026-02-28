@@ -1,10 +1,8 @@
-import React from "react";
 import { Outlet } from "react-router-dom";
 
 const Visitor_Layout = () => {
   return (
-    <div>
-      Visitor_Layout
+    <div className="min-h-screen">
       <Outlet />
     </div>
   );

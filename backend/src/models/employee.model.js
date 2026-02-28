@@ -11,13 +11,7 @@ const employeeSchema = new mongoose.Schema(
             unique: true,
         },
 
-        employeeId: {
-            type: String,
-            required: true,
-            unique: true,
-        },
-
-        designation: {
+        roles: {
             type: String,
             enum: ["admin", "manager", "kitchen", "cashier", "waiter"],
             required: true,

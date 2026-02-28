@@ -36,7 +36,15 @@ const userSchema = new mongoose.Schema(
             ],
             default: ["customer"],
         },
-
+        theme: {
+            type: String,
+            enum: ["light", "dark"],
+            default: "light",
+        },
+        lastLogin: {
+            type: Date,
+            default: null,
+        },
         isActive: {
             type: Boolean,
             default: true,
