@@ -8,14 +8,33 @@ const AdminSettings = () => {
   const [form, setForm] = useState({
     name: "",
     logoText: "",
+    logoImage: "",
     heroTitle: "",
     heroSubtitle: "",
+    heroTagline: "",
+    menuHeading: "",
+    menuSubHeading: "",
     ctaText: "",
     primaryColor: "#0b6b49",
     secondaryColor: "#ffd54f",
     accentColor: "#1f2937",
     surfaceColor: "#f8faf8",
     heroImage: "",
+    addressLine: "",
+    city: "",
+    state: "",
+    country: "",
+    postalCode: "",
+    contactPhone: "",
+    contactEmail: "",
+    openingHours: "",
+    facebookUrl: "",
+    instagramUrl: "",
+    youtubeUrl: "",
+    twitterUrl: "",
+    footerNote: "",
+    colorMode: "system",
+    allowUserThemeToggle: true,
   });
 
   useEffect(() => {
@@ -25,7 +44,7 @@ const AdminSettings = () => {
         setForm((prev) => ({ ...prev, ...res.theme }));
       })
       .catch(() => {
-        setMessage("Unable to fetch theme");
+        setMessage("Unable to fetch settings");
       });
   }, []);
 
@@ -38,46 +57,106 @@ const AdminSettings = () => {
     setMessage("");
     try {
       await themeService.updateTheme(token, form);
-      setMessage("Theme updated. Refresh landing page to view latest style.");
+      setMessage("Restaurant website settings updated.");
     } catch (err) {
-      setMessage(err?.response?.data?.message || "Theme update failed");
+      setMessage(err?.response?.data?.message || "Settings update failed");
     }
   };
 
+  const fields = [
+    ["Restaurant Name", "name", "text"],
+    ["Logo Text", "logoText", "text"],
+    ["Logo Image URL", "logoImage", "text"],
+    ["Hero Title", "heroTitle", "text"],
+    ["Hero Tagline", "heroTagline", "text"],
+    ["CTA Text", "ctaText", "text"],
+    ["Menu Heading", "menuHeading", "text"],
+    ["Menu Sub Heading", "menuSubHeading", "text"],
+    ["Primary Color", "primaryColor", "color"],
+    ["Secondary Color", "secondaryColor", "color"],
+    ["Accent Color", "accentColor", "color"],
+    ["Surface Color", "surfaceColor", "color"],
+    ["Hero Image URL", "heroImage", "text"],
+    ["Address", "addressLine", "text"],
+    ["City", "city", "text"],
+    ["State", "state", "text"],
+    ["Country", "country", "text"],
+    ["Postal Code", "postalCode", "text"],
+    ["Contact Phone", "contactPhone", "text"],
+    ["Contact Email", "contactEmail", "text"],
+    ["Opening Hours", "openingHours", "text"],
+    ["Facebook URL", "facebookUrl", "text"],
+    ["Instagram URL", "instagramUrl", "text"],
+    ["YouTube URL", "youtubeUrl", "text"],
+    ["Twitter URL", "twitterUrl", "text"],
+    ["Default Color Mode", "colorMode", "select"],
+  ];
+
   return (
     <div>
-      <h2 className="text-3xl font-black text-slate-900">Admin Theme Controls</h2>
-      <p className="mt-2 text-slate-600">Manage landing page style from backend.</p>
+      <h2 className="text-3xl font-black text-slate-900">Website Customization</h2>
+      <p className="mt-2 text-slate-600">
+        Admin can dynamically manage branding, headings, contact info, address, socials and landing sections.
+      </p>
 
       <form onSubmit={onSubmit} className="mt-6 grid gap-4 md:grid-cols-2">
-        {[
-          ["Restaurant Name", "name", "text"],
-          ["Logo Text", "logoText", "text"],
-          ["Hero Title", "heroTitle", "text"],
-          ["CTA Text", "ctaText", "text"],
-          ["Primary Color", "primaryColor", "color"],
-          ["Secondary Color", "secondaryColor", "color"],
-          ["Accent Color", "accentColor", "color"],
-          ["Surface Color", "surfaceColor", "color"],
-          ["Hero Image URL", "heroImage", "text"],
-        ].map(([label, key, type]) => (
+        {fields.map(([label, key, type]) => (
           <label key={key} className="block">
             <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
-            <input
-              type={type}
-              name={key}
-              value={form[key]}
-              onChange={onChange}
-              className="w-full rounded-xl border border-slate-300 px-3 py-2"
-            />
+            {type === "select" ? (
+              <select
+                name={key}
+                value={form[key] || "system"}
+                onChange={onChange}
+                className="w-full rounded-xl border border-slate-300 px-3 py-2"
+              >
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            ) : (
+              <input
+                type={type}
+                name={key}
+                value={form[key] || ""}
+                onChange={onChange}
+                className="w-full rounded-xl border border-slate-300 px-3 py-2"
+              />
+            )}
           </label>
         ))}
+
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-700">Allow User Theme Toggle</span>
+          <select
+            name="allowUserThemeToggle"
+            value={String(form.allowUserThemeToggle)}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, allowUserThemeToggle: e.target.value === "true" }))
+            }
+            className="w-full rounded-xl border border-slate-300 px-3 py-2"
+          >
+            <option value="true">Enabled</option>
+            <option value="false">Disabled</option>
+          </select>
+        </label>
 
         <label className="block md:col-span-2">
           <span className="mb-1 block text-sm font-medium text-slate-700">Hero Subtitle</span>
           <textarea
             name="heroSubtitle"
-            value={form.heroSubtitle}
+            value={form.heroSubtitle || ""}
+            onChange={onChange}
+            className="w-full rounded-xl border border-slate-300 px-3 py-2"
+            rows={3}
+          />
+        </label>
+
+        <label className="block md:col-span-2">
+          <span className="mb-1 block text-sm font-medium text-slate-700">Footer Note</span>
+          <textarea
+            name="footerNote"
+            value={form.footerNote || ""}
             onChange={onChange}
             className="w-full rounded-xl border border-slate-300 px-3 py-2"
             rows={3}
@@ -86,7 +165,7 @@ const AdminSettings = () => {
 
         <div className="md:col-span-2">
           <button className="rounded-xl bg-emerald-700 px-5 py-2.5 font-semibold text-white">
-            Save Theme
+            Save Settings
           </button>
           {message ? <p className="mt-2 text-sm text-slate-700">{message}</p> : null}
         </div>

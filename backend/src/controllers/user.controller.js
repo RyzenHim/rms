@@ -3,15 +3,28 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
 const Customer = require("../models/customer.model");
 const Employee = require("../models/employee.model");
+const { sendMailSafely } = require("../utils/mailer");
 
-const allowedRoles = ["admin", "manager", "kitchen", "cashier", "waiter", "customer"];
+const staffRoles = ["admin", "manager", "kitchen", "cashier", "waiter"];
 
-const sanitizeUser = (user) => ({
+const resolvePhone = async (user) => {
+    if (user.roles?.some((role) => staffRoles.includes(role))) {
+        const employee = await Employee.findOne({ user: user._id }).select("phone");
+        return employee?.phone || "";
+    }
+
+    const customer = await Customer.findOne({ user: user._id }).select("phone");
+    return customer?.phone || "";
+};
+
+const sanitizeUser = async (user) => ({
     id: user._id,
     name: user.name,
     email: user.email,
+    phone: await resolvePhone(user),
     roles: user.roles,
     theme: user.theme,
+    profileImage: user.profileImage || "",
     isActive: user.isActive,
 });
 
@@ -25,6 +38,12 @@ exports.signup = async (req, res) => {
             });
         }
 
+        if (role && role !== "customer") {
+            return res.status(403).json({
+                message: "Only customer signup is allowed. Staff accounts are created by admin.",
+            });
+        }
+
         const normalizedEmail = email.toLowerCase().trim();
         const isExisting = await User.findOne({ email: normalizedEmail });
 
@@ -32,30 +51,25 @@ exports.signup = async (req, res) => {
             return res.status(400).json({ message: "User already exists" });
         }
 
-        let rolesArray = ["customer"];
-        if (role) {
-            if (!allowedRoles.includes(role)) {
-                return res.status(400).json({ message: "Invalid role selected" });
-            }
-            rolesArray = [role];
-        }
-
         const createdUser = await User.create({
             name,
             email: normalizedEmail,
             password,
-            roles: rolesArray,
+            roles: ["customer"],
         });
 
-        if (role && role !== "customer") {
-            await Employee.create({ user: createdUser._id, roles: role });
-        } else {
-            await Customer.create({ user: createdUser._id });
-        }
+        await Customer.create({ user: createdUser._id });
+
+        await sendMailSafely({
+            to: createdUser.email,
+            subject: "Welcome to DelishDrop",
+            text: `Hi ${createdUser.name}, your customer account has been created successfully.`,
+            html: `<p>Hi <b>${createdUser.name}</b>,</p><p>Your customer account has been created successfully.</p>`,
+        });
 
         return res.status(201).json({
             message: "User created successfully",
-            user: sanitizeUser(createdUser),
+            user: await sanitizeUser(createdUser),
         });
     } catch (err) {
         console.error("SIGNUP ERROR:", err);
@@ -95,6 +109,13 @@ exports.login = async (req, res) => {
         user.lastLogin = new Date();
         await user.save();
 
+        await sendMailSafely({
+            to: user.email,
+            subject: "Login Alert - DelishDrop",
+            text: `Hi ${user.name}, your account was logged in at ${new Date().toLocaleString()}.`,
+            html: `<p>Hi <b>${user.name}</b>,</p><p>Your account was logged in at ${new Date().toLocaleString()}.</p>`,
+        });
+
         const token = jwt.sign(
             {
                 id: user._id,
@@ -107,7 +128,7 @@ exports.login = async (req, res) => {
         return res.status(200).json({
             message: "Login successful",
             token,
-            user: sanitizeUser(user),
+            user: await sanitizeUser(user),
         });
     } catch (err) {
         console.error("LOGIN ERROR:", err);
@@ -118,10 +139,70 @@ exports.login = async (req, res) => {
 exports.me = async (req, res) => {
     try {
         return res.status(200).json({
-            user: sanitizeUser(req.user),
+            user: await sanitizeUser(req.user),
         });
     } catch (err) {
         console.error("ME ERROR:", err);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+exports.updateProfile = async (req, res) => {
+    try {
+        const { name, profileImage, currentPassword, newPassword } = req.body;
+        const user = await User.findById(req.user._id).select("+password");
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const hasNameUpdate = name !== undefined;
+        const hasImageUpdate = profileImage !== undefined;
+        const hasPasswordUpdate = Boolean(newPassword);
+
+        if (!hasNameUpdate && !hasImageUpdate && !hasPasswordUpdate) {
+            return res.status(400).json({ message: "No profile changes provided" });
+        }
+
+        if (hasNameUpdate) {
+            const nextName = String(name || "").trim();
+            if (nextName.length < 2) {
+                return res.status(400).json({ message: "Name must be at least 2 characters" });
+            }
+            user.name = nextName;
+        }
+
+        if (hasImageUpdate) {
+            const nextImage = String(profileImage || "").trim();
+            if (nextImage && !/^https?:\/\/\S+$/i.test(nextImage)) {
+                return res.status(400).json({ message: "Profile image must be a valid URL" });
+            }
+            user.profileImage = nextImage;
+        }
+
+        if (hasPasswordUpdate) {
+            if (!currentPassword) {
+                return res.status(400).json({ message: "Current password is required to set new password" });
+            }
+            if (String(newPassword).length < 6) {
+                return res.status(400).json({ message: "New password must be at least 6 characters" });
+            }
+
+            const matches = await bcrypt.compare(currentPassword, user.password);
+            if (!matches) {
+                return res.status(400).json({ message: "Current password is incorrect" });
+            }
+            user.password = newPassword;
+        }
+
+        await user.save();
+
+        return res.status(200).json({
+            message: "Profile updated successfully",
+            user: await sanitizeUser(user),
+        });
+    } catch (err) {
+        console.error("UPDATE PROFILE ERROR:", err);
         return res.status(500).json({ message: "Internal server error" });
     }
 };

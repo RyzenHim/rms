@@ -15,6 +15,11 @@ const authService = {
     const { data } = await api.get("/auth/me", withAuth(token));
     return data;
   },
+
+  async updateProfile(token, payload) {
+    const { data } = await api.patch("/auth/profile", payload, withAuth(token));
+    return data;
+  },
 };
 
 export default authService;

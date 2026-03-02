@@ -4,9 +4,10 @@ const KitchenStaff_Layout = () => {
   return (
     <RoleShell
       title="Kitchen Staff"
+      basePath="/kitchen"
       links={[
-        { to: "/kitchen", label: "Dashboard", end: true },
-        { to: "/kitchen/tasks", label: "Tasks" },
+        { to: "/kitchen", label: "Orders", end: true },
+        { to: "/kitchen/tasks", label: "Board" },
         { to: "/kitchen/settings", label: "Settings" },
       ]}
     />

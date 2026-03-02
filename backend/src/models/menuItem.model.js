@@ -27,6 +27,26 @@ const menuItemSchema = new mongoose.Schema(
             ref: "FoodCategory",
             required: true,
         },
+        subCategory: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "MenuSubCategory",
+            default: null,
+        },
+        heading: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        subHeading: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        foodType: {
+            type: String,
+            enum: ["veg", "non_veg"],
+            default: "non_veg",
+        },
         image: {
             type: String,
             default: "",
@@ -40,6 +60,11 @@ const menuItemSchema = new mongoose.Schema(
             type: Number,
             min: 0,
             default: null,
+        },
+        discountLabel: {
+            type: String,
+            default: "",
+            trim: true,
         },
         calories: {
             type: Number,
@@ -78,6 +103,28 @@ const menuItemSchema = new mongoose.Schema(
         isActive: {
             type: Boolean,
             default: true,
+        },
+        portions: {
+            type: [
+                {
+                    label: {
+                        type: String,
+                        required: true,
+                        trim: true,
+                    },
+                    quantityText: {
+                        type: String,
+                        default: "",
+                        trim: true,
+                    },
+                    price: {
+                        type: Number,
+                        required: true,
+                        min: 0,
+                    },
+                },
+            ],
+            default: [],
         },
     },
     {

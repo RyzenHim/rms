@@ -69,6 +69,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateProfile = async (payload) => {
+    if (!token) throw new Error("Not authenticated");
+    setLoading(true);
+    try {
+      const data = await authService.updateProfile(token, payload);
+      setUser(data.user);
+      persist(token, data.user);
+      return data.user;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -90,6 +103,7 @@ export const AuthProvider = ({ children }) => {
       login,
       signup,
       refreshMe,
+      updateProfile,
       logout,
       getPrimaryRole,
     }),

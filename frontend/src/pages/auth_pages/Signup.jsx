@@ -4,15 +4,6 @@ import AuthLayout from "../../layouts/auth_layout/AuthLayout";
 import AuthInput from "../../components/auth_Components/AuthInput";
 import { useAuth } from "../../context/AuthContext";
 
-const roleOptions = [
-  { label: "Customer", value: "customer" },
-  { label: "Waiter", value: "waiter" },
-  { label: "Cashier", value: "cashier" },
-  { label: "Kitchen Staff", value: "kitchen" },
-  { label: "Manager", value: "manager" },
-  { label: "Admin", value: "admin" },
-];
-
 const Signup = () => {
   const { signup, loading } = useAuth();
   const navigate = useNavigate();
@@ -22,12 +13,9 @@ const Signup = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "customer",
   });
 
-  const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
+  const handleChange = (e) => setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,7 +31,6 @@ const Signup = () => {
         name: form.name,
         email: form.email,
         password: form.password,
-        role: form.role,
       });
       navigate("/auth/login", { replace: true });
     } catch (err) {
@@ -52,7 +39,11 @@ const Signup = () => {
   };
 
   return (
-    <AuthLayout title="Create Account" subtitle="Join DelishDrop in less than a minute">
+    <AuthLayout
+      title="Create Customer Account"
+      subtitle="Customer signup only. Staff accounts are created by admin."
+      badge="Customer Signup"
+    >
       <form onSubmit={handleSubmit}>
         <AuthInput
           label="Full Name"
@@ -70,24 +61,6 @@ const Signup = () => {
           onChange={handleChange}
           placeholder="you@example.com"
         />
-        <div className="mb-4">
-          <label htmlFor="role" className="mb-1 block text-sm font-medium text-slate-700">
-            Role
-          </label>
-          <select
-            id="role"
-            name="role"
-            value={form.role}
-            onChange={handleChange}
-            className="w-full rounded-xl border border-slate-300 px-4 py-2 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
-          >
-            {roleOptions.map((role) => (
-              <option key={role.value} value={role.value}>
-                {role.label}
-              </option>
-            ))}
-          </select>
-        </div>
         <AuthInput
           label="Password"
           type="password"
@@ -104,6 +77,9 @@ const Signup = () => {
           onChange={handleChange}
           placeholder="Confirm your password"
         />
+        <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+          Note: Admin, manager, waiter, cashier and kitchen roles cannot register from this page.
+        </p>
         {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
         <button
           disabled={loading}

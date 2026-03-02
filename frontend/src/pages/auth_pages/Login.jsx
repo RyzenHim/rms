@@ -18,14 +18,9 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [error, setError] = useState("");
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
+  const [form, setForm] = useState({ email: "", password: "" });
 
-  const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
+  const handleChange = (e) => setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,7 +28,9 @@ const Login = () => {
     try {
       const user = await login(form);
       const role = getPrimaryRole(user.roles);
-      const redirectTarget = location.state?.from?.pathname || roleRouteMap[role] || "/customer";
+      const fromPath = location.state?.from?.pathname || "";
+      const fromSearch = location.state?.from?.search || "";
+      const redirectTarget = fromPath ? `${fromPath}${fromSearch}` : roleRouteMap[role] || "/customer";
       navigate(redirectTarget, { replace: true });
     } catch (err) {
       setError(err?.response?.data?.message || "Unable to login");
@@ -41,7 +38,7 @@ const Login = () => {
   };
 
   return (
-    <AuthLayout title="Welcome Back" subtitle="Login with your account to continue">
+    <AuthLayout title="Welcome Back" subtitle="Access your restaurant workspace securely." badge="Secure Login">
       <form onSubmit={handleSubmit}>
         <AuthInput
           label="Email"
@@ -67,8 +64,11 @@ const Login = () => {
         >
           {loading ? "Logging in..." : "Login"}
         </button>
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+          Login alert email will be sent on successful login.
+        </div>
         <p className="mt-4 text-center text-sm text-slate-600">
-          Don&apos;t have an account?{" "}
+          Don&apos;t have a customer account?{" "}
           <Link to="/auth/signup" className="font-semibold text-emerald-700">
             Sign up
           </Link>

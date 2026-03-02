@@ -4,9 +4,11 @@ const Manager_Main_Layout = () => {
   return (
     <RoleShell
       title="Manager Panel"
+      basePath="/manager"
       links={[
         { to: "/manager", label: "Dashboard", end: true },
         { to: "/manager/tasks", label: "Tasks" },
+        { to: "/manager/orders", label: "Orders" },
         { to: "/manager/settings", label: "Settings" },
       ]}
     />

@@ -4,9 +4,10 @@ const Waiter_Main_Layout = () => {
   return (
     <RoleShell
       title="Waiter Panel"
+      basePath="/waiter"
       links={[
-        { to: "/waiter", label: "Dashboard", end: true },
-        { to: "/waiter/tasks", label: "Tasks" },
+        { to: "/waiter", label: "Orders", end: true },
+        { to: "/waiter/tasks", label: "Board" },
         { to: "/waiter/settings", label: "Settings" },
       ]}
     />

@@ -21,3 +21,69 @@
     box-sizing: border-box;
   }
 }
+
+@layer utilities {
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(22px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes float-orb {
+    0% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+      transform: translate3d(0, -20px, 0) scale(1.07);
+    }
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 560ms ease-out both;
+  }
+
+  .animate-rise-in {
+    animation: rise-in 650ms ease-out both;
+  }
+
+  .hero-orb-left,
+  .hero-orb-right {
+    position: absolute;
+    width: 14rem;
+    height: 14rem;
+    border-radius: 9999px;
+    filter: blur(65px);
+    opacity: 0.65;
+    animation: float-orb 8s ease-in-out infinite;
+  }
+
+  .hero-orb-left {
+    left: 3%;
+    top: 8%;
+  }
+
+  .hero-orb-right {
+    right: 5%;
+    top: 14%;
+    animation-delay: -3s;
+  }
+}

@@ -41,6 +41,11 @@ const userSchema = new mongoose.Schema(
             enum: ["light", "dark"],
             default: "light",
         },
+        profileImage: {
+            type: String,
+            default: "",
+            trim: true,
+        },
         lastLogin: {
             type: Date,
             default: null,
