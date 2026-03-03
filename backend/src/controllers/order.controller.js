@@ -53,7 +53,7 @@ exports.getOrders = async (req, res) => {
     try {
         const roles = req.user.roles || [];
         const { status = "" } = req.query;
-        const query = {};
+        const query = { restaurant: req.restaurant._id };
 
         if (status) {
             query.status = status;
@@ -125,6 +125,7 @@ exports.createOrder = async (req, res) => {
 
         const order = await Order.create({
             orderNumber: getOrderNumber(),
+            restaurant: req.restaurant._id,
             tableNumber: String(tableNumber).trim(),
             customerName: String(customerName || "").trim(),
             customerEmail: String(customerEmail || "").trim().toLowerCase(),
@@ -142,7 +143,10 @@ exports.createOrder = async (req, res) => {
             .populate("items.menuItem", "name image");
 
         if ((req.user.roles || []).includes("customer")) {
-            const customer = await Customer.findOne({ user: req.user._id });
+            const customer = await Customer.findOne({
+                user: req.user._id,
+                restaurant: req.restaurant._id,
+            });
             if (customer) {
                 if (!customer.phone && customerPhone) customer.phone = customerPhone;
                 customer.totalOrders = Number(customer.totalOrders || 0) + 1;
@@ -150,7 +154,10 @@ exports.createOrder = async (req, res) => {
                 await customer.save();
             }
         } else if (customerPhone) {
-            const matchedCustomer = await Customer.findOne({ phone: String(customerPhone).trim() });
+            const matchedCustomer = await Customer.findOne({
+                phone: String(customerPhone).trim(),
+                restaurant: req.restaurant._id,
+            });
             if (matchedCustomer) {
                 matchedCustomer.totalOrders = Number(matchedCustomer.totalOrders || 0) + 1;
                 matchedCustomer.lastOrderDate = new Date();
@@ -174,7 +181,7 @@ exports.updateOrderStatus = async (req, res) => {
             return res.status(400).json({ message: "status is required" });
         }
 
-        const order = await Order.findById(id);
+        const order = await Order.findOne({ _id: id, restaurant: req.restaurant._id });
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
         }
@@ -219,7 +226,7 @@ exports.updatePaymentStatus = async (req, res) => {
             return res.status(400).json({ message: "Valid paymentStatus is required" });
         }
 
-        const order = await Order.findById(id);
+        const order = await Order.findOne({ _id: id, restaurant: req.restaurant._id });
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
         }

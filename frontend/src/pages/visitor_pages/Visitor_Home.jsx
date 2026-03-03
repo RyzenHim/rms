@@ -7,20 +7,20 @@ import PublicMenuSections from "../../components/menu/PublicMenuSections";
 import useResolvedColorMode from "../../hooks/useResolvedColorMode";
 
 const fallbackTheme = {
-  name: "Emerald Bistro",
-  logoText: "DelishDrop",
+  name: "Feane Restaurant",
+  logoText: "Feane",
   logoImage: "",
-  heroTitle: "Delicious food at your doorstep",
+  heroTitle: "Premium Food & Restaurant Experience",
   heroSubtitle: "Freshly crafted meals with lightning fast delivery.",
-  heroTagline: "Dynamic Restaurant Website",
-  ctaText: "Get Started",
-  primaryColor: "#0b6b49",
-  secondaryColor: "#ffd54f",
-  accentColor: "#1f2937",
-  surfaceColor: "#f8faf8",
+  heroTagline: "Premium Food & Restaurant Experience",
+  ctaText: "Order Now",
+  primaryColor: "#ff8c3a",
+  secondaryColor: "#ffd700",
+  accentColor: "#292524",
+  surfaceColor: "#fafaf9",
   heroImage: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=1000&q=80",
   contactPhone: "+91 99999 99999",
-  contactEmail: "hello@delishdrop.com",
+  contactEmail: "hello@feane.com",
   addressLine: "123 Food Street, Downtown",
   city: "Mumbai",
   state: "Maharashtra",
@@ -95,41 +95,41 @@ const Visitor_Home = ({ isCustomerView = false }) => {
                 {theme.logoImage ? <img src={theme.logoImage} alt="logo" className="h-11 w-11 rounded-full object-cover" /> : null}
                 <div>
                   <p className="text-xs uppercase tracking-[0.22em] text-white/80">{theme.name}</p>
-                  <Link to="/" className="text-2xl font-black">{theme.logoText}</Link>
+                  <Link to="/" className="heading-3 text-white">{theme.logoText}</Link>
                 </div>
               </div>
               <div className="hidden items-center gap-2 text-sm md:flex">
-                <Link to="/" className="rounded-full px-4 py-2 hover:bg-white/15">Home</Link>
-                <a href="#full-menu" className="rounded-full px-4 py-2 hover:bg-white/15">Sections</a>
-                <Link to={menuPath} className="rounded-full px-4 py-2 hover:bg-white/15">Menu</Link>
-                <a href="#site-footer" className="rounded-full px-4 py-2 hover:bg-white/15">Contact</a>
-                {isAdmin ? <Link to="/admin" className="rounded-full bg-white/20 px-4 py-2 font-semibold">Admin Panel</Link> : null}
+                <Link to="/" className="rounded-full px-4 py-2 transition-colors hover:bg-white/20">Home</Link>
+                <a href="#full-menu" className="rounded-full px-4 py-2 transition-colors hover:bg-white/20">Sections</a>
+                <Link to={menuPath} className="rounded-full px-4 py-2 transition-colors hover:bg-white/20">Menu</Link>
+                <a href="#site-footer" className="rounded-full px-4 py-2 transition-colors hover:bg-white/20">Contact</a>
+                {isAdmin ? <Link to="/admin" className="rounded-full bg-white/20 px-4 py-2 font-semibold transition-colors hover:bg-white/30">Admin Panel</Link> : null}
                 {allowUserThemeToggle ? (
-                  <button onClick={() => setUserMode(resolvedMode === "dark" ? "light" : "dark")} className="rounded-full border border-white/30 px-4 py-2">
-                    {resolvedMode === "dark" ? "Light" : "Dark"}
+                  <button onClick={() => setUserMode(resolvedMode === "dark" ? "light" : "dark")} className="rounded-full border border-white/30 px-4 py-2 transition-colors hover:bg-white/10">
+                    {resolvedMode === "dark" ? "☀️ Light" : "🌙 Dark"}
                   </button>
                 ) : null}
                 {!isAuthenticated ? (
                   <>
-                    <Link to="/auth/login" className="rounded-full border border-white/30 px-4 py-2">Login</Link>
-                    <Link to="/auth/signup" className="rounded-full px-4 py-2 font-bold text-slate-900" style={{ background: theme.secondaryColor }}>Sign Up</Link>
+                    <Link to="/auth/login" className="rounded-full border border-white/30 px-4 py-2 transition-colors hover:bg-white/10">Login</Link>
+                    <Link to="/auth/signup" className="btn-primary" style={{ background: theme.secondaryColor, color: theme.accentColor }}>Sign Up</Link>
                   </>
                 ) : null}
               </div>
-              <button className="rounded-full border border-white/40 px-3 py-2 md:hidden" onClick={() => setMobileMenuOpen((prev) => !prev)} aria-label="Toggle menu">
-                {mobileMenuOpen ? "Close" : "Menu"}
+              <button className="btn-outline px-3 py-2 md:hidden" onClick={() => setMobileMenuOpen((prev) => !prev)} aria-label="Toggle menu">
+                {mobileMenuOpen ? "✕ Close" : "☰ Menu"}
               </button>
             </div>
             {mobileMenuOpen ? (
-              <div className="mt-3 grid gap-2 rounded-2xl bg-black/20 p-3 text-sm md:hidden">
-                <Link to="/" onClick={() => setMobileMenuOpen(false)} className="rounded-xl px-3 py-2 hover:bg-white/15">Home</Link>
-                <a href="#full-menu" onClick={() => setMobileMenuOpen(false)} className="rounded-xl px-3 py-2 hover:bg-white/15">Sections</a>
-                <Link to={menuPath} onClick={() => setMobileMenuOpen(false)} className="rounded-xl px-3 py-2 hover:bg-white/15">Menu</Link>
-                <a href="#site-footer" onClick={() => setMobileMenuOpen(false)} className="rounded-xl px-3 py-2 hover:bg-white/15">Contact</a>
-                {isAdmin ? <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="rounded-xl bg-white/20 px-3 py-2 font-semibold">Admin Panel</Link> : null}
+              <div className="mt-3 space-y-2 rounded-2xl bg-black/30 p-3 text-sm md:hidden backdrop-blur">
+                <Link to="/" onClick={() => setMobileMenuOpen(false)} className="block rounded-xl px-3 py-2 transition-colors hover:bg-white/15">Home</Link>
+                <a href="#full-menu" onClick={() => setMobileMenuOpen(false)} className="block rounded-xl px-3 py-2 transition-colors hover:bg-white/15">Sections</a>
+                <Link to={menuPath} onClick={() => setMobileMenuOpen(false)} className="block rounded-xl px-3 py-2 transition-colors hover:bg-white/15">Menu</Link>
+                <a href="#site-footer" onClick={() => setMobileMenuOpen(false)} className="block rounded-xl px-3 py-2 transition-colors hover:bg-white/15">Contact</a>
+                {isAdmin ? <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="block rounded-xl bg-white/20 px-3 py-2 font-semibold transition-colors hover:bg-white/30">Admin Panel</Link> : null}
                 {allowUserThemeToggle ? (
-                  <button onClick={() => setUserMode(resolvedMode === "dark" ? "light" : "dark")} className="rounded-xl border border-white/30 px-3 py-2 text-left">
-                    Switch to {resolvedMode === "dark" ? "Light" : "Dark"}
+                  <button onClick={() => setUserMode(resolvedMode === "dark" ? "light" : "dark")} className="w-full rounded-xl border border-white/30 px-3 py-2 text-left transition-colors hover:bg-white/10">
+                    {resolvedMode === "dark" ? "☀️ Light Mode" : "🌙 Dark Mode"}
                   </button>
                 ) : null}
               </div>
@@ -137,15 +137,17 @@ const Visitor_Home = ({ isCustomerView = false }) => {
           </nav>
 
           <div className="mt-8 grid items-center gap-8 md:grid-cols-2">
-            <div className="animate-rise-in">
-              <p className="inline-block rounded-full bg-white/15 px-3 py-1 text-xs uppercase tracking-widest">{theme.heroTagline}</p>
-              <h1 className="mt-4 text-4xl font-black leading-tight md:text-6xl">{theme.heroTitle}</h1>
-              <p className="mt-4 max-w-xl text-white/85">{theme.heroSubtitle}</p>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <Link to={menuPath} className="rounded-full px-6 py-3 text-sm font-bold text-slate-900" style={{ backgroundColor: theme.secondaryColor }}>
-                  {isCustomerView ? "Order From Menu" : theme.ctaText}
+            <div className="animate-rise-in space-y-6">
+              <div className="inline-block rounded-full bg-white/15 px-4 py-1.5 text-xs uppercase tracking-widest backdrop-blur">✨ {theme.heroTagline}</div>
+              <h1 className="heading-1 text-white leading-tight">{theme.heroTitle}</h1>
+              <p className="text-lg text-white/85 max-w-xl">{theme.heroSubtitle}</p>
+              <div className="mt-8 flex flex-wrap gap-4 pt-4">
+                <Link to={menuPath} className="btn-primary" style={{ background: theme.secondaryColor, color: theme.accentColor }}>
+                  🛒 {isCustomerView ? "Order From Menu" : theme.ctaText}
                 </Link>
-                <a href="#full-menu" className="rounded-full border border-white/40 px-6 py-3 text-sm font-semibold">Browse Sections</a>
+                <a href="#full-menu" className="btn-outline text-white border-white/40 hover:bg-white/10">
+                  👀 Browse Sections
+                </a>
               </div>
             </div>
             <div className="animate-fade-in-up">
@@ -176,25 +178,46 @@ const Visitor_Home = ({ isCustomerView = false }) => {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-10 md:px-8">
+      <section className="mx-auto max-w-7xl px-4 pb-10 md:px-8 space-y-8">
         <div className="mb-4 grid gap-4 md:grid-cols-3">
-          <article className="rounded-2xl p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]" style={{ border: `1px solid ${palette.border}`, backgroundColor: palette.cardBg }}>
-            <p className="text-xs uppercase tracking-[0.18em]" style={{ color: palette.muted }}>Address</p>
-            <p className="mt-2 text-sm font-semibold">{theme.addressLine}, {theme.city}</p>
+          <article className="card-elevated group" style={{ backgroundColor: palette.cardBg }}>
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">📍</span>
+              <div className="flex-1">
+                <p className="text-xs uppercase tracking-[0.18em] font-semibold" style={{ color: palette.muted }}>Address</p>
+                <p className="mt-2 text-sm font-semibold">{theme.addressLine}, {theme.city}</p>
+              </div>
+            </div>
           </article>
-          <article className="rounded-2xl p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]" style={{ border: `1px solid ${palette.border}`, backgroundColor: palette.cardBg }}>
-            <p className="text-xs uppercase tracking-[0.18em]" style={{ color: palette.muted }}>Contact</p>
-            <p className="mt-2 text-sm font-semibold">{theme.contactPhone} | {theme.contactEmail}</p>
+          <article className="card-elevated group" style={{ backgroundColor: palette.cardBg }}>
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">📞</span>
+              <div className="flex-1">
+                <p className="text-xs uppercase tracking-[0.18em] font-semibold" style={{ color: palette.muted }}>Contact</p>
+                <p className="mt-2 text-sm font-semibold">{theme.contactPhone}</p>
+                <p className="text-xs font-medium mt-1" style={{ color: palette.muted }}>{theme.contactEmail}</p>
+              </div>
+            </div>
           </article>
-          <article className="rounded-2xl p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]" style={{ border: `1px solid ${palette.border}`, backgroundColor: palette.cardBg }}>
-            <p className="text-xs uppercase tracking-[0.18em]" style={{ color: palette.muted }}>Open Hours</p>
-            <p className="mt-2 text-sm font-semibold">{theme.openingHours}</p>
+          <article className="card-elevated group" style={{ backgroundColor: palette.cardBg }}>
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🕐</span>
+              <div className="flex-1">
+                <p className="text-xs uppercase tracking-[0.18em] font-semibold" style={{ color: palette.muted }}>Open Hours</p>
+                <p className="mt-2 text-sm font-semibold">{theme.openingHours}</p>
+              </div>
+            </div>
           </article>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[{ label: "Live Categories", value: menuData.categories.length }, { label: "Live Sub-Categories", value: menuData.subCategories.length }, { label: "Total Menu Items", value: menuData.items.length }, { label: "Featured Picks", value: featuredSlides.length }].map((entry, idx) => (
-            <article key={entry.label} className="animate-fade-in-up rounded-2xl p-4 shadow-[0_12px_25px_rgba(15,23,42,0.06)]" style={{ animationDelay: `${idx * 90}ms`, border: `1px solid ${palette.border}`, backgroundColor: palette.cardBg }}>
-              <p className="text-sm" style={{ color: palette.muted }}>{entry.label}</p><p className="mt-2 text-2xl font-black">{entry.value}</p>
+          {[{ label: "📁 Categories", value: menuData.categories.length }, { label: "🏷️ Subcategories", value: menuData.subCategories.length }, { label: "🍽️ Menu Items", value: menuData.items.length }, { label: "⭐ Featured", value: featuredSlides.length }].map((entry, idx) => (
+            <article 
+              key={entry.label} 
+              className="animate-fade-in-up card-elevated hover-lift" 
+              style={{ animationDelay: `${idx * 90}ms`, backgroundColor: palette.cardBg }}
+            >
+              <p className="text-sm font-semibold" style={{ color: palette.muted }}>{entry.label}</p>
+              <p className="mt-3 heading-2" style={{ color: theme.primaryColor }}>{entry.value}</p>
             </article>
           ))}
         </div>
@@ -204,11 +227,11 @@ const Visitor_Home = ({ isCustomerView = false }) => {
 
       <footer id="site-footer" className="mt-10">
         <div className="mx-auto max-w-7xl overflow-hidden rounded-t-[2rem]">
-          <div className="px-6 py-12 text-center text-white" style={{ background: `linear-gradient(120deg, ${theme.secondaryColor}cc 0%, ${theme.primaryColor}cc 100%)` }}>
-            <p className="text-xs uppercase tracking-[0.22em]">Book A Table</p>
-            <h3 className="mt-2 text-4xl font-black">Book A Table Now</h3>
-            <p className="mx-auto mt-3 max-w-2xl text-sm">Reserve your seat and enjoy premium dishes crafted by our chef team.</p>
-            <Link to={menuPath} className="mt-6 inline-block rounded-full bg-orange-500 px-8 py-3 text-sm font-bold text-white">BOOK A TABLE</Link>
+          <div className="px-6 py-12 text-center text-white space-y-4" style={{ background: `linear-gradient(120deg, ${theme.secondaryColor}cc 0%, ${theme.primaryColor}cc 100%)` }}>
+            <p className="text-xs uppercase tracking-[0.22em] font-bold opacity-90">🍽️ Book A Table</p>
+            <h3 className="heading-1 text-white">Reserve Your Seat Now</h3>
+            <p className="mx-auto max-w-2xl text-base text-white/90">Enjoy premium dishes crafted by our award-winning chef team. Perfect for families, business meetings & special occasions.</p>
+            <Link to={menuPath} className="mt-6 inline-block btn-primary" style={{ background: '#ff8c00', color: 'white' }}>🎯 RESERVE TABLE</Link>
           </div>
           <div className="grid gap-8 px-6 py-12 md:grid-cols-4" style={{ backgroundColor: resolvedMode === "dark" ? "#111827" : "#4b4b43", color: "#e5e7eb" }}>
             <div>

@@ -7,14 +7,14 @@
 @layer base {
   :root {
     font-family: "Manrope", "Plus Jakarta Sans", sans-serif;
-    color: #0f172a;
-    background: #f8fafc;
+    color: #44403c;
+    background: #fafaf9;
   }
 
   body {
     margin: 0;
     min-height: 100vh;
-    background: #f8fafc;
+    background: #fafaf9;
   }
 
   * {
@@ -26,7 +26,7 @@
   @keyframes fade-in-up {
     from {
       opacity: 0;
-      transform: translateY(16px);
+      transform: translateY(20px);
     }
     to {
       opacity: 1;
@@ -37,7 +37,7 @@
   @keyframes rise-in {
     from {
       opacity: 0;
-      transform: translateY(22px) scale(0.98);
+      transform: translateY(24px) scale(0.96);
     }
     to {
       opacity: 1;
@@ -50,21 +50,62 @@
       transform: translate3d(0, 0, 0) scale(1);
     }
     50% {
-      transform: translate3d(0, -20px, 0) scale(1.07);
+      transform: translate3d(0, -20px, 0) scale(1.08);
     }
     100% {
       transform: translate3d(0, 0, 0) scale(1);
     }
   }
 
+  @keyframes blob {
+    0%, 100% {
+      transform: translate(0, 0) scale(1);
+    }
+    25% {
+      transform: translate(20px, -50px) scale(1.1);
+    }
+    50% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+    75% {
+      transform: translate(50px, 50px) scale(1.05);
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+    100% {
+      background-position: 1000px 0;
+    }
+  }
+
   .animate-fade-in-up {
-    animation: fade-in-up 560ms ease-out both;
+    animation: fade-in-up 600ms ease-out both;
   }
 
   .animate-rise-in {
-    animation: rise-in 650ms ease-out both;
+    animation: rise-in 700ms ease-out both;
   }
 
+  .animate-blob {
+    animation: blob 7s infinite;
+  }
+
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+
+  .animate-shimmer {
+    animation: shimmer 3s infinite;
+  }
+
+  /* Feane theme orbs - Warm orange/red accent colors */
   .hero-orb-left,
   .hero-orb-right {
     position: absolute;
@@ -72,7 +113,7 @@
     height: 14rem;
     border-radius: 9999px;
     filter: blur(65px);
-    opacity: 0.65;
+    opacity: 0.55;
     animation: float-orb 8s ease-in-out infinite;
   }
 
@@ -85,5 +126,25 @@
     right: 5%;
     top: 14%;
     animation-delay: -3s;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Better input styling */
+  input::-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px white inset !important;
+    -webkit-text-fill-color: #0f172a !important;
+  }
+
+  /* Smooth transitions */
+  * {
+    @apply transition-colors duration-200;
+  }
+
+  button, a {
+    @apply transition-all duration-300;
   }
 }

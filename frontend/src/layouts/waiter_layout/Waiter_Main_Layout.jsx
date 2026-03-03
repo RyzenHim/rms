@@ -7,7 +7,6 @@ const Waiter_Main_Layout = () => {
       basePath="/waiter"
       links={[
         { to: "/waiter", label: "Orders", end: true },
-        { to: "/waiter/tasks", label: "Board" },
         { to: "/waiter/settings", label: "Settings" },
       ]}
     />

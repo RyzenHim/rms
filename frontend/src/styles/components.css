@@ -1,0 +1,220 @@
+/* Beautiful Button Variants - Feane Warm Orange Theme */
+.btn-primary {
+  @apply rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-3.5 font-bold text-white shadow-lg shadow-orange-500/30 transition duration-200 hover:shadow-xl hover:shadow-orange-500/40 hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-4 focus:ring-orange-500/20;
+}
+
+.btn-primary:disabled {
+  @apply opacity-60 cursor-not-allowed;
+}
+
+.btn-secondary {
+  @apply rounded-2xl border-2 border-slate-300 bg-white px-6 py-3.5 font-bold text-slate-700 shadow-soft transition duration-200 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-500/20;
+}
+
+.btn-outline {
+  @apply rounded-2xl border-2 border-orange-500 bg-white px-6 py-3.5 font-bold text-orange-500 transition duration-200 hover:bg-orange-50 focus:outline-none focus:ring-4 focus:ring-orange-500/20;
+}
+
+.btn-danger {
+  @apply rounded-2xl bg-gradient-to-r from-red-600 to-red-700 px-6 py-3.5 font-bold text-white shadow-lg shadow-red-600/30 transition duration-200 hover:shadow-xl hover:shadow-red-600/40 hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-4 focus:ring-red-500/20;
+}
+
+.btn-small {
+  @apply rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2 font-semibold text-white shadow-md shadow-orange-500/20 transition duration-200 hover:shadow-lg hover:from-orange-600 hover:to-orange-700;
+}
+
+.btn-icon {
+  @apply inline-flex items-center justify-center rounded-2xl bg-orange-100 p-3 text-orange-600 transition duration-200 hover:bg-orange-200;
+}
+
+/* Card Styles */
+.card-base {
+  @apply rounded-2xl border border-slate-200 bg-white p-6 shadow-soft transition duration-300 hover:shadow-medium;
+}
+
+.card-elevated {
+  @apply rounded-2xl border border-slate-200 bg-white p-6 shadow-medium transition duration-300 hover:shadow-lg hover:-translate-y-1;
+}
+
+.card-gradient {
+  @apply rounded-2xl border border-white/20 bg-gradient-to-br from-white/80 to-white/50 p-6 shadow-soft backdrop-blur transition duration-300 hover:shadow-medium;
+}
+
+/* Input Styles */
+.input-base {
+  @apply w-full rounded-2xl border-2 border-slate-200 bg-white/50 px-5 py-3.5 text-slate-900 placeholder-slate-400 backdrop-blur-sm transition duration-200 hover:border-slate-300 focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-0 focus:shadow-lg focus:shadow-orange-100;
+}
+
+.input-focused {
+  @apply border-orange-500 bg-white shadow-lg shadow-orange-100;
+}
+
+/* Badge Styles */
+.badge-success {
+  @apply inline-flex items-center gap-1.5 rounded-full bg-green-100 px-4 py-2 text-sm font-semibold text-green-700;
+}
+
+.badge-warning {
+  @apply inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-700;
+}
+
+.badge-error {
+  @apply inline-flex items-center gap-1.5 rounded-full bg-red-100 px-4 py-2 text-sm font-semibold text-red-700;
+}
+
+.badge-info {
+  @apply inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700;
+}
+
+/* Alert Styles */
+.alert-success {
+  @apply rounded-2xl border-2 border-green-200 bg-green-50 px-5 py-4;
+}
+
+.alert-warning {
+  @apply rounded-2xl border-2 border-amber-200 bg-amber-50 px-5 py-4;
+}
+
+.alert-error {
+  @apply rounded-2xl border-2 border-red-200 bg-red-50 px-5 py-4;
+}
+
+.alert-info {
+  @apply rounded-2xl border-2 border-blue-200 bg-blue-50 px-5 py-4;
+}
+
+/* Divider */
+.divider {
+  @apply relative py-4;
+}
+
+.divider::before {
+  @apply absolute inset-0 flex items-center content-[''];
+}
+
+.divider::before {
+  background: linear-gradient(to right, transparent, rgba(15, 23, 42, 0.1), transparent);
+  height: 1px;
+}
+
+/* Glass morphism effect */
+.glass {
+  @apply rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-lg;
+}
+
+.glass-light {
+  @apply rounded-2xl border border-white/30 bg-white/20 backdrop-blur-lg;
+}
+
+/* Text utilities */
+.text-gradient {
+  background: linear-gradient(135deg, #ff8c3a 0%, #ff6b1a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Loading skeleton */
+.skeleton {
+  @apply animate-pulse rounded-lg bg-slate-200;
+}
+
+/* Smooth scroll */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Better form styling */
+.form-group {
+  @apply space-y-2;
+}
+
+.form-label {
+  @apply block text-sm font-bold text-slate-800;
+}
+
+.form-error {
+  @apply text-sm font-semibold text-red-600;
+}
+
+.form-hint {
+  @apply text-xs text-slate-600;
+}
+
+/* Heading styles */
+.heading-1 {
+  @apply text-5xl font-black leading-tight;
+}
+
+.heading-2 {
+  @apply text-4xl font-black;
+}
+
+.heading-3 {
+  @apply text-3xl font-bold;
+}
+
+.heading-4 {
+  @apply text-2xl font-bold;
+}
+
+.heading-5 {
+  @apply text-xl font-bold;
+}
+
+/* Subtle backgrounds */
+.bg-subtle {
+  @apply bg-gradient-to-br from-slate-50 to-slate-100;
+}
+
+.bg-elevated {
+  @apply bg-white shadow-medium;
+}
+
+/* Focus styles for accessibility */
+.focus-ring {
+  @apply focus:outline-none focus:ring-4 focus:ring-orange-500/20;
+}
+
+/* Hover effects */
+.hover-lift {
+  @apply transition duration-200 hover:-translate-y-1 hover:shadow-lg;
+}
+
+.hover-glow {
+  @apply transition duration-200 hover:shadow-orange;
+}
+
+/* Typography */
+.font-weight-regular {
+  font-weight: 400;
+}
+
+.font-weight-medium {
+  font-weight: 500;
+}
+
+.font-weight-semibold {
+  font-weight: 600;
+}
+
+.font-weight-bold {
+  font-weight: 700;
+}
+
+.font-weight-extrabold {
+  font-weight: 800;
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .hide-desktop {
+    display: none;
+  }
+}

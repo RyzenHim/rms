@@ -18,7 +18,6 @@ const Customer_Home = lazy(() => import("../pages/customer_pages/Customer_Home")
 const Customer_Menu = lazy(() => import("../pages/customer_pages/Customer_Menu"));
 const Customer_Orders = lazy(() => import("../pages/customer_pages/Customer_Orders"));
 const RoleDashboard = lazy(() => import("../pages/role_pages/RoleDashboard"));
-const RoleTasks = lazy(() => import("../pages/role_pages/RoleTasks"));
 const RoleSettings = lazy(() => import("../pages/role_pages/RoleSettings"));
 const RoleOrders = lazy(() => import("../pages/role_pages/RoleOrders"));
 const ManagerDashboard = lazy(() => import("../pages/manager_pages/Manager_Dashboard"));
@@ -27,6 +26,12 @@ const AdminSettings = lazy(() => import("../pages/admin_pages/AdminSettings"));
 const AdminMenuManager = lazy(() => import("../pages/admin_pages/AdminMenuManager"));
 const AdminEmployees = lazy(() => import("../pages/admin_pages/AdminEmployees"));
 const AdminTableQR = lazy(() => import("../pages/admin_pages/AdminTableQR"));
+const AdminAnalytics = lazy(() => import("../pages/admin_pages/AdminAnalytics"));
+const AdminInventory = lazy(() => import("../pages/admin_pages/AdminInventory"));
+const AdminReservationManager = lazy(() => import("../pages/Admin/AdminReservationManager"));
+const AdminTableManager = lazy(() => import("../pages/Admin/AdminTableManager"));
+const ReservationForm = lazy(() => import("../pages/Customer/ReservationForm"));
+const CustomerReservations = lazy(() => import("../pages/Customer/CustomerReservations"));
 const WaiterOrders = lazy(() => import("../pages/waiter_pages/Waiter_Orders"));
 const KitchenOrders = lazy(() => import("../pages/kitchen_pages/Kitchen_Orders"));
 const ProfilePage = lazy(() => import("../pages/profile_pages/ProfilePage"));
@@ -91,6 +96,14 @@ const router = createBrowserRouter([
             element: withLazy(<Customer_Orders />),
           },
           {
+            path: "reservation-form",
+            element: withLazy(<ReservationForm />),
+          },
+          {
+            path: "my-reservations",
+            element: withLazy(<CustomerReservations />),
+          },
+          {
             path: "profile",
             element: withLazy(<ProfilePage />),
           },
@@ -106,11 +119,14 @@ const router = createBrowserRouter([
         element: <Admin_Main_Layout />,
         children: [
           { index: true, element: withLazy(<RoleDashboard roleLabel="Admin" />) },
-          { path: "tasks", element: withLazy(<RoleTasks roleLabel="Admin" />) },
           { path: "orders", element: withLazy(<RoleOrders roleLabel="Admin" />) },
           { path: "menu", element: withLazy(<AdminMenuManager />) },
           { path: "tables", element: withLazy(<AdminTableQR />) },
+          { path: "table-management", element: withLazy(<AdminTableManager />) },
+          { path: "reservations", element: withLazy(<AdminReservationManager />) },
           { path: "employees", element: withLazy(<AdminEmployees />) },
+          { path: "analytics", element: withLazy(<AdminAnalytics />) },
+          { path: "inventory", element: withLazy(<AdminInventory />) },
           { path: "settings", element: withLazy(<AdminSettings />) },
           { path: "profile", element: withLazy(<ProfilePage />) },
         ],
@@ -125,7 +141,6 @@ const router = createBrowserRouter([
         element: <Manager_Main_Layout />,
         children: [
           { index: true, element: withLazy(<ManagerDashboard />) },
-          { path: "tasks", element: withLazy(<RoleTasks roleLabel="Manager" />) },
           { path: "orders", element: withLazy(<RoleOrders roleLabel="Manager" />) },
           { path: "settings", element: withLazy(<RoleSettings roleLabel="Manager" />) },
           { path: "profile", element: withLazy(<ProfilePage />) },
@@ -141,7 +156,6 @@ const router = createBrowserRouter([
         element: <KitchenStaff_Layout />,
         children: [
           { index: true, element: withLazy(<KitchenOrders />) },
-          { path: "tasks", element: withLazy(<RoleTasks roleLabel="Kitchen Staff" />) },
           { path: "settings", element: withLazy(<RoleSettings roleLabel="Kitchen Staff" />) },
           { path: "profile", element: withLazy(<ProfilePage />) },
         ],
@@ -157,7 +171,6 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: withLazy(<CashierDashboard />) },
           { path: "orders", element: withLazy(<RoleOrders roleLabel="Cashier" />) },
-          { path: "tasks", element: withLazy(<RoleTasks roleLabel="Cashier" />) },
           { path: "settings", element: withLazy(<RoleSettings roleLabel="Cashier" />) },
           { path: "profile", element: withLazy(<ProfilePage />) },
         ],
@@ -172,7 +185,6 @@ const router = createBrowserRouter([
         element: <Waiter_Main_Layout />,
         children: [
           { index: true, element: withLazy(<WaiterOrders />) },
-          { path: "tasks", element: withLazy(<RoleTasks roleLabel="Waiter" />) },
           { path: "settings", element: withLazy(<RoleSettings roleLabel="Waiter" />) },
           { path: "profile", element: withLazy(<ProfilePage />) },
         ],

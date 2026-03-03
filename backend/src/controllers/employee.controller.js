@@ -5,6 +5,7 @@ const allowedRoles = ["admin", "manager", "kitchen", "cashier", "waiter"];
 
 const sanitize = (employeeDoc) => ({
     id: employeeDoc._id,
+    restaurantId: employeeDoc.restaurant || null,
     userId: employeeDoc.user?._id || employeeDoc.user,
     name: employeeDoc.user?.name || "",
     email: employeeDoc.user?.email || "",
@@ -29,7 +30,7 @@ const sanitize = (employeeDoc) => ({
 
 exports.getEmployees = async (req, res) => {
     try {
-        const employees = await Employee.find()
+        const employees = await Employee.find({ restaurant: req.restaurant._id })
             .populate("user", "name email isActive roles")
             .sort({ createdAt: -1 });
 
@@ -76,7 +77,10 @@ exports.createEmployee = async (req, res) => {
         }
 
         const normalizedEmail = String(email).toLowerCase().trim();
-        const existingUser = await User.findOne({ email: normalizedEmail });
+        const existingUser = await User.findOne({
+            email: normalizedEmail,
+            restaurant: req.restaurant._id,
+        });
         if (existingUser) {
             return res.status(400).json({ message: "User with this email already exists" });
         }
@@ -87,10 +91,12 @@ exports.createEmployee = async (req, res) => {
             password,
             roles: [role],
             isActive: Boolean(isActive),
+            restaurant: req.restaurant._id,
         });
 
         const employee = await Employee.create({
             user: user._id,
+            restaurant: req.restaurant._id,
             roles: role,
             employeeCode: String(employeeCode || "").trim(),
             department: String(department || "").trim(),
@@ -124,7 +130,10 @@ exports.createEmployee = async (req, res) => {
 exports.updateEmployee = async (req, res) => {
     try {
         const { id } = req.params;
-        const employee = await Employee.findById(id).populate("user", "name email isActive roles");
+        const employee = await Employee.findOne({
+            _id: id,
+            restaurant: req.restaurant._id,
+        }).populate("user", "name email isActive roles");
         if (!employee) {
             return res.status(404).json({ message: "Employee not found" });
         }
@@ -160,6 +169,7 @@ exports.updateEmployee = async (req, res) => {
             const existingUser = await User.findOne({
                 email: normalizedEmail,
                 _id: { $ne: employee.user._id },
+                restaurant: req.restaurant._id,
             });
             if (existingUser) {
                 return res.status(400).json({ message: "Email is already in use by another user" });
@@ -197,7 +207,10 @@ exports.updateEmployee = async (req, res) => {
         await employee.user.save();
         await employee.save();
 
-        const updated = await Employee.findById(id).populate("user", "name email isActive roles");
+        const updated = await Employee.findOne({
+            _id: id,
+            restaurant: req.restaurant._id,
+        }).populate("user", "name email isActive roles");
         return res.status(200).json({ message: "Employee updated", employee: sanitize(updated) });
     } catch (error) {
         console.error("UPDATE EMPLOYEE ERROR:", error);
@@ -208,7 +221,10 @@ exports.updateEmployee = async (req, res) => {
 exports.deleteEmployee = async (req, res) => {
     try {
         const { id } = req.params;
-        const employee = await Employee.findById(id);
+        const employee = await Employee.findOne({
+            _id: id,
+            restaurant: req.restaurant._id,
+        });
         if (!employee) {
             return res.status(404).json({ message: "Employee not found" });
         }

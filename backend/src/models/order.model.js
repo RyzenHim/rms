@@ -44,6 +44,12 @@ const orderSchema = new mongoose.Schema(
             unique: true,
             trim: true,
         },
+        restaurant: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Restaurant",
+            required: true,
+            index: true,
+        },
         tableNumber: {
             type: String,
             required: true,
@@ -148,5 +154,7 @@ const orderSchema = new mongoose.Schema(
         timestamps: true,
     }
 );
+
+orderSchema.index({ restaurant: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Order", orderSchema);

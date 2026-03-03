@@ -15,10 +15,10 @@ const AdminSettings = () => {
     menuHeading: "",
     menuSubHeading: "",
     ctaText: "",
-    primaryColor: "#0b6b49",
-    secondaryColor: "#ffd54f",
-    accentColor: "#1f2937",
-    surfaceColor: "#f8faf8",
+    primaryColor: "#ff8c3a",
+    secondaryColor: "#ffd700",
+    accentColor: "#292524",
+    surfaceColor: "#fafaf9",
     heroImage: "",
     addressLine: "",
     city: "",
@@ -93,81 +93,423 @@ const AdminSettings = () => {
   ];
 
   return (
-    <div>
-      <h2 className="text-3xl font-black text-slate-900">Website Customization</h2>
-      <p className="mt-2 text-slate-600">
-        Admin can dynamically manage branding, headings, contact info, address, socials and landing sections.
-      </p>
+    <div className="space-y-8">
+      <div className="space-y-3">
+        <h2 className="heading-1">⚙️ Website Customization</h2>
+        <p className="text-lg text-slate-600">
+          Manage your restaurant branding, colors, contact info, and landing page content. All changes apply instantly across the site.
+        </p>
+      </div>
 
-      <form onSubmit={onSubmit} className="mt-6 grid gap-4 md:grid-cols-2">
-        {fields.map(([label, key, type]) => (
-          <label key={key} className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
-            {type === "select" ? (
-              <select
-                name={key}
-                value={form[key] || "system"}
-                onChange={onChange}
-                className="w-full rounded-xl border border-slate-300 px-3 py-2"
-              >
-                <option value="system">System</option>
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-              </select>
-            ) : (
+      {message && (
+        <div className={message.includes('updated') || message.includes('Settings') ? 'alert-success' : 'alert-error'}>
+          {message}
+        </div>
+      )}
+
+      <form onSubmit={onSubmit} className="space-y-8">
+        <section className="card-elevated p-8">
+          <h3 className="heading-3 mb-6">🏪 Restaurant Branding</h3>
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="form-group">
+              <label className="form-label">Restaurant Name</label>
               <input
-                type={type}
-                name={key}
-                value={form[key] || ""}
+                type="text"
+                name="name"
+                value={form.name || ""}
                 onChange={onChange}
-                className="w-full rounded-xl border border-slate-300 px-3 py-2"
+                className="input-base"
+                placeholder="e.g., Emerald Bistro"
               />
-            )}
-          </label>
-        ))}
+            </div>
+            <div className="form-group">
+              <label className="form-label">Logo Text</label>
+              <input
+                type="text"
+                name="logoText"
+                value={form.logoText || ""}
+                onChange={onChange}
+                className="input-base"
+                placeholder="e.g., DelishDrop"
+              />
+            </div>
+            <div className="form-group md:col-span-2">
+              <label className="form-label">Logo Image URL</label>
+              <input
+                type="text"
+                name="logoImage"
+                value={form.logoImage || ""}
+                onChange={onChange}
+                className="input-base"
+                placeholder="https://..."
+              />
+              <p className="form-hint">120×120 PNG recommended</p>
+            </div>
+          </div>
+        </section>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-slate-700">Allow User Theme Toggle</span>
-          <select
-            name="allowUserThemeToggle"
-            value={String(form.allowUserThemeToggle)}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, allowUserThemeToggle: e.target.value === "true" }))
-            }
-            className="w-full rounded-xl border border-slate-300 px-3 py-2"
-          >
-            <option value="true">Enabled</option>
-            <option value="false">Disabled</option>
-          </select>
-        </label>
+        <section className="card-elevated p-8">
+          <h3 className="heading-3 mb-6">🎨 Brand Colors</h3>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="form-group">
+              <label className="form-label">Primary Color</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  name="primaryColor"
+                  value={form.primaryColor || "#0b6b49"}
+                  onChange={onChange}
+                  className="h-12 w-12 rounded-lg border border-slate-300 cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={form.primaryColor || "#0b6b49"}
+                  onChange={onChange}
+                  name="primaryColor"
+                  className="input-base flex-1 text-xs font-bold font-mono"
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Secondary Color</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  name="secondaryColor"
+                  value={form.secondaryColor || "#ffd54f"}
+                  onChange={onChange}
+                  className="h-12 w-12 rounded-lg border border-slate-300 cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={form.secondaryColor || "#ffd54f"}
+                  onChange={onChange}
+                  name="secondaryColor"
+                  className="input-base flex-1 text-xs font-bold font-mono"
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Accent Color</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  name="accentColor"
+                  value={form.accentColor || "#1f2937"}
+                  onChange={onChange}
+                  className="h-12 w-12 rounded-lg border border-slate-300 cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={form.accentColor || "#1f2937"}
+                  onChange={onChange}
+                  name="accentColor"
+                  className="input-base flex-1 text-xs font-bold font-mono"
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Surface Color</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  name="surfaceColor"
+                  value={form.surfaceColor || "#f8faf8"}
+                  onChange={onChange}
+                  className="h-12 w-12 rounded-lg border border-slate-300 cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={form.surfaceColor || "#f8faf8"}
+                  onChange={onChange}
+                  name="surfaceColor"
+                  className="input-base flex-1 text-xs font-bold font-mono"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
 
-        <label className="block md:col-span-2">
-          <span className="mb-1 block text-sm font-medium text-slate-700">Hero Subtitle</span>
-          <textarea
-            name="heroSubtitle"
-            value={form.heroSubtitle || ""}
-            onChange={onChange}
-            className="w-full rounded-xl border border-slate-300 px-3 py-2"
-            rows={3}
-          />
-        </label>
+        <section className="card-elevated p-8">
+          <h3 className="heading-3 mb-6">🏠 Homepage Content</h3>
+          <div className="space-y-5">
+            <div className="form-group">
+              <label className="form-label">Hero Tagline</label>
+              <input
+                type="text"
+                name="heroTagline"
+                value={form.heroTagline || ""}
+                onChange={onChange}
+                className="input-base"
+                placeholder="e.g., Dynamic Restaurant Website"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Hero Title</label>
+              <input
+                type="text"
+                name="heroTitle"
+                value={form.heroTitle || ""}
+                onChange={onChange}
+                className="input-base"
+                placeholder="Main headline for homepage"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Hero Subtitle</label>
+              <textarea
+                name="heroSubtitle"
+                value={form.heroSubtitle || ""}
+                onChange={onChange}
+                className="input-base"
+                rows={3}
+                placeholder="Secondary text for home hero section"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Hero Image URL</label>
+              <input
+                type="text"
+                name="heroImage"
+                value={form.heroImage || ""}
+                onChange={onChange}
+                className="input-base"
+                placeholder="https://images.unsplash.com/..."
+              />
+              <p className="form-hint">1600×900 recommended</p>
+            </div>
+            <div className="form-group">
+              <label className="form-label">CTA Button Text</label>
+              <input
+                type="text"
+                name="ctaText"
+                value={form.ctaText || ""}
+                onChange={onChange}
+                className="input-base"
+                placeholder="e.g., Get Started"
+              />
+            </div>
+          </div>
+        </section>
 
-        <label className="block md:col-span-2">
-          <span className="mb-1 block text-sm font-medium text-slate-700">Footer Note</span>
-          <textarea
-            name="footerNote"
-            value={form.footerNote || ""}
-            onChange={onChange}
-            className="w-full rounded-xl border border-slate-300 px-3 py-2"
-            rows={3}
-          />
-        </label>
+        <section className="card-elevated p-8">
+          <h3 className="heading-3 mb-6">🍽️ Menu Page</h3>
+          <div className="space-y-5">
+            <div className="form-group">
+              <label className="form-label">Menu Heading</label>
+              <input
+                type="text"
+                name="menuHeading"
+                value={form.menuHeading || ""}
+                onChange={onChange}
+                className="input-base"
+                placeholder="e.g., Browse Our Menu"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Menu Subheading</label>
+              <input
+                type="text"
+                name="menuSubHeading"
+                value={form.menuSubHeading || ""}
+                onChange={onChange}
+                className="input-base"
+                placeholder="Supporting text for menu page"
+              />
+            </div>
+          </div>
+        </section>
 
-        <div className="md:col-span-2">
-          <button className="rounded-xl bg-emerald-700 px-5 py-2.5 font-semibold text-white">
-            Save Settings
+        <section className="card-elevated p-8">
+          <h3 className="heading-3 mb-6">📍 Contact & Address</h3>
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="form-group">
+              <label className="form-label">Address</label>
+              <input
+                type="text"
+                name="addressLine"
+                value={form.addressLine || ""}
+                onChange={onChange}
+                className="input-base"
+                placeholder="Street address"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">City</label>
+              <input
+                type="text"
+                name="city"
+                value={form.city || ""}
+                onChange={onChange}
+                className="input-base"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">State</label>
+              <input
+                type="text"
+                name="state"
+                value={form.state || ""}
+                onChange={onChange}
+                className="input-base"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Country</label>
+              <input
+                type="text"
+                name="country"
+                value={form.country || ""}
+                onChange={onChange}
+                className="input-base"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Postal Code</label>
+              <input
+                type="text"
+                name="postalCode"
+                value={form.postalCode || ""}
+                onChange={onChange}
+                className="input-base"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Opening Hours</label>
+              <input
+                type="text"
+                name="openingHours"
+                value={form.openingHours || ""}
+                onChange={onChange}
+                className="input-base"
+                placeholder="e.g., Mon-Sun: 11 AM - 11 PM"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Phone</label>
+              <input
+                type="tel"
+                name="contactPhone"
+                value={form.contactPhone || ""}
+                onChange={onChange}
+                className="input-base"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Email</label>
+              <input
+                type="email"
+                name="contactEmail"
+                value={form.contactEmail || ""}
+                onChange={onChange}
+                className="input-base"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="card-elevated p-8">
+          <h3 className="heading-3 mb-6">📱 Social Media</h3>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="form-group">
+              <label className="form-label">Facebook URL</label>
+              <input
+                type="text"
+                name="facebookUrl"
+                value={form.facebookUrl || ""}
+                onChange={onChange}
+                className="input-base"
+                placeholder="https://facebook.com/..."
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Instagram URL</label>
+              <input
+                type="text"
+                name="instagramUrl"
+                value={form.instagramUrl || ""}
+                onChange={onChange}
+                className="input-base"
+                placeholder="https://instagram.com/..."
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">YouTube URL</label>
+              <input
+                type="text"
+                name="youtubeUrl"
+                value={form.youtubeUrl || ""}
+                onChange={onChange}
+                className="input-base"
+                placeholder="https://youtube.com/..."
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Twitter URL</label>
+              <input
+                type="text"
+                name="twitterUrl"
+                value={form.twitterUrl || ""}
+                onChange={onChange}
+                className="input-base"
+                placeholder="https://twitter.com/..."
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="card-elevated p-8">
+          <h3 className="heading-3 mb-6">🎛️ Theme Settings</h3>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="form-group">
+              <label className="form-label">Default Color Mode</label>
+              <select
+                name="colorMode"
+                value={form.colorMode || "system"}
+                onChange={onChange}
+                className="input-base"
+              >
+                <option value="system">System (User Device)</option>
+                <option value="light">Always Light</option>
+                <option value="dark">Always Dark</option>
+              </select>
+              <p className="form-hint">Choose the default theme for visitors</p>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Allow Theme Toggle</label>
+              <select
+                name="allowUserThemeToggle"
+                value={String(form.allowUserThemeToggle)}
+                onChange={(e) => setForm((prev) => ({ ...prev, allowUserThemeToggle: e.target.value === "true" }))}
+                className="input-base"
+              >
+                <option value="true">✅ Enabled</option>
+                <option value="false">❌ Disabled</option>
+              </select>
+              <p className="form-hint">Let users switch between light/dark mode</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="card-elevated p-8">
+          <h3 className="heading-3 mb-6">📝 Footer</h3>
+          <div className="form-group">
+            <label className="form-label">Footer Note</label>
+            <textarea
+              name="footerNote"
+              value={form.footerNote || ""}
+              onChange={onChange}
+              className="input-base"
+              rows={3}
+              placeholder="Special message or tagline for footer"
+            />
+          </div>
+        </section>
+
+        <div className="flex gap-4">
+          <button type="submit" className="btn-primary">
+            💾 Save All Settings
           </button>
-          {message ? <p className="mt-2 text-sm text-slate-700">{message}</p> : null}
         </div>
       </form>
     </div>

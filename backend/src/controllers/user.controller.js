@@ -9,11 +9,17 @@ const staffRoles = ["admin", "manager", "kitchen", "cashier", "waiter"];
 
 const resolvePhone = async (user) => {
     if (user.roles?.some((role) => staffRoles.includes(role))) {
-        const employee = await Employee.findOne({ user: user._id }).select("phone");
+        const employee = await Employee.findOne({
+            user: user._id,
+            restaurant: user.restaurant,
+        }).select("phone");
         return employee?.phone || "";
     }
 
-    const customer = await Customer.findOne({ user: user._id }).select("phone");
+    const customer = await Customer.findOne({
+        user: user._id,
+        restaurant: user.restaurant,
+    }).select("phone");
     return customer?.phone || "";
 };
 
@@ -23,6 +29,7 @@ const sanitizeUser = async (user) => ({
     email: user.email,
     phone: await resolvePhone(user),
     roles: user.roles,
+    restaurantId: user.restaurant || null,
     theme: user.theme,
     profileImage: user.profileImage || "",
     isActive: user.isActive,
@@ -30,6 +37,10 @@ const sanitizeUser = async (user) => ({
 
 exports.signup = async (req, res) => {
     try {
+        if (!req.restaurant?._id) {
+            return res.status(400).json({ message: "Restaurant context is required" });
+        }
+
         const { name, email, password, role } = req.body;
 
         if (!name || !email || !password) {
@@ -45,7 +56,10 @@ exports.signup = async (req, res) => {
         }
 
         const normalizedEmail = email.toLowerCase().trim();
-        const isExisting = await User.findOne({ email: normalizedEmail });
+        const isExisting = await User.findOne({
+            email: normalizedEmail,
+            restaurant: req.restaurant._id,
+        });
 
         if (isExisting) {
             return res.status(400).json({ message: "User already exists" });
@@ -56,13 +70,17 @@ exports.signup = async (req, res) => {
             email: normalizedEmail,
             password,
             roles: ["customer"],
+            restaurant: req.restaurant._id,
         });
 
-        await Customer.create({ user: createdUser._id });
+        await Customer.create({
+            user: createdUser._id,
+            restaurant: req.restaurant._id,
+        });
 
         await sendMailSafely({
             to: createdUser.email,
-            subject: "Welcome to DelishDrop",
+            subject: "Welcome to Feane",
             text: `Hi ${createdUser.name}, your customer account has been created successfully.`,
             html: `<p>Hi <b>${createdUser.name}</b>,</p><p>Your customer account has been created successfully.</p>`,
         });
@@ -79,6 +97,10 @@ exports.signup = async (req, res) => {
 
 exports.login = async (req, res) => {
     try {
+        if (!req.restaurant?._id) {
+            return res.status(400).json({ message: "Restaurant context is required" });
+        }
+
         const { email, password } = req.body;
 
         if (!email || !password) {
@@ -91,6 +113,7 @@ exports.login = async (req, res) => {
         const user = await User.findOne({
             email: normalizedEmail,
             isDeleted: false,
+            restaurant: req.restaurant._id,
         }).select("+password");
 
         if (!user) {
@@ -111,7 +134,7 @@ exports.login = async (req, res) => {
 
         await sendMailSafely({
             to: user.email,
-            subject: "Login Alert - DelishDrop",
+            subject: "Login Alert - Feane",
             text: `Hi ${user.name}, your account was logged in at ${new Date().toLocaleString()}.`,
             html: `<p>Hi <b>${user.name}</b>,</p><p>Your account was logged in at ${new Date().toLocaleString()}.</p>`,
         });
@@ -120,6 +143,7 @@ exports.login = async (req, res) => {
             {
                 id: user._id,
                 roles: user.roles,
+                restaurant: user.restaurant,
             },
             process.env.JWT_SECRET,
             { expiresIn: "1d" }

@@ -83,6 +83,12 @@ const customerSchema = new mongoose.Schema(
             required: true,
             unique: true,
         },
+        restaurant: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Restaurant",
+            required: true,
+            index: true,
+        },
         phone: {
             type: String,
         },
@@ -114,6 +120,17 @@ const customerSchema = new mongoose.Schema(
     },
     {
         timestamps: true,
+    }
+);
+
+customerSchema.index(
+    { restaurant: 1, phone: 1 },
+    {
+        unique: true,
+        sparse: true,
+        partialFilterExpression: {
+            phone: { $type: "string", $ne: "" },
+        },
     }
 );
 

@@ -18,6 +18,7 @@ export const AuthProvider = ({ children }) => {
     return raw ? JSON.parse(raw) : null;
   });
   const [loading, setLoading] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const persist = (nextToken, nextUser) => {
     if (nextToken) {
@@ -86,6 +87,16 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     persist(null, null);
+    setSessionExpired(false);
+  };
+
+  const handleSessionExpired = () => {
+    setSessionExpired(true);
+    logout();
+  };
+
+  const clearSessionExpired = () => {
+    setSessionExpired(false);
   };
 
   useEffect(() => {
@@ -94,20 +105,34 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Listen for session expiration from API
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setSessionExpired(true);
+      logout();
+    };
+
+    window.addEventListener("sessionExpired", handleSessionExpired);
+    return () => window.removeEventListener("sessionExpired", handleSessionExpired);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const value = useMemo(
     () => ({
       token,
       user,
       loading,
+      sessionExpired,
       isAuthenticated: Boolean(token && user),
       login,
       signup,
       refreshMe,
       updateProfile,
       logout,
+      handleSessionExpired,
+      clearSessionExpired,
       getPrimaryRole,
     }),
-    [token, user, loading],
+    [token, user, loading, sessionExpired],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

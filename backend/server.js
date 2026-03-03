@@ -5,6 +5,7 @@ const express = require("express");
 const cors = require("cors");
 const connectDB = require("./src/config/db");
 const { startOrderReadyNotifierJob } = require("./src/jobs/orderReadyNotifier.job");
+const { restaurantContext } = require("./src/middlewares/restaurantContext");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -23,13 +24,24 @@ const themeRouter = require("./src/routes/theme.route");
 const menuRouter = require("./src/routes/menu.route");
 const employeeRouter = require("./src/routes/employee.route");
 const orderRouter = require("./src/routes/order.route");
+const reviewRouter = require("./src/routes/review.route");
+const inventoryRouter = require("./src/routes/inventory.route");
+const analyticsRouter = require("./src/routes/analytics.route");
+const tableRouter = require("./src/routes/table.route");
+const reservationRouter = require("./src/routes/reservation.route");
 
 app.get("/health", (req, res) => res.status(200).json({ status: "ok" }));
+app.use("/api", restaurantContext);
 app.use("/api/auth", authRouter);
 app.use("/api/theme", themeRouter);
 app.use("/api/menu", menuRouter);
 app.use("/api/employees", employeeRouter);
 app.use("/api/orders", orderRouter);
+app.use("/api/reviews", reviewRouter);
+app.use("/api/inventory", inventoryRouter);
+app.use("/api/analytics", analyticsRouter);
+app.use("/api/tables", tableRouter);
+app.use("/api/reservations", reservationRouter);
 
 const startServer = async () => {
     await connectDB();

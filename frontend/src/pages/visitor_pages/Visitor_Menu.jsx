@@ -10,11 +10,11 @@ const Visitor_Menu = ({ isCustomerView = false }) => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const [theme, setTheme] = useState({
-    name: "Emerald Bistro",
+    name: "Feane Restaurant",
     menuHeading: "Dynamic Menu",
     menuSubHeading: "All sections are controlled from Admin panel.",
-    primaryColor: "#0b6b49",
-    secondaryColor: "#ffd54f",
+    primaryColor: "#ff8c3a",
+    secondaryColor: "#ffd700",
     colorMode: "system",
     allowUserThemeToggle: true,
   });
@@ -60,20 +60,22 @@ const Visitor_Menu = ({ isCustomerView = false }) => {
   return (
     <div className="min-h-screen pb-10" style={{ backgroundColor: palette.pageBg, color: palette.text }}>
       <section
-        className="mx-auto max-w-7xl rounded-b-[2rem] px-4 py-6 text-white md:px-8"
+        className="mx-auto max-w-7xl rounded-b-[2rem] px-4 py-8 text-white md:px-8"
         style={{ background: `linear-gradient(120deg, ${theme.primaryColor} 0%, #0f172a 100%)` }}
       >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-white/70">{theme.name}</p>
-            <h1 className="text-3xl font-black">{theme.menuHeading}</h1>
-            <p className="mt-1 text-sm text-white/80">{theme.menuSubHeading}</p>
+        <div className="flex flex-wrap items-center justify-between gap-6">
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-white/70 font-bold">🍽️ {theme.name}</p>
+            <h1 className="heading-1 text-white">{theme.menuHeading}</h1>
+            <p className="text-lg text-white/80">{theme.menuSubHeading}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Link to={homePath} className="rounded-full border border-white/40 px-4 py-2 text-sm font-semibold">Back Home</Link>
+          <div className="flex flex-wrap gap-3">
+            <Link to={homePath} className="btn-outline text-white border-white/40 hover:bg-white/10">
+              🏠 Back Home
+            </Link>
             {allowUserThemeToggle ? (
-              <button onClick={() => setUserMode(resolvedMode === "dark" ? "light" : "dark")} className="rounded-full border border-white/40 px-4 py-2 text-sm font-semibold">
-                {resolvedMode === "dark" ? "Light" : "Dark"}
+              <button onClick={() => setUserMode(resolvedMode === "dark" ? "light" : "dark")} className="btn-outline text-white border-white/40 hover:bg-white/10">
+                {resolvedMode === "dark" ? "☀️ Light" : "🌙 Dark"}
               </button>
             ) : null}
           </div>
@@ -81,40 +83,71 @@ const Visitor_Menu = ({ isCustomerView = false }) => {
       </section>
 
       <section className="mx-auto mt-6 max-w-7xl px-4 md:px-8">
-        <div className="rounded-2xl p-4 shadow-sm" style={{ border: `1px solid ${palette.border}`, backgroundColor: palette.panelBg }}>
+        <div className="card-elevated space-y-4 p-6" style={{ backgroundColor: palette.panelBg }}>
           <div className="grid gap-3 md:grid-cols-5">
-            <input type="text" placeholder="Search menu, heading, category..." value={search} onChange={(e) => setSearch(e.target.value)} className="rounded-xl border px-3 py-2 text-sm" style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }} />
-            <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setSubCategoryFilter(""); }} className="rounded-xl border px-3 py-2 text-sm" style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}>
-              <option value="">All Categories</option>{menuData.categories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}
+            <input 
+              type="text" 
+              placeholder="🔍 Search menu items..." 
+              value={search} 
+              onChange={(e) => setSearch(e.target.value)} 
+              className="input-base" 
+              style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }} 
+            />
+            <select 
+              value={categoryFilter} 
+              onChange={(e) => { setCategoryFilter(e.target.value); setSubCategoryFilter(""); }} 
+              className="input-base" 
+              style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
+            >
+              <option value="">📂 All Categories</option>{menuData.categories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}
             </select>
-            <select value={subCategoryFilter} onChange={(e) => setSubCategoryFilter(e.target.value)} className="rounded-xl border px-3 py-2 text-sm" style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}>
-              <option value="">All Sub-Categories</option>{subCategoryOptions.map((subCategory) => <option key={subCategory._id} value={subCategory._id}>{subCategory.name}</option>)}
+            <select 
+              value={subCategoryFilter} 
+              onChange={(e) => setSubCategoryFilter(e.target.value)} 
+              className="input-base" 
+              style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
+            >
+              <option value="">🏷️ All Subcategories</option>{subCategoryOptions.map((subCategory) => <option key={subCategory._id} value={subCategory._id}>{subCategory.name}</option>)}
             </select>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-xl border px-3 py-2 text-sm" style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}>
-              <option value="featured">Featured First</option><option value="price-asc">Price: Low to High</option><option value="price-desc">Price: High to Low</option><option value="newest">Newest First</option>
+            <select 
+              value={sortBy} 
+              onChange={(e) => setSortBy(e.target.value)} 
+              className="input-base" 
+              style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
+            >
+              <option value="featured">⭐ Featured</option><option value="price-asc">💰 Low to High</option><option value="price-desc">💸 High to Low</option><option value="newest">✨ Newest</option>
             </select>
-            <div className="flex rounded-xl border p-1" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
-              <button onClick={() => setFoodTypeFilter("")} className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold ${foodTypeFilter === "" ? "text-white" : ""}`} style={{ backgroundColor: foodTypeFilter === "" ? theme.primaryColor : "transparent", color: foodTypeFilter === "" ? "#fff" : palette.text }}>All</button>
-              <button onClick={() => setFoodTypeFilter("veg")} className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold ${foodTypeFilter === "veg" ? "text-white" : ""}`} style={{ backgroundColor: foodTypeFilter === "veg" ? "#16a34a" : "transparent", color: foodTypeFilter === "veg" ? "#fff" : palette.text }}>Veg</button>
-              <button onClick={() => setFoodTypeFilter("non_veg")} className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold ${foodTypeFilter === "non_veg" ? "text-white" : ""}`} style={{ backgroundColor: foodTypeFilter === "non_veg" ? "#dc2626" : "transparent", color: foodTypeFilter === "non_veg" ? "#fff" : palette.text }}>Non-Veg</button>
+            <div className="flex rounded-xl border gap-1 p-1" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
+              <button onClick={() => setFoodTypeFilter("")} className={`flex-1 rounded-lg px-2 py-2 text-xs font-bold transition-all ${foodTypeFilter === "" ? "text-white shadow-md" : ""}`} style={{ backgroundColor: foodTypeFilter === "" ? theme.primaryColor : "transparent", color: foodTypeFilter === "" ? "#fff" : palette.text }}>All</button>
+              <button onClick={() => setFoodTypeFilter("veg")} className={`flex-1 rounded-lg px-2 py-2 text-xs font-bold transition-all ${foodTypeFilter === "veg" ? "text-white shadow-md" : ""}`} style={{ backgroundColor: foodTypeFilter === "veg" ? "#16a34a" : "transparent", color: foodTypeFilter === "veg" ? "#fff" : palette.text }}>🥗 Veg</button>
+              <button onClick={() => setFoodTypeFilter("non_veg")} className={`flex-1 rounded-lg px-2 py-2 text-xs font-bold transition-all ${foodTypeFilter === "non_veg" ? "text-white shadow-md" : ""}`} style={{ backgroundColor: foodTypeFilter === "non_veg" ? "#dc2626" : "transparent", color: foodTypeFilter === "non_veg" ? "#fff" : palette.text }}>🍗 Non-Veg</button>
             </div>
           </div>
-          {menuData.menuPdf ? (
-            <div className="mt-4 rounded-2xl border p-4" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
-              <p className="mb-2 text-sm font-semibold" style={{ color: palette.muted }}>Menu PDF Reference</p>
-              <p className="text-sm" style={{ color: palette.text }}>{menuData.menuPdf.name}</p>
+        </div>
+      </section>
+
+      {menuData.menuPdf ? (
+        <div className="mx-auto max-w-7xl px-4 md:px-8 py-6">
+          <div className="card-elevated p-6" style={{ backgroundColor: palette.cardBg }}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] font-bold text-slate-600 mb-2">📄 MENU PDF</p>
+                <p className="heading-5" style={{ color: palette.text }}>{menuData.menuPdf.name}</p>
+                <p className="text-sm text-slate-600 mt-1">High-resolution menu reference available for download</p>
+              </div>
               <a
                 href={menuData.menuPdf.url}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-2 inline-block rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                className="btn-primary whitespace-nowrap"
+                style={{ background: theme.primaryColor }}
               >
-                Open PDF Menu
+                📥 Open PDF
               </a>
             </div>
-          ) : null}
+          </div>
         </div>
-      </section>
+      ) : null}
 
       <div className="pt-8">
         <PublicMenuSections

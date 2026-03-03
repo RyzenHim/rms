@@ -16,34 +16,86 @@ const AdminTableQR = () => {
   );
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="text-3xl font-black text-slate-900">Table QR Manager</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Print these QR codes on tables. Scanning opens customer menu with table number prefilled.
+    <div className="space-y-8">
+      <div className="space-y-3">
+        <h2 className="heading-1">🏷️ Table QR Manager</h2>
+        <p className="text-lg text-slate-600">
+          Generate and print QR codes for each table. Customers scan to open the menu with their table automatically selected.
         </p>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <label className="block text-sm font-semibold text-slate-700">Customer Menu Base URL</label>
-        <input
-          type="text"
-          value={baseUrl}
-          onChange={(e) => setBaseUrl(e.target.value)}
-          className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-        />
+      <div className="card-elevated p-6">
+        <div className="form-group">
+          <label className="form-label">Customer Menu Base URL</label>
+          <p className="form-hint mb-3">This URL will be embedded in the QR codes. Modify the domain if deploying to production.</p>
+          <input
+            type="url"
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            className="input-base w-full"
+            placeholder="https://yoursite.com/customer/menu"
+          />
+        </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {tableLinks.map((entry) => (
-          <article key={entry.table} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-lg font-black text-slate-900">Table {entry.table}</p>
-            <img src={entry.qrRef} alt={`QR for ${entry.table}`} className="mt-3 h-40 w-40 rounded-lg border border-slate-200" />
-            <a href={entry.url} target="_blank" rel="noreferrer" className="mt-3 block truncate text-xs font-semibold text-emerald-700 underline">
-              {entry.url}
-            </a>
-          </article>
-        ))}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="heading-3">📋 All Table QR Codes</h3>
+          <span className="badge-info px-3 py-1 rounded-full text-sm">{tableRange.length} Tables</span>
+        </div>
+        
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {tableLinks.map((entry) => (
+            <article key={entry.table} className="card-elevated p-5 text-center space-y-4 hover-lift group">
+              <div className="heading-4 text-slate-900">🪑 {entry.table}</div>
+              
+              <div className="bg-white p-4 rounded-lg border-2 border-slate-200 group-hover:border-emerald-300 transition-colors">
+                <img 
+                  src={entry.qrRef} 
+                  alt={`QR for ${entry.table}`} 
+                  className="h-40 w-40 mx-auto rounded border border-slate-200" 
+                />
+              </div>
+              
+              <div className="space-y-2 text-xs">
+                <a 
+                  href={entry.url} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="block truncate text-emerald-700 underline font-semibold hover:text-emerald-900"
+                >
+                  {entry.url}
+                </a>
+                <div className="flex gap-2">
+                  <a
+                    href={entry.qrRef}
+                    download={`table-${entry.table}-qr.png`}
+                    className="btn-small btn-primary flex-1 text-xs"
+                  >
+                    📥 Download
+                  </a>
+                  <button
+                    onClick={() => window.print()}
+                    className="btn-small btn-outline flex-1 text-xs"
+                  >
+                    🖨️ Print
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+
+      <div className="alert-info p-5 space-y-3">
+        <p className="font-bold">💡 Pro Tips:</p>
+        <ul className="space-y-2 text-sm list-disc list-inside text-slate-700">
+          <li>Print QR codes on adhesive stickers or laminated cards</li>
+          <li>Mount them on tables or table tents for easy scanning</li>
+          <li>Use the download function to save QR codes locally</li>
+          <li>Update the base URL if your domain changes</li>
+          <li>Test QR codes before mass printing</li>
+        </ul>
       </div>
     </div>
   );

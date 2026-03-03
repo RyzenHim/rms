@@ -2,15 +2,21 @@ const mongoose = require("mongoose");
 
 const restaurantThemeSchema = new mongoose.Schema(
     {
+        restaurant: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Restaurant",
+            required: true,
+            index: true,
+        },
         name: {
             type: String,
             required: true,
-            default: "Emerald Bistro",
+            default: "Feane Restaurant",
         },
         heroTitle: {
             type: String,
             required: true,
-            default: "Delicious food at your doorstep",
+            default: "Premium Food & Restaurant Experience",
         },
         heroSubtitle: {
             type: String,
@@ -19,23 +25,23 @@ const restaurantThemeSchema = new mongoose.Schema(
         },
         primaryColor: {
             type: String,
-            default: "#0b6b49",
+            default: "#ff8c3a",
         },
         secondaryColor: {
             type: String,
-            default: "#ffd54f",
+            default: "#ffd700",
         },
         accentColor: {
             type: String,
-            default: "#1f2937",
+            default: "#292524",
         },
         surfaceColor: {
             type: String,
-            default: "#f8faf8",
+            default: "#fafaf9",
         },
         logoText: {
             type: String,
-            default: "DelishDrop",
+            default: "Feane",
         },
         logoImage: {
             type: String,
@@ -52,7 +58,7 @@ const restaurantThemeSchema = new mongoose.Schema(
         },
         heroTagline: {
             type: String,
-            default: "Dynamic Restaurant Website",
+            default: "Premium Food & Restaurant Experience",
         },
         menuHeading: {
             type: String,
@@ -88,7 +94,7 @@ const restaurantThemeSchema = new mongoose.Schema(
         },
         contactEmail: {
             type: String,
-            default: "hello@delishdrop.com",
+            default: "hello@feane.com",
         },
         mapEmbedUrl: {
             type: String,
@@ -136,5 +142,7 @@ const restaurantThemeSchema = new mongoose.Schema(
         timestamps: true,
     }
 );
+
+restaurantThemeSchema.index({ restaurant: 1, isActive: 1, updatedAt: -1 });
 
 module.exports = mongoose.model("RestaurantTheme", restaurantThemeSchema);
