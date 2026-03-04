@@ -2,12 +2,6 @@ const mongoose = require("mongoose");
 
 const reviewSchema = new mongoose.Schema(
   {
-    restaurant: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Restaurant",
-      required: true,
-      index: true,
-    },
     menuItem: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "MenuItem",
@@ -58,7 +52,7 @@ const reviewSchema = new mongoose.Schema(
 );
 
 // Compound index for better query performance
-reviewSchema.index({ restaurant: 1, menuItem: 1, createdAt: -1 });
-reviewSchema.index({ restaurant: 1, customer: 1, menuItem: 1 }, { unique: true }); // One review per customer per item per restaurant
+reviewSchema.index({ menuItem: 1, createdAt: -1 });
+reviewSchema.index({ customer: 1, menuItem: 1 }, { unique: true }); // One review per customer per item
 
 module.exports = mongoose.model("Review", reviewSchema);

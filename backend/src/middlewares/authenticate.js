@@ -24,16 +24,7 @@ exports.authenticate = async (req, res, next) => {
             return res.status(401).json({ message: "Invalid token" });
         }
 
-        if (req.restaurant && decoded.restaurant && String(decoded.restaurant) !== String(req.restaurant._id)) {
-            return res.status(401).json({ message: "Token does not belong to current restaurant" });
-        }
-
-        const userQuery = { _id: decoded.id };
-        if (req.restaurant?._id) {
-            userQuery.restaurant = req.restaurant._id;
-        }
-
-        const user = await User.findOne(userQuery).select("-password");
+        const user = await User.findById(decoded.id).select("-password");
         if (!user) {
             return res.status(401).json({ message: "User not found" });
         }

@@ -2,15 +2,10 @@ const mongoose = require("mongoose");
 
 const tableSchema = new mongoose.Schema(
   {
-    restaurant: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Restaurant",
-      required: true,
-      index: true,
-    },
     tableNumber: {
       type: String,
       required: true,
+      unique: true,
       trim: true,
     },
     capacity: {
@@ -52,6 +47,4 @@ const tableSchema = new mongoose.Schema(
 
 // Index for quick lookup
 tableSchema.index({ status: 1, capacity: 1 });
-tableSchema.index({ restaurant: 1, tableNumber: 1 }, { unique: true });
-
 module.exports = mongoose.model("Table", tableSchema);

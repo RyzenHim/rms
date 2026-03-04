@@ -12,14 +12,9 @@ const userSchema = new mongoose.Schema(
         email: {
             type: String,
             required: true,
+            unique: true,
             lowercase: true,
             trim: true,
-        },
-        restaurant: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Restaurant",
-            required: true,
-            index: true,
         },
 
         password: {
@@ -32,6 +27,7 @@ const userSchema = new mongoose.Schema(
         roles: {
             type: [String],
             enum: [
+                "super_admin",
                 "admin",
                 "manager",
                 "kitchen",
@@ -77,7 +73,5 @@ userSchema.pre("save", async function () {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
 });
-
-userSchema.index({ restaurant: 1, email: 1 }, { unique: true });
 
 module.exports = mongoose.model('User', userSchema)

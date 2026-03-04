@@ -3,10 +3,7 @@ const Table = require("../models/table.model");
 const Customer = require("../models/customer.model");
 
 const getCustomerFromRequest = async (req) =>
-  Customer.findOne({
-    user: req.user._id,
-    restaurant: req.restaurant._id,
-  }).populate("user");
+  Customer.findOne({ user: req.user._id }).populate("user");
 
 // Create reservation
 exports.createReservation = async (req, res) => {
@@ -25,11 +22,7 @@ exports.createReservation = async (req, res) => {
     }
 
     // Check table exists and has capacity
-    const table = await Table.findOne({
-      _id: tableId,
-      restaurant: req.restaurant._id,
-      isActive: true,
-    });
+    const table = await Table.findOne({ _id: tableId, isActive: true });
     if (!table) {
       return res.status(404).json({ message: "Table not found" });
     }
@@ -40,7 +33,6 @@ exports.createReservation = async (req, res) => {
 
     // Check for conflicting reservations
     const conflictingReservation = await Reservation.findOne({
-      restaurant: req.restaurant._id,
       table: tableId,
       reservationDate: {
         $gte: new Date(reservationDate),
@@ -55,7 +47,6 @@ exports.createReservation = async (req, res) => {
 
     // Create reservation
     const reservation = await Reservation.create({
-      restaurant: req.restaurant._id,
       customer: customer._id,
       customerName: customer.user.name,
       customerPhone: customer.user.phone || "",
@@ -71,10 +62,7 @@ exports.createReservation = async (req, res) => {
     const populatedReservation = await reservation.populate("table customer");
 
     // Update table status
-    await Table.findOneAndUpdate(
-      { _id: tableId, restaurant: req.restaurant._id },
-      { status: "reserved" }
-    );
+    await Table.findByIdAndUpdate(tableId, { status: "reserved" });
 
     res.status(201).json({ message: "Reservation created successfully", reservation: populatedReservation });
   } catch (err) {
@@ -91,10 +79,7 @@ exports.getMyReservations = async (req, res) => {
     }
     const { status } = req.query;
 
-    let query = {
-      restaurant: req.restaurant._id,
-      customer: customer._id,
-    };
+    let query = { customer: customer._id };
     if (status) query.status = status;
 
     const reservations = await Reservation.find(query)
@@ -113,7 +98,7 @@ exports.getAllReservations = async (req, res) => {
     const { date, status, page = 1, limit = 10 } = req.query;
 
     const skip = (page - 1) * limit;
-    let query = { restaurant: req.restaurant._id };
+    let query = {};
 
     if (date) {
       const startDate = new Date(date);
@@ -145,10 +130,7 @@ exports.getReservation = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const reservation = await Reservation.findOne({
-      _id: id,
-      restaurant: req.restaurant._id,
-    }).populate("table customer");
+    const reservation = await Reservation.findById(id).populate("table customer");
     if (!reservation) {
       return res.status(404).json({ message: "Reservation not found" });
     }
@@ -166,10 +148,7 @@ exports.updateReservation = async (req, res) => {
     const customer = await getCustomerFromRequest(req);
     const updates = req.body;
 
-    const reservation = await Reservation.findOne({
-      _id: id,
-      restaurant: req.restaurant._id,
-    });
+    const reservation = await Reservation.findById(id);
     if (!reservation) {
       return res.status(404).json({ message: "Reservation not found" });
     }
@@ -184,11 +163,7 @@ exports.updateReservation = async (req, res) => {
       return res.status(403).json({ message: "You cannot update this reservation" });
     }
 
-    const updatedReservation = await Reservation.findOneAndUpdate(
-      { _id: id, restaurant: req.restaurant._id },
-      updates,
-      { new: true }
-    ).populate("table customer");
+    const updatedReservation = await Reservation.findByIdAndUpdate(id, updates, { new: true }).populate("table customer");
 
     res.status(200).json({ message: "Reservation updated", reservation: updatedReservation });
   } catch (err) {
@@ -203,10 +178,7 @@ exports.cancelReservation = async (req, res) => {
     const { reason } = req.body;
     const customer = await getCustomerFromRequest(req);
 
-    const reservation = await Reservation.findOne({
-      _id: id,
-      restaurant: req.restaurant._id,
-    });
+    const reservation = await Reservation.findById(id);
     if (!reservation) {
       return res.status(404).json({ message: "Reservation not found" });
     }
@@ -224,8 +196,8 @@ exports.cancelReservation = async (req, res) => {
     }
 
     // Update reservation
-    const updated = await Reservation.findOneAndUpdate(
-      { _id: id, restaurant: req.restaurant._id },
+    const updated = await Reservation.findByIdAndUpdate(
+      id,
       {
         status: "cancelled",
         cancellationReason: reason || "",
@@ -234,10 +206,7 @@ exports.cancelReservation = async (req, res) => {
     ).populate("table customer");
 
     // Free up table
-    await Table.findOneAndUpdate(
-      { _id: reservation.table, restaurant: req.restaurant._id },
-      { status: "available" }
-    );
+    await Table.findByIdAndUpdate(reservation.table, { status: "available" });
 
     res.status(200).json({ message: "Reservation cancelled", reservation: updated });
   } catch (err) {
@@ -250,10 +219,7 @@ exports.checkInReservation = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const reservation = await Reservation.findOne({
-      _id: id,
-      restaurant: req.restaurant._id,
-    });
+    const reservation = await Reservation.findById(id);
     if (!reservation) {
       return res.status(404).json({ message: "Reservation not found" });
     }
@@ -262,8 +228,8 @@ exports.checkInReservation = async (req, res) => {
       return res.status(400).json({ message: "Only confirmed reservations can be checked in" });
     }
 
-    const updated = await Reservation.findOneAndUpdate(
-      { _id: id, restaurant: req.restaurant._id },
+    const updated = await Reservation.findByIdAndUpdate(
+      id,
       {
         status: "arrived",
         checkinTime: new Date(),
@@ -272,10 +238,7 @@ exports.checkInReservation = async (req, res) => {
     ).populate("table customer");
 
     // Update table status to occupied
-    await Table.findOneAndUpdate(
-      { _id: reservation.table, restaurant: req.restaurant._id },
-      { status: "occupied" }
-    );
+    await Table.findByIdAndUpdate(reservation.table, { status: "occupied" });
 
     res.status(200).json({ message: "Checked in successfully", reservation: updated });
   } catch (err) {
@@ -288,10 +251,7 @@ exports.checkOutReservation = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const reservation = await Reservation.findOne({
-      _id: id,
-      restaurant: req.restaurant._id,
-    });
+    const reservation = await Reservation.findById(id);
     if (!reservation) {
       return res.status(404).json({ message: "Reservation not found" });
     }
@@ -300,8 +260,8 @@ exports.checkOutReservation = async (req, res) => {
       return res.status(400).json({ message: "Only arrived reservations can be checked out" });
     }
 
-    const updated = await Reservation.findOneAndUpdate(
-      { _id: id, restaurant: req.restaurant._id },
+    const updated = await Reservation.findByIdAndUpdate(
+      id,
       {
         status: "completed",
         checkoutTime: new Date(),
@@ -310,10 +270,7 @@ exports.checkOutReservation = async (req, res) => {
     ).populate("table customer");
 
     // Free up table
-    await Table.findOneAndUpdate(
-      { _id: reservation.table, restaurant: req.restaurant._id },
-      { status: "available" }
-    );
+    await Table.findByIdAndUpdate(reservation.table, { status: "available" });
 
     res.status(200).json({ message: "Checked out successfully", reservation: updated });
   } catch (err) {
@@ -326,25 +283,19 @@ exports.markNoShow = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const reservation = await Reservation.findOne({
-      _id: id,
-      restaurant: req.restaurant._id,
-    });
+    const reservation = await Reservation.findById(id);
     if (!reservation) {
       return res.status(404).json({ message: "Reservation not found" });
     }
 
-    const updated = await Reservation.findOneAndUpdate(
-      { _id: id, restaurant: req.restaurant._id },
+    const updated = await Reservation.findByIdAndUpdate(
+      id,
       { status: "no-show" },
       { new: true }
     ).populate("table customer");
 
     // Free up table
-    await Table.findOneAndUpdate(
-      { _id: reservation.table, restaurant: req.restaurant._id },
-      { status: "available" }
-    );
+    await Table.findByIdAndUpdate(reservation.table, { status: "available" });
 
     res.status(200).json({ message: "Marked as no-show", reservation: updated });
   } catch (err) {
@@ -362,22 +313,18 @@ exports.getReservationStats = async (req, res) => {
 
     const stats = {
       todayReservations: await Reservation.countDocuments({
-        restaurant: req.restaurant._id,
         reservationDate: { $gte: today, $lt: tomorrow },
         status: { $in: ["confirmed", "arrived"] },
       }),
       confirmedToday: await Reservation.countDocuments({
-        restaurant: req.restaurant._id,
         reservationDate: { $gte: today, $lt: tomorrow },
         status: "confirmed",
       }),
       arrivedToday: await Reservation.countDocuments({
-        restaurant: req.restaurant._id,
         reservationDate: { $gte: today, $lt: tomorrow },
         status: "arrived",
       }),
       completedThisMonth: await Reservation.countDocuments({
-        restaurant: req.restaurant._id,
         createdAt: { $gte: new Date(today.getFullYear(), today.getMonth(), 1) },
         status: "completed",
       }),
@@ -387,7 +334,6 @@ exports.getReservationStats = async (req, res) => {
     const guestCount = await Reservation.aggregate([
       {
         $match: {
-          restaurant: req.restaurant._id,
           reservationDate: { $gte: today, $lt: tomorrow },
           status: { $in: ["confirmed", "arrived"] },
         },

@@ -95,7 +95,7 @@ const AdminSettings = () => {
   return (
     <div className="space-y-8">
       <div className="space-y-3">
-        <h2 className="heading-1">⚙️ Website Customization</h2>
+        <h2 className="heading-1"> Website Customization</h2>
         <p className="text-lg text-slate-600">
           Manage your restaurant branding, colors, contact info, and landing page content. All changes apply instantly across the site.
         </p>
@@ -109,7 +109,7 @@ const AdminSettings = () => {
 
       <form onSubmit={onSubmit} className="space-y-8">
         <section className="card-elevated p-8">
-          <h3 className="heading-3 mb-6">🏪 Restaurant Branding</h3>
+          <h3 className="heading-3 mb-6"> Restaurant Branding</h3>
           <div className="grid gap-5 md:grid-cols-2">
             <div className="form-group">
               <label className="form-label">Restaurant Name</label>
@@ -149,7 +149,7 @@ const AdminSettings = () => {
         </section>
 
         <section className="card-elevated p-8">
-          <h3 className="heading-3 mb-6">🎨 Brand Colors</h3>
+          <h3 className="heading-3 mb-6"> Brand Colors</h3>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <div className="form-group">
               <label className="form-label">Primary Color</label>
@@ -231,7 +231,7 @@ const AdminSettings = () => {
         </section>
 
         <section className="card-elevated p-8">
-          <h3 className="heading-3 mb-6">🏠 Homepage Content</h3>
+          <h3 className="heading-3 mb-6"> Homepage Content</h3>
           <div className="space-y-5">
             <div className="form-group">
               <label className="form-label">Hero Tagline</label>
@@ -293,7 +293,7 @@ const AdminSettings = () => {
         </section>
 
         <section className="card-elevated p-8">
-          <h3 className="heading-3 mb-6">🍽️ Menu Page</h3>
+          <h3 className="heading-3 mb-6"> Menu Page</h3>
           <div className="space-y-5">
             <div className="form-group">
               <label className="form-label">Menu Heading</label>
@@ -321,7 +321,7 @@ const AdminSettings = () => {
         </section>
 
         <section className="card-elevated p-8">
-          <h3 className="heading-3 mb-6">📍 Contact & Address</h3>
+          <h3 className="heading-3 mb-6"> Contact & Address</h3>
           <div className="grid gap-5 md:grid-cols-2">
             <div className="form-group">
               <label className="form-label">Address</label>
@@ -409,7 +409,7 @@ const AdminSettings = () => {
         </section>
 
         <section className="card-elevated p-8">
-          <h3 className="heading-3 mb-6">📱 Social Media</h3>
+          <h3 className="heading-3 mb-6"> Social Media</h3>
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="form-group">
               <label className="form-label">Facebook URL</label>
@@ -459,7 +459,7 @@ const AdminSettings = () => {
         </section>
 
         <section className="card-elevated p-8">
-          <h3 className="heading-3 mb-6">🎛️ Theme Settings</h3>
+          <h3 className="heading-3 mb-6"> Theme Settings</h3>
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="form-group">
               <label className="form-label">Default Color Mode</label>
@@ -483,8 +483,8 @@ const AdminSettings = () => {
                 onChange={(e) => setForm((prev) => ({ ...prev, allowUserThemeToggle: e.target.value === "true" }))}
                 className="input-base"
               >
-                <option value="true">✅ Enabled</option>
-                <option value="false">❌ Disabled</option>
+                <option value="true"> Enabled</option>
+                <option value="false"> Disabled</option>
               </select>
               <p className="form-hint">Let users switch between light/dark mode</p>
             </div>
@@ -492,7 +492,7 @@ const AdminSettings = () => {
         </section>
 
         <section className="card-elevated p-8">
-          <h3 className="heading-3 mb-6">📝 Footer</h3>
+          <h3 className="heading-3 mb-6"> Footer</h3>
           <div className="form-group">
             <label className="form-label">Footer Note</label>
             <textarea
@@ -508,7 +508,7 @@ const AdminSettings = () => {
 
         <div className="flex gap-4">
           <button type="submit" className="btn-primary">
-            💾 Save All Settings
+             Save All Settings
           </button>
         </div>
       </form>

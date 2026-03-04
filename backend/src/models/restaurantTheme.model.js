@@ -2,12 +2,6 @@ const mongoose = require("mongoose");
 
 const restaurantThemeSchema = new mongoose.Schema(
     {
-        restaurant: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Restaurant",
-            required: true,
-            index: true,
-        },
         name: {
             type: String,
             required: true,
@@ -142,7 +136,5 @@ const restaurantThemeSchema = new mongoose.Schema(
         timestamps: true,
     }
 );
-
-restaurantThemeSchema.index({ restaurant: 1, isActive: 1, updatedAt: -1 });
 
 module.exports = mongoose.model("RestaurantTheme", restaurantThemeSchema);

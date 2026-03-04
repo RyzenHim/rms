@@ -10,12 +10,6 @@ const employeeSchema = new mongoose.Schema(
             required: true,
             unique: true,
         },
-        restaurant: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Restaurant",
-            required: true,
-            index: true,
-        },
 
         roles: {
             type: String,
@@ -109,16 +103,6 @@ const employeeSchema = new mongoose.Schema(
     },
     {
         timestamps: true,
-    }
-);
-
-employeeSchema.index(
-    { restaurant: 1, employeeCode: 1 },
-    {
-        unique: true,
-        partialFilterExpression: {
-            employeeCode: { $type: "string", $ne: "" },
-        },
     }
 );
 

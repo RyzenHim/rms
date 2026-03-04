@@ -18,7 +18,7 @@ const AdminTableQR = () => {
   return (
     <div className="space-y-8">
       <div className="space-y-3">
-        <h2 className="heading-1">🏷️ Table QR Manager</h2>
+        <h2 className="heading-1"> Table QR Manager</h2>
         <p className="text-lg text-slate-600">
           Generate and print QR codes for each table. Customers scan to open the menu with their table automatically selected.
         </p>
@@ -40,14 +40,14 @@ const AdminTableQR = () => {
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="heading-3">📋 All Table QR Codes</h3>
+          <h3 className="heading-3"> All Table QR Codes</h3>
           <span className="badge-info px-3 py-1 rounded-full text-sm">{tableRange.length} Tables</span>
         </div>
         
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {tableLinks.map((entry) => (
             <article key={entry.table} className="card-elevated p-5 text-center space-y-4 hover-lift group">
-              <div className="heading-4 text-slate-900">🪑 {entry.table}</div>
+              <div className="heading-4 text-slate-900"> {entry.table}</div>
               
               <div className="bg-white p-4 rounded-lg border-2 border-slate-200 group-hover:border-emerald-300 transition-colors">
                 <img 
@@ -72,13 +72,13 @@ const AdminTableQR = () => {
                     download={`table-${entry.table}-qr.png`}
                     className="btn-small btn-primary flex-1 text-xs"
                   >
-                    📥 Download
+                     Download
                   </a>
                   <button
                     onClick={() => window.print()}
                     className="btn-small btn-outline flex-1 text-xs"
                   >
-                    🖨️ Print
+                     Print
                   </button>
                 </div>
               </div>
@@ -88,7 +88,7 @@ const AdminTableQR = () => {
       </div>
 
       <div className="alert-info p-5 space-y-3">
-        <p className="font-bold">💡 Pro Tips:</p>
+        <p className="font-bold"> Pro Tips:</p>
         <ul className="space-y-2 text-sm list-disc list-inside text-slate-700">
           <li>Print QR codes on adhesive stickers or laminated cards</li>
           <li>Mount them on tables or table tents for easy scanning</li>

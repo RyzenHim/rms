@@ -46,7 +46,7 @@ const ReviewsList = ({ menuItemId, theme, refreshTrigger }) => {
                   <span className="text-4xl font-bold" style={{ color: theme?.primaryColor }}>
                     {stats.averageRating}
                   </span>
-                  <span className="text-lg text-yellow-400">★</span>
+                  <span className="text-lg text-yellow-400"></span>
                 </div>
                 <div className="text-sm text-slate-600">
                   <p className="font-semibold">{stats.totalReviews} reviews</p>
@@ -59,7 +59,7 @@ const ReviewsList = ({ menuItemId, theme, refreshTrigger }) => {
           <div className="space-y-2">
             {[5, 4, 3, 2, 1].map((rating) => (
               <div key={rating} className="flex items-center gap-2">
-                <span className="text-sm font-medium w-8">{rating}★</span>
+                <span className="text-sm font-medium w-8">{rating}</span>
                 <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
                   <div
                     className="h-full transition-all"
@@ -107,11 +107,11 @@ const ReviewsList = ({ menuItemId, theme, refreshTrigger }) => {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold text-slate-900">{review.customer.name}</span>
-                    {review.isVerifiedPurchase && <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">✓ Verified Purchase</span>}
+                    {review.isVerifiedPurchase && <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full"> Verified Purchase</span>}
                   </div>
                   <div className={`flex items-center gap-1 ${getRatingColor(review.rating)}`}>
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <span key={i}>{i < review.rating ? "★" : "☆"}</span>
+                      <span key={i}>{i < review.rating ? "" : ""}</span>
                     ))}
                     <span className="text-sm text-slate-600 ml-2 font-medium">{review.rating} out of 5</span>
                   </div>
@@ -134,7 +134,7 @@ const ReviewsList = ({ menuItemId, theme, refreshTrigger }) => {
 
               <div className="flex items-center gap-4 pt-2 text-sm">
                 <button className="text-slate-600 hover:text-slate-900 flex items-center gap-1">
-                  👍 Helpful ({review.helpful})
+                   Helpful ({review.helpful})
                 </button>
               </div>
             </div>

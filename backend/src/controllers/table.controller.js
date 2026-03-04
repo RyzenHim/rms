@@ -5,7 +5,7 @@ exports.getAllTables = async (req, res) => {
   try {
     const { status, capacity } = req.query;
 
-    let query = { isActive: true, restaurant: req.restaurant._id };
+    let query = { isActive: true };
 
     if (status) query.status = status;
     if (capacity) query.capacity = { $gte: parseInt(capacity) };
@@ -23,7 +23,7 @@ exports.getTable = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const table = await Table.findOne({ _id: id, restaurant: req.restaurant._id });
+    const table = await Table.findById(id);
     if (!table) {
       return res.status(404).json({ message: "Table not found" });
     }
@@ -44,7 +44,6 @@ exports.createTable = async (req, res) => {
     }
 
     const table = await Table.create({
-      restaurant: req.restaurant._id,
       tableNumber,
       capacity,
       location,
@@ -67,11 +66,7 @@ exports.updateTable = async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
 
-    const table = await Table.findOneAndUpdate(
-      { _id: id, restaurant: req.restaurant._id },
-      updates,
-      { new: true }
-    );
+    const table = await Table.findByIdAndUpdate(id, updates, { new: true });
     if (!table) {
       return res.status(404).json({ message: "Table not found" });
     }
@@ -92,11 +87,7 @@ exports.updateTableStatus = async (req, res) => {
       return res.status(400).json({ message: "Invalid status" });
     }
 
-    const table = await Table.findOneAndUpdate(
-      { _id: id, restaurant: req.restaurant._id },
-      { status },
-      { new: true }
-    );
+    const table = await Table.findByIdAndUpdate(id, { status }, { new: true });
     if (!table) {
       return res.status(404).json({ message: "Table not found" });
     }
@@ -112,11 +103,7 @@ exports.deleteTable = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const table = await Table.findOneAndUpdate(
-      { _id: id, restaurant: req.restaurant._id },
-      { isActive: false },
-      { new: true }
-    );
+    const table = await Table.findByIdAndUpdate(id, { isActive: false }, { new: true });
     if (!table) {
       return res.status(404).json({ message: "Table not found" });
     }
@@ -142,14 +129,12 @@ exports.getAvailableTables = async (req, res) => {
     const tables = await Table.find({
       isActive: true,
       status: "available",
-      restaurant: req.restaurant._id,
       capacity: { $gte: parseInt(guests) },
     }).sort({ capacity: 1 });
 
     // Filter out reserved tables for this time slot
     const reservedTableIds = await Reservation.find(
       {
-        restaurant: req.restaurant._id,
         reservationDate: {
           $gte: new Date(date),
           $lt: new Date(new Date(date).getTime() + 24 * 60 * 60 * 1000),
@@ -173,11 +158,11 @@ exports.getAvailableTables = async (req, res) => {
 exports.getTableStats = async (req, res) => {
   try {
     const stats = {
-      totalTables: await Table.countDocuments({ isActive: true, restaurant: req.restaurant._id }),
-      available: await Table.countDocuments({ isActive: true, status: "available", restaurant: req.restaurant._id }),
-      reserved: await Table.countDocuments({ isActive: true, status: "reserved", restaurant: req.restaurant._id }),
-      occupied: await Table.countDocuments({ isActive: true, status: "occupied", restaurant: req.restaurant._id }),
-      maintenance: await Table.countDocuments({ isActive: true, status: "maintenance", restaurant: req.restaurant._id }),
+      totalTables: await Table.countDocuments({ isActive: true }),
+      available: await Table.countDocuments({ isActive: true, status: "available" }),
+      reserved: await Table.countDocuments({ isActive: true, status: "reserved" }),
+      occupied: await Table.countDocuments({ isActive: true, status: "occupied" }),
+      maintenance: await Table.countDocuments({ isActive: true, status: "maintenance" }),
     };
 
     res.status(200).json({ stats });

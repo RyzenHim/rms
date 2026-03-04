@@ -5,7 +5,6 @@ const express = require("express");
 const cors = require("cors");
 const connectDB = require("./src/config/db");
 const { startOrderReadyNotifierJob } = require("./src/jobs/orderReadyNotifier.job");
-const { restaurantContext } = require("./src/middlewares/restaurantContext");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -31,7 +30,6 @@ const tableRouter = require("./src/routes/table.route");
 const reservationRouter = require("./src/routes/reservation.route");
 
 app.get("/health", (req, res) => res.status(200).json({ status: "ok" }));
-app.use("/api", restaurantContext);
 app.use("/api/auth", authRouter);
 app.use("/api/theme", themeRouter);
 app.use("/api/menu", menuRouter);

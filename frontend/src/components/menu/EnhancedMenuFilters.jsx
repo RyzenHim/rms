@@ -47,7 +47,7 @@ const EnhancedMenuFilters = ({ onFilterChange, items, theme }) => {
     <div className="space-y-6">
       <div>
         <label className="form-label flex items-center justify-between mb-3">
-          <span>💰 Price Range</span>
+          <span> Price Range</span>
           <span className="text-sm font-semibold">₹{priceRange[0]} - ₹{priceRange[1]}</span>
         </label>
         <input
@@ -75,7 +75,7 @@ const EnhancedMenuFilters = ({ onFilterChange, items, theme }) => {
             >
               {Array.from({ length: 5 }).map((_, i) => (
                 <span key={i} className="text-sm">
-                  {i < rating ? "★" : "☆"}
+                  {i < rating ? "" : ""}
                 </span>
               ))}{" "}
               <span className="text-sm ml-2">{rating}+ Stars</span>
@@ -85,7 +85,7 @@ const EnhancedMenuFilters = ({ onFilterChange, items, theme }) => {
       </div>
 
       <div>
-        <label className="form-label mb-3">🌱 Dietary Preference</label>
+        <label className="form-label mb-3"> Dietary Preference</label>
         <div className="space-y-2">
           <button
             onClick={() => handleVegetarianChange("veg")}
@@ -95,7 +95,7 @@ const EnhancedMenuFilters = ({ onFilterChange, items, theme }) => {
                 : "bg-slate-100 text-slate-700 hover:bg-slate-200"
             }`}
           >
-            🥗 Vegetarian
+             Vegetarian
           </button>
           <button
             onClick={() => handleVegetarianChange("non_veg")}
@@ -105,20 +105,20 @@ const EnhancedMenuFilters = ({ onFilterChange, items, theme }) => {
                 : "bg-slate-100 text-slate-700 hover:bg-slate-200"
             }`}
           >
-            🍗 Non-Vegetarian
+             Non-Vegetarian
           </button>
         </div>
       </div>
 
       <div>
-        <label className="form-label mb-3">📊 Sort By</label>
+        <label className="form-label mb-3"> Sort By</label>
         <select value={sortBy} onChange={(e) => handleSortChange(e.target.value)} className="input-base w-full">
           <option value="featured">⭐ Featured</option>
-          <option value="price-asc">💰 Price: Low to High</option>
-          <option value="price-desc">💰 Price: High to Low</option>
+          <option value="price-asc"> Price: Low to High</option>
+          <option value="price-desc"> Price: High to Low</option>
           <option value="rating">⭐ Highest Rated</option>
-          <option value="newest">✨ Newest</option>
-          <option value="most-reviewed">💬 Most Reviewed</option>
+          <option value="newest"> Newest</option>
+          <option value="most-reviewed"> Most Reviewed</option>
         </select>
       </div>
 
@@ -137,7 +137,7 @@ const EnhancedMenuFilters = ({ onFilterChange, items, theme }) => {
         }}
         className="w-full btn-outline"
       >
-        🔄 Reset Filters
+         Reset Filters
       </button>
     </div>
   );

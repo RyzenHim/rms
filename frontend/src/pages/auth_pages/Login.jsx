@@ -25,6 +25,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
     try {
       const user = await login(form);
       const role = getPrimaryRole(user.roles);
@@ -39,7 +40,7 @@ const Login = () => {
 
   return (
     <AuthLayout title="Welcome Back" subtitle="Enter your credentials to access your dashboard" badge="Secure Login">
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <AuthInput
           label="Email Address"
           type="email"
@@ -89,20 +90,6 @@ const Login = () => {
             </div>
           )}
         </button>
-
-        <div className="relative py-2">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-200"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="bg-gradient-to-br from-white via-emerald-50/30 to-white px-3 text-slate-600 font-medium">Or continue with</span>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border-2 border-slate-200 bg-slate-50/50 px-5 py-4 space-y-2">
-          <p className="text-xs uppercase tracking-wider text-slate-600 font-semibold">Sign-In Info</p>
-          <p className="text-sm text-slate-700">Use your restaurant account email and password.</p>
-        </div>
 
         <p className="text-center text-sm text-slate-600">
           Don&apos;t have a customer account?{" "}

@@ -5,21 +5,15 @@ const Customer = require("../models/customer.model");
 const Employee = require("../models/employee.model");
 const { sendMailSafely } = require("../utils/mailer");
 
-const staffRoles = ["admin", "manager", "kitchen", "cashier", "waiter"];
+const staffRoles = ["super_admin", "admin", "manager", "kitchen", "cashier", "waiter"];
 
 const resolvePhone = async (user) => {
     if (user.roles?.some((role) => staffRoles.includes(role))) {
-        const employee = await Employee.findOne({
-            user: user._id,
-            restaurant: user.restaurant,
-        }).select("phone");
+        const employee = await Employee.findOne({ user: user._id }).select("phone");
         return employee?.phone || "";
     }
 
-    const customer = await Customer.findOne({
-        user: user._id,
-        restaurant: user.restaurant,
-    }).select("phone");
+    const customer = await Customer.findOne({ user: user._id }).select("phone");
     return customer?.phone || "";
 };
 
@@ -29,7 +23,6 @@ const sanitizeUser = async (user) => ({
     email: user.email,
     phone: await resolvePhone(user),
     roles: user.roles,
-    restaurantId: user.restaurant || null,
     theme: user.theme,
     profileImage: user.profileImage || "",
     isActive: user.isActive,
@@ -37,11 +30,7 @@ const sanitizeUser = async (user) => ({
 
 exports.signup = async (req, res) => {
     try {
-        if (!req.restaurant?._id) {
-            return res.status(400).json({ message: "Restaurant context is required" });
-        }
-
-        const { name, email, password, role } = req.body;
+        const { name, email, password, role, phone, department } = req.body;
 
         if (!name || !email || !password) {
             return res.status(400).json({
@@ -49,17 +38,33 @@ exports.signup = async (req, res) => {
             });
         }
 
-        if (role && role !== "customer") {
+        const requestedRole = String(role || "customer").trim().toLowerCase();
+        const isAdminSignup = requestedRole === "admin";
+        const adminSignupSecret =
+            req.headers["x-admin-signup-secret"] || req.body.adminSignupSecret;
+
+        if (!["customer", "admin"].includes(requestedRole)) {
             return res.status(403).json({
-                message: "Only customer signup is allowed. Staff accounts are created by admin.",
+                message: "Only customer or admin signup is allowed on this endpoint.",
             });
         }
 
+        if (isAdminSignup) {
+            if (!process.env.SUPER_ADMIN_SIGNUP_SECRET) {
+                return res.status(500).json({
+                    message: "Admin signup is not configured on server.",
+                });
+            }
+
+            if (adminSignupSecret !== process.env.SUPER_ADMIN_SIGNUP_SECRET) {
+                return res.status(403).json({
+                    message: "Invalid admin signup secret.",
+                });
+            }
+        }
+
         const normalizedEmail = email.toLowerCase().trim();
-        const isExisting = await User.findOne({
-            email: normalizedEmail,
-            restaurant: req.restaurant._id,
-        });
+        const isExisting = await User.findOne({ email: normalizedEmail });
 
         if (isExisting) {
             return res.status(400).json({ message: "User already exists" });
@@ -69,20 +74,26 @@ exports.signup = async (req, res) => {
             name,
             email: normalizedEmail,
             password,
-            roles: ["customer"],
-            restaurant: req.restaurant._id,
+            roles: [requestedRole],
         });
 
-        await Customer.create({
-            user: createdUser._id,
-            restaurant: req.restaurant._id,
-        });
+        if (isAdminSignup) {
+            await Employee.create({
+                user: createdUser._id,
+                roles: "admin",
+                department: String(department || "").trim(),
+                phone: String(phone || "").trim(),
+                isActive: true,
+            });
+        } else {
+            await Customer.create({ user: createdUser._id });
+        }
 
         await sendMailSafely({
             to: createdUser.email,
             subject: "Welcome to Feane",
-            text: `Hi ${createdUser.name}, your customer account has been created successfully.`,
-            html: `<p>Hi <b>${createdUser.name}</b>,</p><p>Your customer account has been created successfully.</p>`,
+            text: `Hi ${createdUser.name}, your ${requestedRole} account has been created successfully.`,
+            html: `<p>Hi <b>${createdUser.name}</b>,</p><p>Your ${requestedRole} account has been created successfully.</p>`,
         });
 
         return res.status(201).json({
@@ -97,10 +108,6 @@ exports.signup = async (req, res) => {
 
 exports.login = async (req, res) => {
     try {
-        if (!req.restaurant?._id) {
-            return res.status(400).json({ message: "Restaurant context is required" });
-        }
-
         const { email, password } = req.body;
 
         if (!email || !password) {
@@ -113,7 +120,6 @@ exports.login = async (req, res) => {
         const user = await User.findOne({
             email: normalizedEmail,
             isDeleted: false,
-            restaurant: req.restaurant._id,
         }).select("+password");
 
         if (!user) {
@@ -143,7 +149,6 @@ exports.login = async (req, res) => {
             {
                 id: user._id,
                 roles: user.roles,
-                restaurant: user.restaurant,
             },
             process.env.JWT_SECRET,
             { expiresIn: "1d" }

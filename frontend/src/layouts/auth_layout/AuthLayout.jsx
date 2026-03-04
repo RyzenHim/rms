@@ -8,7 +8,7 @@ const AuthLayout = ({ children, title, subtitle, badge = "DelishDrop Access" }) 
       <div className="absolute top-0 -right-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
       <div className="absolute -bottom-8 left-20 w-80 h-80 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
 
-      <div className="mx-auto grid min-h-[90vh] w-full max-w-7xl overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl md:grid-cols-2">
+      <div className="mx-auto grid h-[calc(100vh-2rem)] max-h-[920px] w-full max-w-7xl overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl md:h-[calc(100vh-4rem)] md:grid-cols-2">
         {/* Left Side - Hero Section */}
         <section className="relative hidden overflow-hidden p-12 text-white md:flex md:flex-col md:justify-between">
           <img
@@ -51,7 +51,7 @@ const AuthLayout = ({ children, title, subtitle, badge = "DelishDrop Access" }) 
         </section>
 
         {/* Right Side - Form Section */}
-        <section className="flex flex-col items-center justify-center bg-gradient-to-br from-white via-emerald-50/30 to-white p-6 md:p-12">
+        <section className="flex flex-col items-center justify-center overflow-y-auto bg-gradient-to-br from-white via-emerald-50/30 to-white p-5 md:p-9">
           <div className="w-full max-w-sm">
             {/* Back Button */}
             <Link 
@@ -65,7 +65,7 @@ const AuthLayout = ({ children, title, subtitle, badge = "DelishDrop Access" }) 
             </Link>
 
             {/* Form Container */}
-            <div className="mt-8 space-y-4">
+            <div className="mt-6 space-y-3">
               <div>
                 <h2 className="text-4xl md:text-5xl font-black text-slate-900 leading-tight">{title}</h2>
                 <p className="mt-3 text-base text-slate-600 font-medium">{subtitle}</p>
@@ -75,7 +75,7 @@ const AuthLayout = ({ children, title, subtitle, badge = "DelishDrop Access" }) 
             </div>
 
             {/* Children - Form Content */}
-            <div className="mt-10">
+            <div className="mt-7">
               {children}
             </div>
           </div>

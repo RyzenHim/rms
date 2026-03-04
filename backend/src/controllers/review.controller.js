@@ -3,10 +3,7 @@ const MenuItem = require("../models/menuItem.model");
 const Customer = require("../models/customer.model");
 
 const getCustomerFromRequest = async (req) =>
-  Customer.findOne({
-    user: req.user._id,
-    restaurant: req.restaurant._id,
-  });
+  Customer.findOne({ user: req.user._id });
 
 // Create review
 exports.createReview = async (req, res) => {
@@ -30,7 +27,6 @@ exports.createReview = async (req, res) => {
 
     // Check if customer already reviewed this item
     const existingReview = await Review.findOne({
-      restaurant: req.restaurant._id,
       menuItem: menuItemId,
       customer: customer._id,
     });
@@ -39,7 +35,6 @@ exports.createReview = async (req, res) => {
     }
 
     const review = await Review.create({
-      restaurant: req.restaurant._id,
       menuItem: menuItemId,
       customer: customer._id,
       rating,
@@ -70,7 +65,6 @@ exports.getMenuItemReviews = async (req, res) => {
     if (sortBy === "helpful") sortOption = { helpful: -1, createdAt: -1 };
 
     const reviews = await Review.find({
-      restaurant: req.restaurant._id,
       menuItem: menuItemId,
       status: "approved",
     })
@@ -80,7 +74,6 @@ exports.getMenuItemReviews = async (req, res) => {
       .limit(parseInt(limit));
 
     const total = await Review.countDocuments({
-      restaurant: req.restaurant._id,
       menuItem: menuItemId,
       status: "approved",
     });
@@ -89,7 +82,6 @@ exports.getMenuItemReviews = async (req, res) => {
     const ratingData = await Review.aggregate([
       {
         $match: {
-          restaurant: req.restaurant._id,
           menuItem: require("mongoose").Types.ObjectId(menuItemId),
           status: "approved",
         },
@@ -133,10 +125,7 @@ exports.updateReview = async (req, res) => {
     const customer = await getCustomerFromRequest(req);
     const { rating, title, comment, highlights } = req.body;
 
-    const review = await Review.findOne({
-      _id: reviewId,
-      restaurant: req.restaurant._id,
-    });
+    const review = await Review.findById(reviewId);
     if (!review) {
       return res.status(404).json({ message: "Review not found" });
     }
@@ -169,10 +158,7 @@ exports.deleteReview = async (req, res) => {
     const { reviewId } = req.params;
     const customer = await getCustomerFromRequest(req);
 
-    const review = await Review.findOne({
-      _id: reviewId,
-      restaurant: req.restaurant._id,
-    });
+    const review = await Review.findById(reviewId);
     if (!review) {
       return res.status(404).json({ message: "Review not found" });
     }
@@ -184,7 +170,7 @@ exports.deleteReview = async (req, res) => {
       return res.status(403).json({ message: "You can only delete your own reviews" });
     }
 
-    await Review.findOneAndDelete({ _id: reviewId, restaurant: req.restaurant._id });
+    await Review.findByIdAndDelete(reviewId);
     res.status(200).json({ message: "Review deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -200,7 +186,6 @@ exports.getCustomerReviews = async (req, res) => {
     }
 
     const reviews = await Review.find({
-      restaurant: req.restaurant._id,
       customer: customer._id,
     })
       .populate("menuItem", "name")
@@ -217,8 +202,8 @@ exports.markHelpful = async (req, res) => {
   try {
     const { reviewId } = req.params;
 
-    const review = await Review.findOneAndUpdate(
-      { _id: reviewId, restaurant: req.restaurant._id },
+    const review = await Review.findByIdAndUpdate(
+      reviewId,
       { $inc: { helpful: 1 } },
       { new: true }
     );

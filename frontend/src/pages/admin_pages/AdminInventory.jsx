@@ -169,7 +169,7 @@ const AdminInventory = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="heading-2">📦 Inventory Management</h2>
+        <h2 className="heading-2"> Inventory Management</h2>
         <button onClick={() => setShowForm(!showForm)} className="btn-primary">
           {showForm ? "Cancel" : "+ Add Item"}
         </button>
@@ -368,16 +368,16 @@ const AdminInventory = () => {
                     <td className="px-4 py-3 text-center">
                       <div className="flex gap-2 justify-center">
                         <button onClick={() => updateStock(item._id, "add")} className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">
-                          ➕ Add
+                           Add
                         </button>
                         <button onClick={() => updateStock(item._id, "subtract")} className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200">
-                          ➖ Use
+                           Use
                         </button>
                         <button onClick={() => handleEdit(item)} className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
-                          ✏️ Edit
+                           Edit
                         </button>
                         <button onClick={() => handleDelete(item._id)} className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">
-                          🗑️ Delete
+                           Delete
                         </button>
                       </div>
                     </td>

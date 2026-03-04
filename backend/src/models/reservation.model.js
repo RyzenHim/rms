@@ -2,12 +2,6 @@ const mongoose = require("mongoose");
 
 const reservationSchema = new mongoose.Schema(
   {
-    restaurant: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Restaurant",
-      required: true,
-      index: true,
-    },
     customer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Customer",
@@ -91,8 +85,8 @@ const reservationSchema = new mongoose.Schema(
 );
 
 // Indexes for efficient queries
-reservationSchema.index({ restaurant: 1, reservationDate: 1, table: 1 });
-reservationSchema.index({ restaurant: 1, customer: 1, createdAt: -1 });
-reservationSchema.index({ restaurant: 1, status: 1, reservationDate: 1 });
+reservationSchema.index({ reservationDate: 1, table: 1 });
+reservationSchema.index({ customer: 1, createdAt: -1 });
+reservationSchema.index({ status: 1, reservationDate: 1 });
 
 module.exports = mongoose.model("Reservation", reservationSchema);

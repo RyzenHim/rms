@@ -33,7 +33,7 @@ const AdminAnalytics = () => {
   return (
     <div className="p-3 sm:p-4 md:p-8 space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <h2 className="text-2xl sm:text-3xl font-bold">📊 Analytics Dashboard</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold"> Analytics Dashboard</h2>
         <select
           value={timeRange}
           onChange={(e) => setTimeRange(e.target.value)}
@@ -124,7 +124,7 @@ const AdminAnalytics = () => {
 
       {/* Popular Items */}
       <div className="card-elevated p-4 sm:p-6">
-        <h3 className="text-lg sm:text-xl font-bold mb-4">🔥 Top 10 Popular Items</h3>
+        <h3 className="text-lg sm:text-xl font-bold mb-4"> Top 10 Popular Items</h3>
         
         {/* Desktop Table View */}
         <div className="hidden lg:block overflow-x-auto">
@@ -182,7 +182,7 @@ const AdminAnalytics = () => {
       {/* Customer Insights */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         <div className="card-elevated p-4 sm:p-6">
-          <h3 className="text-lg sm:text-xl font-bold mb-4">👥 Customer Insights</h3>
+          <h3 className="text-lg sm:text-xl font-bold mb-4"> Customer Insights</h3>
           <div className="space-y-3 sm:space-y-4">
             <div>
               <p className="text-xs sm:text-sm text-slate-600">Repeat Customers</p>
