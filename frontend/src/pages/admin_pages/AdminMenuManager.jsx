@@ -451,7 +451,7 @@ const AdminMenuManager = () => {
                 <p className="font-bold text-slate-900">{item.name}</p>
                 <p className="text-xs text-slate-500">{item.category?.name} {item.subCategory?.name ? `> ${item.subCategory?.name}` : ""} | {(item.foodType || "non_veg").replace("_", "-")}</p>
                 <p className="text-xs text-slate-600">{item.shortDescription || item.description}</p>
-                <p className="mt-1 text-xs text-slate-500">Base: ${Number(item.price || 0).toFixed(2)} | Portions: {item.portions?.length || 0}</p>
+                <p className="mt-1 text-xs text-slate-500">Base: Rs {Number(item.price || 0).toFixed(2)} | Portions: {item.portions?.length || 0}</p>
                 <div className="mt-2 flex gap-2">
                   <button onClick={() => onItemEdit(item)} className="rounded-lg bg-slate-800 px-3 py-1 text-xs font-semibold text-white">Edit</button>
                   <button onClick={() => onDeleteItem(item._id)} className="rounded-lg bg-red-600 px-3 py-1 text-xs font-semibold text-white">Delete</button>

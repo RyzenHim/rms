@@ -168,7 +168,7 @@ const Waiter_Orders = () => {
                   <option value="">Select Menu Item</option>
                   {menuItems.map((item) => (
                     <option key={item._id} value={item._id}>
-                      {item.name} (${Number(item.price || 0).toFixed(2)})
+                      {item.name} (Rs {Number(item.price || 0).toFixed(2)})
                     </option>
                   ))}
                 </select>
@@ -237,7 +237,7 @@ const Waiter_Orders = () => {
                 <p className="mt-1 text-xs text-slate-600">
                   {order.items?.map((item) => `${item.name} x${item.quantity}`).join(", ")}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">Total: ${Number(order.grandTotal || 0).toFixed(2)}</p>
+                <p className="mt-1 text-xs text-slate-500">Total: Rs {Number(order.grandTotal || 0).toFixed(2)}</p>
                 <p className="mt-1 text-xs text-slate-500">
                   {order.customerName || "Guest"} {order.customerEmail ? `| ${order.customerEmail}` : ""}
                 </p>

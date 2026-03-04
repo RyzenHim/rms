@@ -96,7 +96,7 @@ const PublicMenuSections = ({
   }, [sortedCategories, sortedSubCategories, filteredItems]);
 
   return (
-    <section id="full-menu" className="mx-auto max-w-7xl px-4 pb-16 md:px-8" style={{ color: palette.text }}>
+    <section id="full-menu" className="mx-auto w-full max-w-[96rem] px-4 pb-16 md:px-8" style={{ color: palette.text }}>
       <div className="space-y-10">
         {sortedCategories.map((category) => {
           const group = groupedByCategory[category._id];
@@ -165,7 +165,7 @@ const PublicMenuSections = ({
                               <div className="flex items-start justify-between gap-3">
                                 <h4 className="text-lg font-bold">{item.name}</h4>
                                 <p className="text-lg font-black">
-                                  ${Number(item.price || 0).toFixed(2)}
+                                  Rs {Number(item.price || 0).toFixed(2)}
                                 </p>
                               </div>
                               <p className="mt-2 text-sm" style={{ color: palette.muted }}>
@@ -182,7 +182,7 @@ const PublicMenuSections = ({
                                 <div className="mt-3 rounded-xl p-2 text-xs" style={{ backgroundColor: palette.panelBg, color: palette.muted }}>
                                   {item.portions.map((portion) => (
                                     <p key={`${item._id}-${portion.label}`}>
-                                      {portion.label}: ${Number(portion.price || 0).toFixed(2)}
+                                      {portion.label}: Rs {Number(portion.price || 0).toFixed(2)}
                                     </p>
                                   ))}
                                 </div>
@@ -221,7 +221,7 @@ const PublicMenuSections = ({
                       >
                         <h4 className="text-lg font-bold">{item.name}</h4>
                         <p className="mt-1 text-sm" style={{ color: palette.muted }}>{item.shortDescription || item.description}</p>
-                        <p className="mt-3 text-lg font-black">${Number(item.price || 0).toFixed(2)}</p>
+                        <p className="mt-3 text-lg font-black">Rs {Number(item.price || 0).toFixed(2)}</p>
                         {isCustomerView ? (
                           <button
                             onClick={(e) => {

@@ -1,17 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  FiClock,
-  FiGrid,
-  FiLogIn,
-  FiMapPin,
-  FiMenu,
-  FiMoon,
-  FiPhone,
-  FiShoppingCart,
-  FiSun,
-  FiX,
-} from "react-icons/fi";
 import menuService from "../../services/menu_Service";
 import themeService from "../../services/theme_Service";
 import { useAuth } from "../../context/AuthContext";
@@ -46,12 +34,11 @@ const fallbackTheme = {
 
 const Visitor_Home = ({ isCustomerView = false }) => {
   const navigate = useNavigate();
-  const { isAuthenticated, user, getPrimaryRole } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [theme, setTheme] = useState(fallbackTheme);
   const [menuData, setMenuData] = useState({ categories: [], subCategories: [], items: [], menuPdf: null });
   const [slideIndex, setSlideIndex] = useState(0);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { palette, resolvedMode, setUserMode, allowUserThemeToggle } = useResolvedColorMode(theme);
+  const { palette } = useResolvedColorMode(theme);
 
   useEffect(() => {
     const loadPageData = async () => {
@@ -78,18 +65,7 @@ const Visitor_Home = ({ isCustomerView = false }) => {
     return () => clearInterval(timer);
   }, [featuredSlides.length]);
 
-  const menuPath = isCustomerView ? "/customer/menu" : "/menu";
-  const primaryRole = getPrimaryRole(user?.roles || []);
-  const routeByRole = {
-    admin: "/admin",
-    manager: "/manager",
-    kitchen: "/kitchen",
-    cashier: "/cashier",
-    waiter: "/waiter",
-    customer: "/customer",
-  };
-  const dashboardPath = routeByRole[primaryRole] || "/dashboard";
-
+  const menuPath = isCustomerView ? "/customer/menu" : "#full-menu";
   const onPublicItemTap = () => {
     if (!isAuthenticated) {
       navigate("/auth/login");
@@ -106,7 +82,7 @@ const Visitor_Home = ({ isCustomerView = false }) => {
 
   return (
     <div className="min-h-screen overflow-hidden" style={{ background: palette.pageBg, color: palette.text }}>
-      <section className="relative mx-auto max-w-7xl px-4 pb-10 pt-6 md:px-8">
+      <section className="relative mx-auto w-full max-w-[96rem] px-4 pb-10 pt-6 md:px-8">
         <div className="pointer-events-none absolute inset-0 -z-10">
           <div className="hero-orb-left" style={{ background: `${theme.secondaryColor}80` }} />
           <div className="hero-orb-right" style={{ background: `${theme.primaryColor}80` }} />
@@ -115,98 +91,11 @@ const Visitor_Home = ({ isCustomerView = false }) => {
           className="overflow-hidden rounded-[2rem] p-5 text-white md:p-10"
           style={{ background: `linear-gradient(128deg, ${theme.primaryColor} 0%, ${theme.accentColor} 100%)` }}
         >
-          <nav>
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                {theme.logoImage ? <img src={theme.logoImage} alt="logo" className="h-11 w-11 rounded-full object-cover" /> : null}
-                <div>
-                  <p className="text-xs uppercase tracking-[0.22em] text-white/80">{theme.name}</p>
-                  <Link to="/" className="heading-3 text-white">{theme.logoText}</Link>
-                </div>
-              </div>
-
-              <div className="hidden items-center gap-2 text-sm md:flex">
-                <Link to="/" className="rounded-full px-4 py-2 transition-colors hover:bg-white/20">Home</Link>
-                <a href="#full-menu" className="rounded-full px-4 py-2 transition-colors hover:bg-white/20">Sections</a>
-                <Link to={menuPath} className="rounded-full px-4 py-2 transition-colors hover:bg-white/20">Menu</Link>
-                <a href="#site-footer" className="rounded-full px-4 py-2 transition-colors hover:bg-white/20">Contact</a>
-
-                {allowUserThemeToggle ? (
-                  <button
-                    onClick={() => setUserMode(resolvedMode === "dark" ? "light" : "dark")}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/30 px-4 py-2 transition-colors hover:bg-white/10"
-                  >
-                    {resolvedMode === "dark" ? <FiSun className="h-4 w-4" /> : <FiMoon className="h-4 w-4" />}
-                    {resolvedMode === "dark" ? "Light" : "Dark"}
-                  </button>
-                ) : null}
-
-                {!isAuthenticated ? (
-                  <>
-                    <Link to="/auth/login" className="inline-flex items-center gap-2 rounded-full border border-white/30 px-4 py-2 transition-colors hover:bg-white/10">
-                      <FiLogIn className="h-4 w-4" />
-                      Login
-                    </Link>
-                    <Link to="/auth/signup" className="btn-primary" style={{ background: theme.secondaryColor, color: theme.accentColor }}>
-                      Sign Up
-                    </Link>
-                  </>
-                ) : (
-                  <Link to={dashboardPath} className="rounded-full bg-white/20 px-4 py-2 font-semibold transition-colors hover:bg-white/30">
-                    Dashboard
-                  </Link>
-                )}
-              </div>
-
-              <button
-                className="inline-flex items-center gap-2 rounded-full border border-white/30 px-3 py-2 text-sm md:hidden"
-                onClick={() => setMobileMenuOpen((prev) => !prev)}
-                aria-label="Toggle menu"
-              >
-                {mobileMenuOpen ? <FiX className="h-4 w-4" /> : <FiMenu className="h-4 w-4" />}
-                {mobileMenuOpen ? "Close" : "Menu"}
-              </button>
-            </div>
-
-            {mobileMenuOpen ? (
-              <div className="mt-3 space-y-2 rounded-2xl bg-black/30 p-3 text-sm md:hidden backdrop-blur">
-                <Link to="/" onClick={() => setMobileMenuOpen(false)} className="block rounded-xl px-3 py-2 transition-colors hover:bg-white/15">Home</Link>
-                <a href="#full-menu" onClick={() => setMobileMenuOpen(false)} className="block rounded-xl px-3 py-2 transition-colors hover:bg-white/15">Sections</a>
-                <Link to={menuPath} onClick={() => setMobileMenuOpen(false)} className="block rounded-xl px-3 py-2 transition-colors hover:bg-white/15">Menu</Link>
-                <a href="#site-footer" onClick={() => setMobileMenuOpen(false)} className="block rounded-xl px-3 py-2 transition-colors hover:bg-white/15">Contact</a>
-                {allowUserThemeToggle ? (
-                  <button
-                    onClick={() => setUserMode(resolvedMode === "dark" ? "light" : "dark")}
-                    className="inline-flex w-full items-center gap-2 rounded-xl border border-white/30 px-3 py-2 text-left transition-colors hover:bg-white/10"
-                  >
-                    {resolvedMode === "dark" ? <FiSun className="h-4 w-4" /> : <FiMoon className="h-4 w-4" />}
-                    {resolvedMode === "dark" ? "Light Mode" : "Dark Mode"}
-                  </button>
-                ) : null}
-                {isAuthenticated ? (
-                  <Link to={dashboardPath} onClick={() => setMobileMenuOpen(false)} className="block rounded-xl bg-white/20 px-3 py-2 font-semibold transition-colors hover:bg-white/30">
-                    Dashboard
-                  </Link>
-                ) : null}
-              </div>
-            ) : null}
-          </nav>
-
           <div className="mt-8 grid items-center gap-8 md:grid-cols-2">
             <div className="animate-rise-in space-y-6">
               <div className="inline-block rounded-full bg-white/15 px-4 py-1.5 text-xs uppercase tracking-widest backdrop-blur">{theme.heroTagline}</div>
               <h1 className="heading-1 text-white leading-tight">{theme.heroTitle}</h1>
               <p className="text-lg text-white/85 max-w-xl">{theme.heroSubtitle}</p>
-              <div className="mt-8 flex flex-wrap gap-4 pt-4">
-                <Link to={menuPath} className="inline-flex items-center gap-2 rounded-full px-6 py-3 font-semibold" style={{ background: theme.secondaryColor, color: theme.accentColor }}>
-                  <FiShoppingCart className="h-4 w-4" />
-                  {isCustomerView ? "Order From Menu" : theme.ctaText}
-                </Link>
-                <a href="#full-menu" className="inline-flex items-center gap-2 rounded-full border border-white/40 px-6 py-3 font-semibold text-white hover:bg-white/10">
-                  <FiGrid className="h-4 w-4" />
-                  Browse Sections
-                </a>
-              </div>
             </div>
             <div className="animate-fade-in-up">
               <div className="relative rounded-[1.8rem] bg-white/10 p-3 backdrop-blur">
@@ -218,7 +107,7 @@ const Visitor_Home = ({ isCustomerView = false }) => {
                       <p className="text-lg font-black">{currentSlide?.name || "Chef Special"}</p>
                       <p className="text-sm text-slate-600">{currentSlide?.shortDescription || "Freshly prepared premium quality menu item."}</p>
                     </div>
-                    <p className="text-xl font-black text-slate-900">${Number(currentSlide?.price || 0).toFixed(2)}</p>
+                    <p className="text-xl font-black text-slate-900">Rs {Number(currentSlide?.price || 0).toFixed(2)}</p>
                   </div>
                 </div>
               </div>
@@ -239,56 +128,6 @@ const Visitor_Home = ({ isCustomerView = false }) => {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-10 md:px-8 space-y-8">
-        <div className="mb-4 grid gap-4 md:grid-cols-3">
-          <article className="card-elevated group" style={{ backgroundColor: palette.cardBg }}>
-            <div className="flex items-start gap-3">
-              <FiMapPin className="mt-0.5 h-6 w-6" />
-              <div className="flex-1">
-                <p className="text-xs uppercase tracking-[0.18em] font-semibold" style={{ color: palette.muted }}>Address</p>
-                <p className="mt-2 text-sm font-semibold">{theme.addressLine}, {theme.city}</p>
-              </div>
-            </div>
-          </article>
-          <article className="card-elevated group" style={{ backgroundColor: palette.cardBg }}>
-            <div className="flex items-start gap-3">
-              <FiPhone className="mt-0.5 h-6 w-6" />
-              <div className="flex-1">
-                <p className="text-xs uppercase tracking-[0.18em] font-semibold" style={{ color: palette.muted }}>Contact</p>
-                <p className="mt-2 text-sm font-semibold">{theme.contactPhone}</p>
-                <p className="text-xs font-medium mt-1" style={{ color: palette.muted }}>{theme.contactEmail}</p>
-              </div>
-            </div>
-          </article>
-          <article className="card-elevated group" style={{ backgroundColor: palette.cardBg }}>
-            <div className="flex items-start gap-3">
-              <FiClock className="mt-0.5 h-6 w-6" />
-              <div className="flex-1">
-                <p className="text-xs uppercase tracking-[0.18em] font-semibold" style={{ color: palette.muted }}>Open Hours</p>
-                <p className="mt-2 text-sm font-semibold">{theme.openingHours}</p>
-              </div>
-            </div>
-          </article>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Categories", value: menuData.categories.length },
-            { label: "Subcategories", value: menuData.subCategories.length },
-            { label: "Menu Items", value: menuData.items.length },
-            { label: "Featured", value: featuredSlides.length },
-          ].map((entry, idx) => (
-            <article
-              key={entry.label}
-              className="animate-fade-in-up card-elevated hover-lift"
-              style={{ animationDelay: `${idx * 90}ms`, backgroundColor: palette.cardBg }}
-            >
-              <p className="text-sm font-semibold" style={{ color: palette.muted }}>{entry.label}</p>
-              <p className="mt-3 heading-2" style={{ color: theme.primaryColor }}>{entry.value}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
       <PublicMenuSections
         categories={menuData.categories}
         subCategories={menuData.subCategories}
@@ -300,33 +139,33 @@ const Visitor_Home = ({ isCustomerView = false }) => {
       />
 
       <footer id="site-footer" className="mt-10">
-        <div className="mx-auto max-w-7xl overflow-hidden rounded-t-[2rem]">
+        <div className="mx-auto w-full max-w-[96rem] overflow-hidden rounded-t-[2rem]">
           <div className="px-6 py-12 text-center text-white space-y-4" style={{ background: `linear-gradient(120deg, ${theme.secondaryColor}cc 0%, ${theme.primaryColor}cc 100%)` }}>
             <p className="text-xs uppercase tracking-[0.22em] font-bold opacity-90">Book A Table</p>
             <h3 className="heading-1 text-white">Reserve Your Seat Now</h3>
             <p className="mx-auto max-w-2xl text-base text-white/90">Enjoy premium dishes crafted by our chef team. Perfect for families, business meetings and special occasions.</p>
             <Link to={menuPath} className="mt-6 inline-flex items-center gap-2 rounded-full bg-orange-500 px-6 py-3 font-semibold text-white hover:bg-orange-600">Reserve Table</Link>
           </div>
-          <div className="grid gap-8 px-6 py-12 md:grid-cols-4" style={{ backgroundColor: resolvedMode === "dark" ? "#111827" : "#4b4b43", color: "#e5e7eb" }}>
+          <div className="grid gap-8 px-6 py-12 md:grid-cols-4" style={{ backgroundColor: palette.panelBg, color: palette.text }}>
             <div>
               <div className="mb-3 flex items-center gap-2">{theme.logoImage ? <img src={theme.logoImage} alt="logo" className="h-10 w-10 rounded-full object-cover" /> : null}<p className="text-xl font-black">{theme.logoText}</p></div>
-              <p className="text-sm text-slate-300">{theme.footerNote}</p>
+              <p className="text-sm" style={{ color: palette.muted }}>{theme.footerNote}</p>
             </div>
             <div>
-              <p className="text-lg font-bold text-white">Menu</p>
-              <div className="mt-3 space-y-2 text-sm text-slate-300">{menuData.categories.slice(0, 5).map((c) => <p key={c._id}>{c.name}</p>)}</div>
+              <p className="text-lg font-bold">Menu</p>
+              <div className="mt-3 space-y-2 text-sm" style={{ color: palette.muted }}>{menuData.categories.slice(0, 5).map((c) => <p key={c._id}>{c.name}</p>)}</div>
             </div>
             <div>
-              <p className="text-lg font-bold text-white">Connect</p>
+              <p className="text-lg font-bold">Connect</p>
               <div className="mt-3 flex flex-wrap gap-2 text-xs">
                 {[["Facebook", theme.facebookUrl], ["Instagram", theme.instagramUrl], ["YouTube", theme.youtubeUrl], ["Twitter", theme.twitterUrl]].filter((x) => x[1]).map(([label, url]) => (
-                  <a key={label} href={url} target="_blank" rel="noreferrer" className="rounded-full border border-white/30 px-3 py-1.5">{label}</a>
+                  <a key={label} href={url} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-1.5" style={{ borderColor: palette.border }}>{label}</a>
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-lg font-bold text-white">Contact</p>
-              <div className="mt-3 space-y-2 text-sm text-slate-300">
+              <p className="text-lg font-bold">Contact</p>
+              <div className="mt-3 space-y-2 text-sm" style={{ color: palette.muted }}>
                 <p>{theme.addressLine}, {theme.city}, {theme.state}, {theme.country} {theme.postalCode}</p>
                 <p>{theme.contactPhone}</p><p>{theme.contactEmail}</p><p>{theme.openingHours}</p>
                 {menuData.menuPdf ? <a href={menuData.menuPdf.url} target="_blank" rel="noreferrer" className="inline-block font-semibold underline">Open Menu PDF</a> : null}

@@ -62,7 +62,7 @@ const Visitor_Menu = ({ isCustomerView = false }) => {
   return (
     <div className="min-h-screen pb-10" style={{ backgroundColor: palette.pageBg, color: palette.text }}>
       <section
-        className="mx-auto max-w-7xl rounded-b-[2rem] px-4 py-8 text-white md:px-8"
+        className="mx-auto w-full max-w-[96rem] rounded-b-[2rem] px-4 py-8 text-white md:px-8"
         style={{ background: `linear-gradient(120deg, ${theme.primaryColor} 0%, #0f172a 100%)` }}
       >
         <div className="flex flex-wrap items-center justify-between gap-6">
@@ -86,7 +86,7 @@ const Visitor_Menu = ({ isCustomerView = false }) => {
         </div>
       </section>
 
-      <section className="mx-auto mt-6 max-w-7xl px-4 md:px-8">
+      <section className="mx-auto mt-6 w-full max-w-[96rem] px-4 md:px-8">
         <div className="card-elevated space-y-4 p-6" style={{ backgroundColor: palette.panelBg }}>
           <div className="grid gap-3 md:grid-cols-5">
             <div className="relative">
@@ -142,7 +142,7 @@ const Visitor_Menu = ({ isCustomerView = false }) => {
       </section>
 
       {menuData.menuPdf ? (
-        <div className="mx-auto max-w-7xl px-4 md:px-8 py-6">
+        <div className="mx-auto w-full max-w-[96rem] px-4 md:px-8 py-6">
           <div className="card-elevated p-6" style={{ backgroundColor: palette.cardBg }}>
             <div className="flex items-start justify-between gap-4">
               <div>

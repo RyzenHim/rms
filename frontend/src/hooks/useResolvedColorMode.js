@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "rms_color_mode_override";
+const MODE_CHANGE_EVENT = "rms-color-mode-changed";
 
 const useResolvedColorMode = (theme = {}) => {
   const [systemDark, setSystemDark] = useState(() =>
     typeof window !== "undefined" ? window.matchMedia("(prefers-color-scheme: dark)").matches : false,
   );
-  const [overrideMode, setOverrideMode] = useState(() => localStorage.getItem(STORAGE_KEY) || "");
+  const [overrideMode, setOverrideMode] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) || "" : "",
+  );
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
@@ -19,6 +22,27 @@ const useResolvedColorMode = (theme = {}) => {
   const resolvedMode = effectivePreference === "system" ? (systemDark ? "dark" : "light") : effectivePreference;
 
   useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const syncOverrideMode = () => {
+      setOverrideMode(localStorage.getItem(STORAGE_KEY) || "");
+    };
+
+    const handleStorage = (event) => {
+      if (!event.key || event.key === STORAGE_KEY) {
+        syncOverrideMode();
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener(MODE_CHANGE_EVENT, syncOverrideMode);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener(MODE_CHANGE_EVENT, syncOverrideMode);
+    };
+  }, []);
+
+  useEffect(() => {
     document.documentElement.classList.toggle("dark", resolvedMode === "dark");
   }, [resolvedMode]);
 
@@ -26,10 +50,12 @@ const useResolvedColorMode = (theme = {}) => {
     if (!mode || mode === "system") {
       localStorage.removeItem(STORAGE_KEY);
       setOverrideMode("");
+      window.dispatchEvent(new Event(MODE_CHANGE_EVENT));
       return;
     }
     localStorage.setItem(STORAGE_KEY, mode);
     setOverrideMode(mode);
+    window.dispatchEvent(new Event(MODE_CHANGE_EVENT));
   };
 
   const palette = useMemo(

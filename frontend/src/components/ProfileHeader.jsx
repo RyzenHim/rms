@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiChevronDown, FiLogOut, FiUser } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
@@ -7,6 +7,13 @@ const ProfileHeader = () => {
   const { user, logout, getPrimaryRole } = useAuth();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
+
+  const profileImage = useMemo(() => String(user?.profileImage || "").trim(), [user?.profileImage]);
+
+  useEffect(() => {
+    setImageLoadFailed(false);
+  }, [profileImage]);
 
   if (!user) return null;
 
@@ -30,9 +37,18 @@ const ProfileHeader = () => {
         onClick={() => setProfileOpen((prev) => !prev)}
         className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-white border border-gray-300 hover:bg-gray-50 transition text-sm sm:text-base"
       >
-        <div className="w-8 h-8 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm">
-          {user.name?.charAt(0) || user.email?.charAt(0) || "U"}
-        </div>
+        {profileImage && !imageLoadFailed ? (
+          <img
+            src={profileImage}
+            alt={user.name || "User"}
+            onError={() => setImageLoadFailed(true)}
+            className="w-8 h-8 rounded-full object-cover border border-gray-200"
+          />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm">
+            {user.name?.charAt(0) || user.email?.charAt(0) || "U"}
+          </div>
+        )}
         <span className="hidden sm:inline font-medium text-gray-900">
           {user.name || user.email?.split("@")[0]}
         </span>

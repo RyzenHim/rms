@@ -17,7 +17,7 @@ const RoleDashboard = ({ roleLabel }) => {
         </article>
         <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <p className="text-xs uppercase tracking-wider text-slate-500">Revenue Today</p>
-          <p className="mt-1 text-3xl font-black text-slate-900">$1,850</p>
+          <p className="mt-1 text-3xl font-black text-slate-900">Rs 1,850</p>
         </article>
       </div>
     </div>

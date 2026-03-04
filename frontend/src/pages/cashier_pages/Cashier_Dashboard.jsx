@@ -54,8 +54,8 @@ const Cashier_Dashboard = () => {
       <section className="grid gap-4 md:grid-cols-4">
         <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-xs text-slate-500">Billing Queue</p><p className="mt-1 text-3xl font-black text-slate-900">{billQueue.length}</p></article>
         <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-xs text-slate-500">Paid Orders</p><p className="mt-1 text-3xl font-black text-slate-900">{paidOrders.length}</p></article>
-        <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-xs text-slate-500">Pending Amount</p><p className="mt-1 text-3xl font-black text-slate-900">${pendingAmount.toFixed(2)}</p></article>
-        <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-xs text-slate-500">Collected</p><p className="mt-1 text-3xl font-black text-slate-900">${collectedAmount.toFixed(2)}</p></article>
+        <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-xs text-slate-500">Pending Amount</p><p className="mt-1 text-3xl font-black text-slate-900">Rs {pendingAmount.toFixed(2)}</p></article>
+        <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-xs text-slate-500">Collected</p><p className="mt-1 text-3xl font-black text-slate-900">Rs {collectedAmount.toFixed(2)}</p></article>
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -65,7 +65,7 @@ const Cashier_Dashboard = () => {
             <article key={order._id} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-bold text-slate-900">{order.orderNumber} | Table {order.tableNumber}</p>
-                <p className="font-black text-slate-900">${Number(order.grandTotal || 0).toFixed(2)}</p>
+                <p className="font-black text-slate-900">Rs {Number(order.grandTotal || 0).toFixed(2)}</p>
               </div>
               <p className="mt-1 text-xs text-slate-600">Customer: {order.customerName || "Guest"} {order.customerPhone ? `| ${order.customerPhone}` : ""}</p>
               <div className="mt-2 flex flex-wrap items-center gap-2">

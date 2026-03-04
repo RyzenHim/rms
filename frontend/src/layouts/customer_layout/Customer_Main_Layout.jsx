@@ -1,18 +1,21 @@
-import { useMemo, useState } from "react";
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import ProfileHeader from "../../components/ProfileHeader";
 import useResolvedColorMode from "../../hooks/useResolvedColorMode";
 import { FiMoon, FiSun } from "react-icons/fi";
+import themeService from "../../services/theme_Service";
 
 const Customer_Main_Layout = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { resolvedMode, setUserMode, palette } = useResolvedColorMode({
+  const [theme, setTheme] = useState({
     colorMode: "system",
     allowUserThemeToggle: true,
     surfaceColor: "#f1f5f9",
   });
+  const [restaurantName, setRestaurantName] = useState("DelishDrop");
+  const { resolvedMode, setUserMode, palette, allowUserThemeToggle } = useResolvedColorMode(theme);
   const searchLinks = useMemo(
     () => [
       { to: "/customer", label: "Home" },
@@ -21,10 +24,25 @@ const Customer_Main_Layout = () => {
       { to: "/customer/my-reservations", label: "Reservations" },
       { to: "/customer/reservation-form", label: "Book Table" },
       { to: "/customer/profile", label: "Profile" },
-      { to: "/", label: "Public" },
     ],
     [],
   );
+
+  useEffect(() => {
+    const loadTheme = async () => {
+      try {
+        const data = await themeService.getActiveTheme();
+        const nextName = String(data?.theme?.name || data?.theme?.logoText || "").trim();
+        if (nextName) setRestaurantName(nextName);
+        if (data?.theme) {
+          setTheme((prev) => ({ ...prev, ...data.theme }));
+        }
+      } catch {
+        // Keep fallback name if theme API fails
+      }
+    };
+    loadTheme();
+  }, []);
 
   const onSearchSubmit = (e) => {
     e.preventDefault();
@@ -50,7 +68,7 @@ const Customer_Main_Layout = () => {
       <header className="sticky top-0 z-40 border-b backdrop-blur" style={{ borderColor: palette.border, backgroundColor: `${palette.panelBg}E6` }}>
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:px-4 md:px-8">
           <div className="flex items-center gap-2 sm:gap-3 flex-1 md:flex-none">
-            <p className="font-black text-sm sm:text-base truncate" style={{ color: palette.text }}>Customer</p>
+            <p className="font-black italic uppercase tracking-[0.14em] text-sm sm:text-base truncate" style={{ color: palette.text }}>{restaurantName}</p>
             <nav className="hidden items-center gap-0.5 lg:flex">
               <NavLink
                 to="/customer"
@@ -97,9 +115,6 @@ const Customer_Main_Layout = () => {
               >
                 Reservations
               </NavLink>
-              <Link to="/" className="rounded-full px-2.5 py-1.5 text-xs sm:text-sm font-semibold hover:bg-slate-100" style={{ color: palette.text }}>
-                Public
-              </Link>
             </nav>
           </div>
 
@@ -117,27 +132,31 @@ const Customer_Main_Layout = () => {
 
           {/* Desktop Profile & Logout - Hidden on mobile */}
           <div className="hidden md:flex items-center gap-2">
-            <button
-              onClick={() => setUserMode(resolvedMode === "dark" ? "light" : "dark")}
-              className="rounded-full border p-2 transition"
-              style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
-              title={resolvedMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {resolvedMode === "dark" ? <FiSun className="h-4 w-4" /> : <FiMoon className="h-4 w-4" />}
-            </button>
+            {allowUserThemeToggle ? (
+              <button
+                onClick={() => setUserMode(resolvedMode === "dark" ? "light" : "dark")}
+                className="rounded-full border p-2 transition"
+                style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
+                title={resolvedMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {resolvedMode === "dark" ? <FiSun className="h-4 w-4" /> : <FiMoon className="h-4 w-4" />}
+              </button>
+            ) : null}
             <ProfileHeader />
           </div>
 
           {/* Mobile Theme + Menu Buttons */}
           <div className="flex items-center gap-2 md:hidden">
-            <button
-              onClick={() => setUserMode(resolvedMode === "dark" ? "light" : "dark")}
-              className="rounded-full border p-2 transition"
-              style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
-              title={resolvedMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {resolvedMode === "dark" ? <FiSun className="h-4 w-4" /> : <FiMoon className="h-4 w-4" />}
-            </button>
+            {allowUserThemeToggle ? (
+              <button
+                onClick={() => setUserMode(resolvedMode === "dark" ? "light" : "dark")}
+                className="rounded-full border p-2 transition"
+                style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
+                title={resolvedMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {resolvedMode === "dark" ? <FiSun className="h-4 w-4" /> : <FiMoon className="h-4 w-4" />}
+              </button>
+            ) : null}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="rounded-lg p-2 transition"
@@ -207,9 +226,6 @@ const Customer_Main_Layout = () => {
                 }>
                 Book Table
               </NavLink>
-              <Link to="/" onClick={handleNavClick} className="border-b px-4 py-3 text-sm font-semibold hover:bg-slate-50" style={{ color: palette.text }}>
-                Public Menu
-              </Link>
             </nav>
 
             {/* Mobile Profile & Logout */}

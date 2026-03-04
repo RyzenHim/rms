@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { useAuth } from "../../context/AuthContext";
+import api, { withAuth } from "../../services/api";
 
 const ReviewForm = ({ menuItemId, onReviewSubmitted, theme }) => {
+  const { token } = useAuth();
   const [rating, setRating] = useState(5);
   const [title, setTitle] = useState("");
   const [comment, setComment] = useState("");
@@ -25,34 +28,26 @@ const ReviewForm = ({ menuItemId, onReviewSubmitted, theme }) => {
 
     setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/reviews`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
+      const { data } = await api.post(
+        "/reviews",
+        {
           menuItemId,
           rating: parseInt(rating),
           title,
           comment,
           highlights,
-        }),
-      });
+        },
+        withAuth(token)
+      );
 
-      const data = await response.json();
-      if (response.ok) {
-        setMessage("Review submitted successfully!");
-        setRating(5);
-        setTitle("");
-        setComment("");
-        setHighlights([]);
-        if (onReviewSubmitted) onReviewSubmitted();
-      } else {
-        setMessage(data.message || "Failed to submit review");
-      }
+      setMessage(data?.message || "Review submitted successfully!");
+      setRating(5);
+      setTitle("");
+      setComment("");
+      setHighlights([]);
+      if (onReviewSubmitted) onReviewSubmitted();
     } catch (err) {
-      setMessage(err.message);
+      setMessage(err?.response?.data?.message || "Failed to submit review");
     } finally {
       setLoading(false);
     }

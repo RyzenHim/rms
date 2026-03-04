@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import api from "../../services/api";
 
 const ReviewsList = ({ menuItemId, theme, refreshTrigger }) => {
   const [reviews, setReviews] = useState([]);
@@ -7,17 +8,12 @@ const ReviewsList = ({ menuItemId, theme, refreshTrigger }) => {
   const [sortBy, setSortBy] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    loadReviews();
-  }, [menuItemId, sortBy, currentPage, refreshTrigger]);
-
-  const loadReviews = async () => {
+  const loadReviews = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/reviews/item/${menuItemId}?page=${currentPage}&limit=5&sortBy=${sortBy}`
-      );
-      const data = await response.json();
+      const { data } = await api.get(`/reviews/item/${menuItemId}`, {
+        params: { page: currentPage, limit: 5, sortBy },
+      });
       setReviews(data.reviews);
       setStats(data.stats);
     } catch (err) {
@@ -25,7 +21,11 @@ const ReviewsList = ({ menuItemId, theme, refreshTrigger }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, menuItemId, sortBy]);
+
+  useEffect(() => {
+    loadReviews();
+  }, [loadReviews, refreshTrigger]);
 
   const getRatingColor = (rating) => {
     if (rating >= 4) return "text-green-600";

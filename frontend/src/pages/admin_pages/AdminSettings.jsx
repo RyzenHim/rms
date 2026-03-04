@@ -63,35 +63,6 @@ const AdminSettings = () => {
     }
   };
 
-  const fields = [
-    ["Restaurant Name", "name", "text"],
-    ["Logo Text", "logoText", "text"],
-    ["Logo Image URL", "logoImage", "text"],
-    ["Hero Title", "heroTitle", "text"],
-    ["Hero Tagline", "heroTagline", "text"],
-    ["CTA Text", "ctaText", "text"],
-    ["Menu Heading", "menuHeading", "text"],
-    ["Menu Sub Heading", "menuSubHeading", "text"],
-    ["Primary Color", "primaryColor", "color"],
-    ["Secondary Color", "secondaryColor", "color"],
-    ["Accent Color", "accentColor", "color"],
-    ["Surface Color", "surfaceColor", "color"],
-    ["Hero Image URL", "heroImage", "text"],
-    ["Address", "addressLine", "text"],
-    ["City", "city", "text"],
-    ["State", "state", "text"],
-    ["Country", "country", "text"],
-    ["Postal Code", "postalCode", "text"],
-    ["Contact Phone", "contactPhone", "text"],
-    ["Contact Email", "contactEmail", "text"],
-    ["Opening Hours", "openingHours", "text"],
-    ["Facebook URL", "facebookUrl", "text"],
-    ["Instagram URL", "instagramUrl", "text"],
-    ["YouTube URL", "youtubeUrl", "text"],
-    ["Twitter URL", "twitterUrl", "text"],
-    ["Default Color Mode", "colorMode", "select"],
-  ];
-
   return (
     <div className="space-y-8">
       <div className="space-y-3">

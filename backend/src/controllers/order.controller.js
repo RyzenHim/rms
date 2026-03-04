@@ -1,6 +1,8 @@
 const Order = require("../models/order.model");
 const MenuItem = require("../models/menuItem.model");
 const Customer = require("../models/customer.model");
+const Table = require("../models/table.model");
+const jwt = require("jsonwebtoken");
 
 const TAX_RATE = 0.05;
 
@@ -80,13 +82,49 @@ exports.getOrders = async (req, res) => {
 
 exports.createOrder = async (req, res) => {
     try {
-        const { tableNumber, customerName = "", customerEmail = "", customerPhone = "", notes = "", items = [] } = req.body;
+        const { tableNumber, qrToken = "", customerName = "", customerEmail = "", customerPhone = "", notes = "", items = [] } = req.body;
+        const roles = req.user.roles || [];
+        const isCustomer = roles.includes("customer");
 
         if (!tableNumber || !String(tableNumber).trim()) {
             return res.status(400).json({ message: "Table number is required" });
         }
         if (!Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ message: "At least one order item is required" });
+        }
+
+        const normalizedTableNumber = String(tableNumber).trim();
+        const table = await Table.findOne({ tableNumber: normalizedTableNumber, isActive: true }).select("_id tableNumber status");
+        if (!table) {
+            return res.status(400).json({ message: "Invalid or inactive table number" });
+        }
+
+        const tokenSecret = process.env.QR_SIGNING_SECRET || process.env.JWT_SECRET;
+        if (qrToken) {
+            if (!tokenSecret) {
+                return res.status(500).json({ message: "QR signing secret is not configured" });
+            }
+
+            let decoded;
+            try {
+                decoded = jwt.verify(String(qrToken), tokenSecret);
+            } catch (error) {
+                return res.status(400).json({ message: "Invalid or expired table QR token" });
+            }
+
+            const tokenTableId = String(decoded.tableId || "");
+            const tokenTableNumber = String(decoded.tableNumber || "");
+            const tokenPurpose = String(decoded.purpose || "");
+
+            if (
+                tokenPurpose !== "table_qr" ||
+                tokenTableId !== String(table._id) ||
+                tokenTableNumber !== table.tableNumber
+            ) {
+                return res.status(400).json({ message: "QR token does not match selected table" });
+            }
+        } else if (isCustomer) {
+            return res.status(400).json({ message: "Please scan a valid table QR code before placing order" });
         }
 
         const normalizedItems = [];
@@ -125,7 +163,7 @@ exports.createOrder = async (req, res) => {
 
         const order = await Order.create({
             orderNumber: getOrderNumber(),
-            tableNumber: String(tableNumber).trim(),
+            tableNumber: table.tableNumber,
             customerName: String(customerName || "").trim(),
             customerEmail: String(customerEmail || "").trim().toLowerCase(),
             customerPhone: String(customerPhone || "").trim(),
@@ -141,7 +179,7 @@ exports.createOrder = async (req, res) => {
             .populate("createdBy", "name email roles")
             .populate("items.menuItem", "name image");
 
-        if ((req.user.roles || []).includes("customer")) {
+        if (isCustomer) {
             const customer = await Customer.findOne({ user: req.user._id });
             if (customer) {
                 if (!customer.phone && customerPhone) customer.phone = customerPhone;
@@ -237,6 +275,37 @@ exports.updatePaymentStatus = async (req, res) => {
         return res.status(200).json({ message: "Payment status updated", order: populated });
     } catch (error) {
         console.error("UPDATE PAYMENT STATUS ERROR:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+exports.cancelMyOrder = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const order = await Order.findById(id);
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        if (String(order.createdBy) !== String(req.user._id)) {
+            return res.status(403).json({ message: "You can only cancel your own orders" });
+        }
+
+        if (!["placed", "received"].includes(order.status)) {
+            return res.status(400).json({ message: "Order can only be cancelled before kitchen starts preparing" });
+        }
+
+        order.status = "cancelled";
+        await order.save();
+
+        const populated = await Order.findById(order._id)
+            .populate("createdBy", "name email roles")
+            .populate("items.menuItem", "name image");
+
+        return res.status(200).json({ message: "Order cancelled", order: populated });
+    } catch (error) {
+        console.error("CANCEL ORDER ERROR:", error);
         return res.status(500).json({ message: "Internal server error" });
     }
 };

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { FiCheckCircle, FiClock, FiCreditCard, FiFilter, FiGrid, FiMinus, FiPhone, FiPlus, FiSearch, FiShoppingCart, FiTrash2, FiUser } from "react-icons/fi";
+import { FiClock, FiCreditCard, FiGrid, FiMinus, FiPlus, FiSearch, FiShoppingCart, FiTrash2 } from "react-icons/fi";
 import menuService from "../../services/menu_Service";
 import themeService from "../../services/theme_Service";
 import orderService from "../../services/order_Service";
@@ -31,6 +31,7 @@ const Customer_Menu = () => {
   const [submitting, setSubmitting] = useState(false);
   const [checkout, setCheckout] = useState({
     tableNumber: searchParams.get("table") || "",
+    qrToken: searchParams.get("qrToken") || "",
     customerName: user?.name || "",
     customerEmail: user?.email || "",
     customerPhone: "",
@@ -38,6 +39,14 @@ const Customer_Menu = () => {
   });
   const [cart, setCart] = useState([]);
   const { palette } = useResolvedColorMode(theme);
+  const statusMeta = {
+    placed: { bg: "bg-slate-100", text: "text-slate-700", label: "Placed" },
+    received: { bg: "bg-blue-100", text: "text-blue-800", label: "Received" },
+    preparing: { bg: "bg-amber-100", text: "text-amber-800", label: "Preparing" },
+    done_preparing: { bg: "bg-emerald-100", text: "text-emerald-800", label: "Ready To Serve" },
+    served: { bg: "bg-green-100", text: "text-green-800", label: "Served" },
+    cancelled: { bg: "bg-rose-100", text: "text-rose-700", label: "Cancelled" },
+  };
 
   const loadData = async () => {
     try {
@@ -119,6 +128,7 @@ const Customer_Menu = () => {
 
       await orderService.createOrder(token, {
         tableNumber: checkout.tableNumber,
+        qrToken: checkout.qrToken,
         customerName: checkout.customerName,
         customerEmail: checkout.customerEmail,
         customerPhone: checkout.customerPhone,
@@ -157,7 +167,7 @@ const Customer_Menu = () => {
         </div>
       </section>
 
-      <section className="mx-auto mt-6 max-w-7xl px-4 md:px-8">
+      <section className="mx-auto mt-6 w-full max-w-[96rem] px-4 md:px-8">
         <div className="card-elevated space-y-4 p-6" style={{ backgroundColor: palette.panelBg }}>
           <div className="grid gap-3 md:grid-cols-5">
             <div className="relative">
@@ -212,7 +222,7 @@ const Customer_Menu = () => {
         </div>
       </section>
 
-      <div className="mx-auto mt-6 grid max-w-7xl gap-6 px-4 md:px-8 lg:grid-cols-[1fr_360px]">
+      <div className="mx-auto mt-6 grid w-full max-w-[96rem] gap-6 px-4 md:px-8 xl:grid-cols-[1fr_380px]">
         <div>
           <PublicMenuSections
             categories={menuData.categories}
@@ -230,7 +240,7 @@ const Customer_Menu = () => {
           />
         </div>
 
-        <aside className="space-y-4">
+        <aside className="space-y-4 xl:sticky xl:top-24 xl:h-fit">
           <section className="card-elevated overflow-hidden p-0" style={{ backgroundColor: palette.panelBg }}>
             <div className="bg-gradient-to-r p-5" style={{ background: `linear-gradient(135deg, ${theme.primaryColor} 0%, #10b981 100%)` }}>
               <h3 className="inline-flex items-center gap-2 heading-4 text-white"><FiShoppingCart className="h-5 w-5" />Order Tray ({cart.length})</h3>
@@ -286,7 +296,17 @@ const Customer_Menu = () => {
             <h3 className="inline-flex items-center gap-2 heading-4" style={{ color: palette.text }}><FiCreditCard className="h-5 w-5" />Checkout</h3>
             <div className="form-group">
               <label className="form-label">Table Number *</label>
-              <input type="text" placeholder="e.g., T01" value={checkout.tableNumber} onChange={(e) => setCheckout((prev) => ({ ...prev, tableNumber: e.target.value }))} className="input-base" />
+              <input
+                type="text"
+                placeholder="e.g., T01"
+                value={checkout.tableNumber}
+                onChange={(e) => setCheckout((prev) => ({ ...prev, tableNumber: e.target.value }))}
+                className="input-base"
+                readOnly={Boolean(checkout.qrToken)}
+              />
+              {checkout.qrToken ? (
+                <p className="text-xs text-emerald-700 mt-1">Table locked by scanned QR token.</p>
+              ) : null}
             </div>
             <div className="form-group">
               <label className="form-label">Your Name *</label>
@@ -316,19 +336,12 @@ const Customer_Menu = () => {
             </div>
             <div className="max-h-[220px] space-y-2 overflow-auto">
               {orders.map((order) => {
-                const statusColors = {
-                  pending: { bg: "bg-yellow-100", text: "text-yellow-800" },
-                  confirmed: { bg: "bg-blue-100", text: "text-blue-800" },
-                  preparing: { bg: "bg-orange-100", text: "text-orange-800" },
-                  ready: { bg: "bg-green-100", text: "text-green-800" },
-                  served: { bg: "bg-emerald-100", text: "text-emerald-800" },
-                };
-                const colors = statusColors[order.status] || statusColors.pending;
+                const colors = statusMeta[order.status] || statusMeta.placed;
                 return (
                   <article key={order._id} className={`${colors.bg} space-y-1 rounded-lg p-3 text-xs`}>
                     <div className="flex items-start justify-between">
                       <p className="font-bold">{order.orderNumber}</p>
-                      <span className={`${colors.text} rounded-full px-2 py-0.5 text-xs font-bold`}>{order.status}</span>
+                      <span className={`${colors.text} rounded-full px-2 py-0.5 text-xs font-bold`}>{colors.label}</span>
                     </div>
                     <p className="text-slate-700">Table {order.tableNumber}</p>
                     <p className="line-clamp-1 text-slate-700">{order.items?.map((x) => `${x.name} x ${x.quantity}`).join(", ")}</p>

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { useAuth } from "../../context/AuthContext";
+import api, { withAuth } from "../../services/api";
 
 const AdminTableManager = () => {
+  const { token } = useAuth();
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -16,19 +18,16 @@ const AdminTableManager = () => {
     description: "",
   });
 
-  const token = localStorage.getItem("token");
-
   useEffect(() => {
+    if (!token) return;
     fetchTables();
     fetchStats();
-  }, []);
+  }, [token]);
 
   const fetchTables = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("/api/tables", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get("/tables", withAuth(token));
       setTables(response.data.tables || []);
       setError("");
     } catch (err) {
@@ -40,9 +39,7 @@ const AdminTableManager = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get("/api/tables/stats/all", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get("/tables/stats/all", withAuth(token));
       setStats(response.data.stats);
     } catch (err) {
       console.error("Failed to fetch stats:", err);
@@ -67,18 +64,16 @@ const AdminTableManager = () => {
 
     try {
       if (editingTable) {
-        const response = await axios.put(
-          `/api/tables/${editingTable._id}`,
+        const response = await api.put(
+          `/tables/${editingTable._id}`,
           formData,
-          { headers: { Authorization: `Bearer ${token}` } }
+          withAuth(token)
         );
         setTables(
           tables.map((t) => (t._id === editingTable._id ? response.data.table : t))
         );
       } else {
-        const response = await axios.post("/api/tables", formData, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await api.post("/tables", formData, withAuth(token));
         setTables([...tables, response.data.table]);
       }
 
@@ -114,9 +109,7 @@ const AdminTableManager = () => {
     if (!window.confirm("Are you sure you want to delete this table?")) return;
 
     try {
-      await axios.delete(`/api/tables/${tableId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.delete(`/tables/${tableId}`, withAuth(token));
       setTables(tables.filter((t) => t._id !== tableId));
       fetchStats();
     } catch (err) {
@@ -126,10 +119,10 @@ const AdminTableManager = () => {
 
   const handleStatusChange = async (tableId, newStatus) => {
     try {
-      const response = await axios.patch(
-        `/api/tables/${tableId}/status`,
+      const response = await api.patch(
+        `/tables/${tableId}/status`,
         { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
+        withAuth(token)
       );
       setTables(tables.map((t) => (t._id === tableId ? response.data.table : t)));
       fetchStats();
@@ -177,7 +170,7 @@ const AdminTableManager = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-8">
           <div className="bg-green-50 border-l-4 border-green-600 p-2 sm:p-4 rounded">
             <p className="text-gray-600 text-xs sm:text-sm font-semibold">Total</p>
-            <p className="text-lg sm:text-2xl font-bold text-green-600">{stats.total}</p>
+            <p className="text-lg sm:text-2xl font-bold text-green-600">{stats.totalTables}</p>
           </div>
           <div className="bg-blue-50 border-l-4 border-blue-600 p-2 sm:p-4 rounded">
             <p className="text-gray-600 text-xs sm:text-sm font-semibold">Available</p>
@@ -308,11 +301,11 @@ const AdminTableManager = () => {
                     Table Number*
                   </label>
                   <input
-                    type="number"
+                    type="text"
                     name="tableNumber"
                     value={formData.tableNumber}
                     onChange={handleInputChange}
-                    placeholder="e.g., 1, 2, 3..."
+                    placeholder="e.g., T01, A1, 1"
                     className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     required
                   />

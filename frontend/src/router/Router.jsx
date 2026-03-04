@@ -81,7 +81,7 @@ const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: withLazy(<Customer_Menu />),
+            element: withLazy(<Customer_Home />),
           },
           {
             path: "home",

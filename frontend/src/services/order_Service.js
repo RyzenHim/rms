@@ -20,6 +20,11 @@ const orderService = {
     const { data } = await api.patch(`/orders/${id}/payment`, payload, withAuth(token));
     return data;
   },
+
+  async cancelMyOrder(token, id) {
+    const { data } = await api.patch(`/orders/${id}/cancel`, {}, withAuth(token));
+    return data;
+  },
 };
 
 export default orderService;

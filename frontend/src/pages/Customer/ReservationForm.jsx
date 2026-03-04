@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import api, { withAuth } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 
 const ReservationForm = () => {
   const navigate = useNavigate();
+  const { token } = useAuth();
   const [formData, setFormData] = useState({
     reservationDate: "",
     reservationTime: "18:00",
@@ -36,7 +38,7 @@ const ReservationForm = () => {
 
     setLoading(true);
     try {
-      const response = await axios.get("/api/tables/available", {
+      const response = await api.get("/tables/available", {
         params: {
           date: formData.reservationDate,
           time: formData.reservationTime,
@@ -76,8 +78,8 @@ const ReservationForm = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post(
-        "/api/reservations",
+      await api.post(
+        "/reservations",
         {
           tableId: selectedTable._id,
           numberOfGuests: formData.numberOfGuests,
@@ -86,11 +88,7 @@ const ReservationForm = () => {
           occasion: formData.occasion,
           specialRequests: formData.specialRequests,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
+        withAuth(token)
       );
 
       setSuccess("Reservation created successfully!");

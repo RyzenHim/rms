@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const EnhancedMenuFilters = ({ onFilterChange, items, theme }) => {
+const EnhancedMenuFilters = ({ onFilterChange, items }) => {
   const [priceRange, setPriceRange] = useState([0, 1000]);
   const [minRating, setMinRating] = useState(0);
   const [isVegetarian, setIsVegetarian] = useState(null);

@@ -52,7 +52,7 @@ const Manager_Dashboard = () => {
         <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-xs text-slate-500">Kitchen Pending</p><p className="mt-1 text-3xl font-black text-slate-900">{stats.pendingKitchen}</p></article>
         <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-xs text-slate-500">Ready To Serve</p><p className="mt-1 text-3xl font-black text-slate-900">{stats.readyToServe}</p></article>
         <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-xs text-slate-500">Served Orders</p><p className="mt-1 text-3xl font-black text-slate-900">{stats.servedToday}</p></article>
-        <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-xs text-slate-500">Tracked Revenue</p><p className="mt-1 text-3xl font-black text-slate-900">${stats.revenue.toFixed(2)}</p></article>
+        <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-xs text-slate-500">Tracked Revenue</p><p className="mt-1 text-3xl font-black text-slate-900">Rs {stats.revenue.toFixed(2)}</p></article>
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4">

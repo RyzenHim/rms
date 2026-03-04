@@ -73,7 +73,7 @@ const RoleOrders = ({ roleLabel }) => {
               Items: {order.items?.map((x) => `${x.name} x${x.quantity}`).join(", ")}
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Total: ${Number(order.grandTotal || 0).toFixed(2)} | By: {order.createdBy?.name || "Unknown"}
+              Total: Rs {Number(order.grandTotal || 0).toFixed(2)} | By: {order.createdBy?.name || "Unknown"}
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {["received", "preparing", "done_preparing", "served", "cancelled"].map((status) => (

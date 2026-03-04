@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const { getOrders, createOrder, updateOrderStatus, updatePaymentStatus } = require("../controllers/order.controller");
+const { getOrders, createOrder, updateOrderStatus, updatePaymentStatus, cancelMyOrder } = require("../controllers/order.controller");
 const { authenticate } = require("../middlewares/authenticate");
 const { authorizeRoles } = require("../middlewares/authorize");
 
@@ -26,6 +26,12 @@ router.patch(
     authenticate,
     authorizeRoles("cashier", "admin", "manager"),
     updatePaymentStatus
+);
+router.patch(
+    "/:id/cancel",
+    authenticate,
+    authorizeRoles("customer"),
+    cancelMyOrder
 );
 
 module.exports = router;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import api, { withAuth } from "../../services/api";
 
 const AdminInventory = () => {
   const { token } = useAuth();
@@ -26,24 +27,22 @@ const AdminInventory = () => {
   });
 
   useEffect(() => {
+    if (!token) return;
     loadInventory();
     loadCategories();
-  }, [filterCategory]);
+  }, [filterCategory, token]);
 
   const loadInventory = async () => {
     try {
-      const url = filterCategory === "all" 
-        ? `${import.meta.env.VITE_API_URL}/api/inventory` 
-        : `${import.meta.env.VITE_API_URL}/api/inventory?category=${filterCategory}`;
-      
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
-      setItems(data.items);
-      setStats(data.stats);
+      const query = filterCategory === "all" ? "" : `?category=${encodeURIComponent(filterCategory)}`;
+      const { data } = await api.get(`/inventory${query}`, withAuth(token));
+      setItems(data?.items || []);
+      setStats(data?.stats || null);
+      setMessage("");
     } catch (err) {
-      setMessage("Failed to load inventory");
+      setItems([]);
+      setStats(null);
+      setMessage(err?.response?.data?.message || "Failed to load inventory");
     } finally {
       setLoading(false);
     }
@@ -51,14 +50,26 @@ const AdminInventory = () => {
 
   const loadCategories = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory/categories`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
-      setCategories(data.categories);
+      const { data } = await api.get("/inventory/categories", withAuth(token));
+      setCategories(data?.categories || []);
     } catch (err) {
-      console.error("Failed to load categories");
+      console.error("Failed to load categories", err);
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      description: "",
+      category: "vegetables",
+      unit: "kg",
+      currentStock: 0,
+      minimumThreshold: 10,
+      maximumStock: 100,
+      unitCost: 0,
+      supplier: "",
+      location: "",
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -66,44 +77,19 @@ const AdminInventory = () => {
     setLoading(true);
 
     try {
-      const url = editingId
-        ? `${import.meta.env.VITE_API_URL}/api/inventory/${editingId}`
-        : `${import.meta.env.VITE_API_URL}/api/inventory`;
-
-      const method = editingId ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        setMessage(`Item ${editingId ? "updated" : "created"} successfully`);
-        setFormData({
-          name: "",
-          description: "",
-          category: "vegetables",
-          unit: "kg",
-          currentStock: 0,
-          minimumThreshold: 10,
-          maximumStock: 100,
-          unitCost: 0,
-          supplier: "",
-          location: "",
-        });
-        setEditingId(null);
-        setShowForm(false);
-        loadInventory();
+      if (editingId) {
+        await api.put(`/inventory/${editingId}`, formData, withAuth(token));
       } else {
-        setMessage(data.message || "Failed to save item");
+        await api.post("/inventory", formData, withAuth(token));
       }
+
+      setMessage(`Item ${editingId ? "updated" : "created"} successfully`);
+      resetForm();
+      setEditingId(null);
+      setShowForm(false);
+      loadInventory();
     } catch (err) {
-      setMessage(err.message);
+      setMessage(err?.response?.data?.message || "Failed to save item");
     } finally {
       setLoading(false);
     }
@@ -111,7 +97,13 @@ const AdminInventory = () => {
 
   const handleEdit = (item) => {
     setEditingId(item._id);
-    setFormData(item);
+    setFormData({
+      ...item,
+      currentStock: Number(item.currentStock || 0),
+      minimumThreshold: Number(item.minimumThreshold || 0),
+      maximumStock: Number(item.maximumStock || 0),
+      unitCost: Number(item.unitCost || 0),
+    });
     setShowForm(true);
   };
 
@@ -119,44 +111,30 @@ const AdminInventory = () => {
     if (!window.confirm("Are you sure?")) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        setMessage("Item deleted successfully");
-        loadInventory();
-      } else {
-        setMessage("Failed to delete item");
-      }
+      await api.delete(`/inventory/${id}`, withAuth(token));
+      setMessage("Item deleted successfully");
+      loadInventory();
     } catch (err) {
-      setMessage(err.message);
+      setMessage(err?.response?.data?.message || "Failed to delete item");
     }
   };
 
   const updateStock = async (id, type) => {
-    const quantity = prompt(`Enter quantity to ${type}:`, "1");
-    if (!quantity) return;
+    const quantityInput = prompt(`Enter quantity to ${type}:`, "1");
+    if (!quantityInput) return;
+
+    const quantity = parseInt(quantityInput, 10);
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      setMessage("Please enter a valid positive quantity");
+      return;
+    }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory/${id}/stock`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ quantity: parseInt(quantity), type }),
-      });
-
-      if (response.ok) {
-        setMessage(`Stock ${type}ed successfully`);
-        loadInventory();
-      } else {
-        setMessage("Failed to update stock");
-      }
+      await api.patch(`/inventory/${id}/stock`, { quantity, type }, withAuth(token));
+      setMessage(`Stock ${type}ed successfully`);
+      loadInventory();
     } catch (err) {
-      setMessage(err.message);
+      setMessage(err?.response?.data?.message || "Failed to update stock");
     }
   };
 
@@ -185,7 +163,6 @@ const AdminInventory = () => {
         </div>
       )}
 
-      {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="card-elevated p-6">
@@ -198,12 +175,11 @@ const AdminInventory = () => {
           </div>
           <div className="card-elevated p-6">
             <p className="text-sm text-slate-600 mb-2">Total Inventory Value</p>
-            <p className="heading-3">₹{stats.totalValue.toLocaleString()}</p>
+            <p className="heading-3">Rs {Number(stats.totalValue || 0).toLocaleString()}</p>
           </div>
         </div>
       )}
 
-      {/* Form */}
       {showForm && (
         <form onSubmit={handleSubmit} className="card-elevated p-6 space-y-4">
           <h3 className="heading-4">{editingId ? "Edit Item" : "Add New Item"}</h3>
@@ -242,7 +218,7 @@ const AdminInventory = () => {
               type="number"
               placeholder="Current Stock"
               value={formData.currentStock}
-              onChange={(e) => setFormData({ ...formData, currentStock: parseInt(e.target.value) })}
+              onChange={(e) => setFormData({ ...formData, currentStock: parseInt(e.target.value || "0", 10) })}
               className="input-base"
               required
             />
@@ -250,7 +226,7 @@ const AdminInventory = () => {
               type="number"
               placeholder="Minimum Threshold"
               value={formData.minimumThreshold}
-              onChange={(e) => setFormData({ ...formData, minimumThreshold: parseInt(e.target.value) })}
+              onChange={(e) => setFormData({ ...formData, minimumThreshold: parseInt(e.target.value || "0", 10) })}
               className="input-base"
               required
             />
@@ -258,15 +234,15 @@ const AdminInventory = () => {
               type="number"
               placeholder="Maximum Stock"
               value={formData.maximumStock}
-              onChange={(e) => setFormData({ ...formData, maximumStock: parseInt(e.target.value) })}
+              onChange={(e) => setFormData({ ...formData, maximumStock: parseInt(e.target.value || "0", 10) })}
               className="input-base"
               required
             />
             <input
               type="number"
-              placeholder="Unit Cost (₹)"
+              placeholder="Unit Cost (Rs)"
               value={formData.unitCost}
-              onChange={(e) => setFormData({ ...formData, unitCost: parseFloat(e.target.value) })}
+              onChange={(e) => setFormData({ ...formData, unitCost: parseFloat(e.target.value || "0") })}
               className="input-base"
               step="0.01"
               required
@@ -311,7 +287,6 @@ const AdminInventory = () => {
         </form>
       )}
 
-      {/* Filter */}
       <div>
         <label className="form-label">Filter by Category</label>
         <select
@@ -331,7 +306,6 @@ const AdminInventory = () => {
         </select>
       </div>
 
-      {/* Items Table */}
       {loading ? (
         <p className="text-center py-8 text-slate-600">Loading inventory...</p>
       ) : (
@@ -364,20 +338,20 @@ const AdminInventory = () => {
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-1 rounded-full ${status.color}`}>{status.label}</span>
                     </td>
-                    <td className="px-4 py-3 text-sm font-medium">₹{(item.currentStock * item.unitCost).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-sm font-medium">Rs {(Number(item.currentStock || 0) * Number(item.unitCost || 0)).toLocaleString()}</td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex gap-2 justify-center">
                         <button onClick={() => updateStock(item._id, "add")} className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">
-                           Add
+                          Add
                         </button>
                         <button onClick={() => updateStock(item._id, "subtract")} className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200">
-                           Use
+                          Use
                         </button>
                         <button onClick={() => handleEdit(item)} className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
-                           Edit
+                          Edit
                         </button>
                         <button onClick={() => handleDelete(item._id)} className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">
-                           Delete
+                          Delete
                         </button>
                       </div>
                     </td>

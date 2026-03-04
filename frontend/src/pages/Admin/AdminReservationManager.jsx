@@ -50,25 +50,6 @@ const AdminReservationManager = () => {
     }
   };
 
-  const handleStatusChange = async (reservationId, newStatus) => {
-    try {
-      const response = await axios.patch(
-        `/api/reservations/${reservationId}`,
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setReservations(
-        reservations.map((r) =>
-          r._id === reservationId ? response.data.reservation : r
-        )
-      );
-      fetchStats();
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to update reservation");
-    }
-  };
-
   const handleCheckIn = async (reservationId) => {
     try {
       const response = await axios.patch(
