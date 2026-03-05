@@ -95,7 +95,9 @@ const Customer_Orders = () => {
                       <p className="inline-flex items-center gap-1 heading-5" style={{ color: "#10b981" }}>
                         Rs {Number(order.grandTotal || 0).toFixed(2)}
                       </p>
-                      <p className="text-xs" style={{ color: palette.muted }}>Table {order.tableNumber}</p>
+                      <p className="text-xs" style={{ color: palette.muted }}>
+                        {order.serviceType === "online" ? "Online Order" : `Table ${order.tableNumber}`}
+                      </p>
                     </div>
                   </div>
 
@@ -137,6 +139,13 @@ const Customer_Orders = () => {
                       <p className="mt-1 text-sm" style={{ color: palette.text }}>{order.notes}</p>
                     </div>
                   )}
+
+                  {order.serviceType === "online" && order.deliveryAddress ? (
+                    <div className="rounded-lg border-l-4 p-3" style={{ borderColor: "#1d4ed8", backgroundColor: palette.cardBg }}>
+                      <p className="text-xs font-semibold" style={{ color: palette.muted }}>Delivery Address</p>
+                      <p className="mt-1 text-sm" style={{ color: palette.text }}>{order.deliveryAddress}</p>
+                    </div>
+                  ) : null}
 
                   {["placed", "received"].includes(order.status) ? (
                     <div className="pt-1">

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { FiArrowLeft, FiFileText, FiMoon, FiSearch, FiSun, FiTag } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
+import { FiFileText, FiSearch } from "react-icons/fi";
 import menuService from "../../services/menu_Service";
 import themeService from "../../services/theme_Service";
 import PublicMenuSections from "../../components/menu/PublicMenuSections";
@@ -25,7 +25,7 @@ const Visitor_Menu = ({ isCustomerView = false }) => {
   const [subCategoryFilter, setSubCategoryFilter] = useState("");
   const [foodTypeFilter, setFoodTypeFilter] = useState("");
   const [sortBy, setSortBy] = useState("featured");
-  const { palette, resolvedMode, setUserMode, allowUserThemeToggle } = useResolvedColorMode(theme);
+  const { palette } = useResolvedColorMode(theme);
 
   useEffect(() => {
     const loadData = async () => {
@@ -41,7 +41,6 @@ const Visitor_Menu = ({ isCustomerView = false }) => {
     loadData().catch((err) => console.error("Menu page load failed:", err));
   }, []);
 
-  const homePath = isCustomerView ? "/customer" : "/";
   const onPublicItemTap = () => {
     if (!isAuthenticated) {
       navigate("/auth/login");
@@ -61,31 +60,6 @@ const Visitor_Menu = ({ isCustomerView = false }) => {
 
   return (
     <div className="min-h-screen pb-10" style={{ backgroundColor: palette.pageBg, color: palette.text }}>
-      <section
-        className="mx-auto w-full max-w-[96rem] rounded-b-[2rem] px-4 py-8 text-white md:px-8"
-        style={{ background: `linear-gradient(120deg, ${theme.primaryColor} 0%, #0f172a 100%)` }}
-      >
-        <div className="flex flex-wrap items-center justify-between gap-6">
-          <div className="space-y-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-white/70 font-bold">{theme.name}</p>
-            <h1 className="heading-1 text-white">{theme.menuHeading}</h1>
-            <p className="text-lg text-white/80">{theme.menuSubHeading}</p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link to={homePath} className="inline-flex items-center gap-2 rounded-full border border-white/40 px-4 py-2 text-white hover:bg-white/10">
-              <FiArrowLeft className="h-4 w-4" />
-              Back Home
-            </Link>
-            {allowUserThemeToggle ? (
-              <button onClick={() => setUserMode(resolvedMode === "dark" ? "light" : "dark")} className="inline-flex items-center gap-2 rounded-full border border-white/40 px-4 py-2 text-white hover:bg-white/10">
-                {resolvedMode === "dark" ? <FiSun className="h-4 w-4" /> : <FiMoon className="h-4 w-4" />}
-                {resolvedMode === "dark" ? "Light" : "Dark"}
-              </button>
-            ) : null}
-          </div>
-        </div>
-      </section>
-
       <section className="mx-auto mt-6 w-full max-w-[96rem] px-4 md:px-8">
         <div className="card-elevated space-y-4 p-6" style={{ backgroundColor: palette.panelBg }}>
           <div className="grid gap-3 md:grid-cols-5">
@@ -151,18 +125,23 @@ const Visitor_Menu = ({ isCustomerView = false }) => {
                   Menu PDF
                 </p>
                 <p className="heading-5" style={{ color: palette.text }}>{menuData.menuPdf.name}</p>
-                <p className="text-sm text-slate-600 mt-1">High-resolution menu reference available for download</p>
+                <p className="text-sm text-slate-600 mt-1">Menu PDF preview loaded inside this page.</p>
               </div>
-              <a
-                href={menuData.menuPdf.url}
-                target="_blank"
-                rel="noreferrer"
+              <span
                 className="inline-flex items-center gap-2 rounded-full px-4 py-2 font-semibold text-white"
                 style={{ background: theme.primaryColor }}
               >
                 <FiFileText className="h-4 w-4" />
-                Open PDF
-              </a>
+                PDF Viewer
+              </span>
+            </div>
+
+            <div className="mt-4 overflow-hidden rounded-xl border" style={{ borderColor: palette.border }}>
+              <iframe
+                src={`${menuData.menuPdf.url}#toolbar=1&navpanes=0&view=fitH`}
+                title="Restaurant menu PDF"
+                className="h-[70vh] w-full bg-white"
+              />
             </div>
           </div>
         </div>

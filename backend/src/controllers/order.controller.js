@@ -82,25 +82,49 @@ exports.getOrders = async (req, res) => {
 
 exports.createOrder = async (req, res) => {
     try {
-        const { tableNumber, qrToken = "", customerName = "", customerEmail = "", customerPhone = "", notes = "", items = [] } = req.body;
+        const {
+            tableNumber,
+            qrToken = "",
+            customerName = "",
+            customerEmail = "",
+            customerPhone = "",
+            deliveryAddress = "",
+            serviceType: rawServiceType = "dine_in",
+            notes = "",
+            items = [],
+        } = req.body;
         const roles = req.user.roles || [];
         const isCustomer = roles.includes("customer");
+        const serviceType = ["dine_in", "online"].includes(String(rawServiceType || "").toLowerCase())
+            ? String(rawServiceType).toLowerCase()
+            : "dine_in";
+        const isDineIn = serviceType === "dine_in";
+        const normalizedTableNumberInput = String(tableNumber || "").trim();
 
-        if (!tableNumber || !String(tableNumber).trim()) {
-            return res.status(400).json({ message: "Table number is required" });
+        if (isDineIn && !normalizedTableNumberInput) {
+            return res.status(400).json({ message: "Table number is required for dine-in orders" });
+        }
+        if (!isDineIn && isCustomer && !String(customerPhone || "").trim() && !String(customerEmail || "").trim()) {
+            return res.status(400).json({ message: "Phone or email is required for online orders" });
+        }
+        if (!isDineIn && isCustomer && !String(deliveryAddress || "").trim()) {
+            return res.status(400).json({ message: "Delivery address is required for online orders" });
         }
         if (!Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ message: "At least one order item is required" });
         }
 
-        const normalizedTableNumber = String(tableNumber).trim();
-        const table = await Table.findOne({ tableNumber: normalizedTableNumber, isActive: true }).select("_id tableNumber status");
-        if (!table) {
-            return res.status(400).json({ message: "Invalid or inactive table number" });
+        let table = null;
+        const normalizedTableNumber = isDineIn ? normalizedTableNumberInput : (normalizedTableNumberInput || "ONLINE");
+        if (isDineIn) {
+            table = await Table.findOne({ tableNumber: normalizedTableNumber, isActive: true }).select("_id tableNumber status");
+            if (!table) {
+                return res.status(400).json({ message: "Invalid or inactive table number" });
+            }
         }
 
         const tokenSecret = process.env.QR_SIGNING_SECRET || process.env.JWT_SECRET;
-        if (qrToken) {
+        if (isDineIn && qrToken) {
             if (!tokenSecret) {
                 return res.status(500).json({ message: "QR signing secret is not configured" });
             }
@@ -123,7 +147,7 @@ exports.createOrder = async (req, res) => {
             ) {
                 return res.status(400).json({ message: "QR token does not match selected table" });
             }
-        } else if (isCustomer) {
+        } else if (isDineIn && isCustomer) {
             return res.status(400).json({ message: "Please scan a valid table QR code before placing order" });
         }
 
@@ -163,7 +187,9 @@ exports.createOrder = async (req, res) => {
 
         const order = await Order.create({
             orderNumber: getOrderNumber(),
-            tableNumber: table.tableNumber,
+            serviceType,
+            tableNumber: isDineIn ? table.tableNumber : normalizedTableNumber,
+            deliveryAddress: String(deliveryAddress || "").trim(),
             customerName: String(customerName || "").trim(),
             customerEmail: String(customerEmail || "").trim().toLowerCase(),
             customerPhone: String(customerPhone || "").trim(),

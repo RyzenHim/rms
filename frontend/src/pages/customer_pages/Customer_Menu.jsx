@@ -1,12 +1,34 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { FiClock, FiCreditCard, FiGrid, FiMinus, FiPlus, FiSearch, FiShoppingCart, FiTrash2 } from "react-icons/fi";
+import { FiClock, FiCreditCard, FiGlobe, FiHome, FiGrid, FiMinus, FiPlus, FiSearch, FiShoppingCart, FiTrash2 } from "react-icons/fi";
 import menuService from "../../services/menu_Service";
 import themeService from "../../services/theme_Service";
 import orderService from "../../services/order_Service";
+import authService from "../../services/auth_Service";
 import PublicMenuSections from "../../components/menu/PublicMenuSections";
 import useResolvedColorMode from "../../hooks/useResolvedColorMode";
 import { useAuth } from "../../context/AuthContext";
+
+const formatAddressForOrder = (address) => {
+  if (!address) return "";
+  return [
+    address.street,
+    address.area,
+    address.landmark,
+    address.city,
+    address.state,
+    address.pincode,
+    address.country,
+  ]
+    .filter(Boolean)
+    .join(", ");
+};
+
+const formatAddressLabel = (address) => {
+  if (!address) return "";
+  const tag = address.label === "other" ? address.customLabel || "Other" : address.label;
+  return `${tag} - ${address.street || ""}, ${address.city || ""}`.replace(/,\s*$/, "");
+};
 
 const Customer_Menu = () => {
   const { token, user } = useAuth();
@@ -29,14 +51,19 @@ const Customer_Menu = () => {
   const [sortBy, setSortBy] = useState("featured");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [useSelectedAsDefault, setUseSelectedAsDefault] = useState(false);
   const [checkout, setCheckout] = useState({
     tableNumber: searchParams.get("table") || "",
     qrToken: searchParams.get("qrToken") || "",
+    deliveryAddress: "",
     customerName: user?.name || "",
     customerEmail: user?.email || "",
     customerPhone: "",
     notes: "",
   });
+  const [orderMode, setOrderMode] = useState(searchParams.get("qrToken") ? "dine_in" : "online");
   const [cart, setCart] = useState([]);
   const { palette } = useResolvedColorMode(theme);
   const statusMeta = {
@@ -50,10 +77,11 @@ const Customer_Menu = () => {
 
   const loadData = async () => {
     try {
-      const [themeRes, menuRes, ordersRes] = await Promise.all([
+      const [themeRes, menuRes, ordersRes, addressesRes] = await Promise.all([
         themeService.getActiveTheme(),
         menuService.getPublicMenu(),
         orderService.getOrders(token),
+        authService.getAddresses(token).catch(() => ({ addresses: [] })),
       ]);
       setTheme((prev) => ({ ...prev, ...themeRes.theme }));
       setMenuData({
@@ -62,6 +90,21 @@ const Customer_Menu = () => {
         items: menuRes.items || [],
       });
       setOrders(ordersRes.orders || []);
+
+      const incomingAddresses = addressesRes.addresses || [];
+      setSavedAddresses(incomingAddresses);
+
+      const defaultAddress = incomingAddresses.find((addr) => addr.isDefault) || incomingAddresses[0] || null;
+      setSelectedAddressId((prev) => prev || defaultAddress?.id || "");
+      setCheckout((prev) => {
+        const next = { ...prev };
+        if (!next.customerPhone && defaultAddress?.phone) next.customerPhone = defaultAddress.phone;
+        if (!next.customerName && defaultAddress?.fullName) next.customerName = defaultAddress.fullName;
+        if (orderMode === "online" && !next.deliveryAddress && defaultAddress) {
+          next.deliveryAddress = formatAddressForOrder(defaultAddress);
+        }
+        return next;
+      });
     } catch (err) {
       setMessage(err?.response?.data?.message || "Failed to load customer menu");
     }
@@ -73,10 +116,29 @@ const Customer_Menu = () => {
     return () => clearInterval(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (orderMode !== "online" || checkout.deliveryAddress) return;
+    const selected = savedAddresses.find((addr) => addr.id === selectedAddressId);
+    const fallback = selected || savedAddresses.find((addr) => addr.isDefault) || savedAddresses[0];
+    if (!fallback) return;
+    setSelectedAddressId((prev) => prev || fallback.id);
+    setCheckout((prev) => ({
+      ...prev,
+      deliveryAddress: prev.deliveryAddress || formatAddressForOrder(fallback),
+      customerName: prev.customerName || fallback.fullName || "",
+      customerPhone: prev.customerPhone || fallback.phone || "",
+    }));
+  }, [orderMode, savedAddresses, selectedAddressId, checkout.deliveryAddress]);
+
   const subCategoryOptions = useMemo(() => {
     if (!categoryFilter) return menuData.subCategories;
     return menuData.subCategories.filter((sub) => (sub.category?._id || sub.category) === categoryFilter);
   }, [menuData.subCategories, categoryFilter]);
+
+  const selectedSavedAddress = useMemo(
+    () => savedAddresses.find((addr) => addr.id === selectedAddressId) || null,
+    [savedAddresses, selectedAddressId]
+  );
 
   const cartTotals = useMemo(() => {
     const subTotal = cart.reduce((sum, item) => sum + Number(item.unitPrice || 0) * Number(item.quantity || 0), 0);
@@ -117,21 +179,37 @@ const Customer_Menu = () => {
     setSubmitting(true);
     setMessage("");
     try {
-      if (!checkout.tableNumber) {
-        setMessage("Please enter table number");
-        return;
-      }
       if (!cart.length) {
         setMessage("Please add at least one item to your order tray");
         return;
       }
+      if (orderMode === "dine_in" && !checkout.tableNumber) {
+        setMessage("Please enter table number for dine-in");
+        return;
+      }
+      if (orderMode === "online" && !checkout.customerPhone && !checkout.customerEmail) {
+        setMessage("Please provide phone or email for online order");
+        return;
+      }
+      if (orderMode === "online" && !String(checkout.deliveryAddress || "").trim()) {
+        setMessage("Please select or enter a delivery address for online order");
+        return;
+      }
+      if (orderMode === "online" && useSelectedAsDefault && selectedAddressId && !selectedSavedAddress?.isDefault) {
+        const defaultRes = await authService.setDefaultAddress(token, selectedAddressId);
+        if (defaultRes?.addresses) {
+          setSavedAddresses(defaultRes.addresses);
+        }
+      }
 
       await orderService.createOrder(token, {
-        tableNumber: checkout.tableNumber,
-        qrToken: checkout.qrToken,
+        serviceType: orderMode,
+        tableNumber: orderMode === "dine_in" ? checkout.tableNumber : "ONLINE",
+        qrToken: orderMode === "dine_in" ? checkout.qrToken : "",
         customerName: checkout.customerName,
         customerEmail: checkout.customerEmail,
         customerPhone: checkout.customerPhone,
+        deliveryAddress: orderMode === "online" ? checkout.deliveryAddress : "",
         notes: checkout.notes,
         items: cart.map((item) => ({
           menuItem: item.menuItem,
@@ -142,6 +220,7 @@ const Customer_Menu = () => {
 
       setCart([]);
       setCheckout((prev) => ({ ...prev, notes: "" }));
+      setUseSelectedAsDefault(false);
       setMessage("Order placed successfully. Track status below.");
       await loadData();
     } catch (err) {
@@ -151,25 +230,25 @@ const Customer_Menu = () => {
     }
   };
 
+  const onSavedAddressChange = (addressId) => {
+    setSelectedAddressId(addressId);
+    setUseSelectedAsDefault(false);
+    const selected = savedAddresses.find((addr) => addr.id === addressId);
+    if (!selected) return;
+
+    setCheckout((prev) => ({
+      ...prev,
+      deliveryAddress: formatAddressForOrder(selected),
+      customerName: prev.customerName || selected.fullName || "",
+      customerPhone: prev.customerPhone || selected.phone || "",
+    }));
+  };
+
   return (
     <div className="min-h-screen pb-10" style={{ backgroundColor: palette.pageBg, color: palette.text }}>
-      <section
-        className="mx-auto max-w-7xl rounded-b-[2rem] px-4 py-8 text-white md:px-8"
-        style={{ background: `linear-gradient(120deg, ${theme.primaryColor} 0%, #0f172a 100%)` }}
-      >
-        <div className="space-y-3">
-          <h1 className="heading-1 text-white">{theme.menuHeading}</h1>
-          <p className="text-lg text-white/85">{theme.menuSubHeading}</p>
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-sm text-white/85">
-            <FiGrid className="h-4 w-4" />
-            {checkout.tableNumber ? `Table ${checkout.tableNumber} selected` : "No table selected yet"}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto mt-6 w-full max-w-[96rem] px-4 md:px-8">
-        <div className="card-elevated space-y-4 p-6" style={{ backgroundColor: palette.panelBg }}>
-          <div className="grid gap-3 md:grid-cols-5">
+      <section className="mx-auto mt-4 w-full max-w-[90rem] px-4 md:px-8">
+        <div className="space-y-2 p-1">
+          <div className="grid gap-2 md:grid-cols-[1.2fr_1fr_1fr_0.9fr_0.9fr]">
             <div className="relative">
               <FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: palette.muted }} />
               <input
@@ -177,7 +256,7 @@ const Customer_Menu = () => {
                 placeholder="Search menu items"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="input-base pl-10"
+                className="h-10 w-full rounded-lg border pl-10 pr-2 text-sm"
                 style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
               />
             </div>
@@ -187,7 +266,7 @@ const Customer_Menu = () => {
                 setCategoryFilter(e.target.value);
                 setSubCategoryFilter("");
               }}
-              className="input-base"
+              className="h-10 rounded-lg border px-2 text-sm"
               style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
             >
               <option value="">All Categories</option>
@@ -196,7 +275,7 @@ const Customer_Menu = () => {
             <select
               value={subCategoryFilter}
               onChange={(e) => setSubCategoryFilter(e.target.value)}
-              className="input-base"
+              className="h-10 rounded-lg border px-2 text-sm"
               style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
             >
               <option value="">All Subcategories</option>
@@ -205,7 +284,7 @@ const Customer_Menu = () => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="input-base"
+              className="h-10 rounded-lg border px-2 text-sm"
               style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
             >
               <option value="featured">Featured</option>
@@ -213,16 +292,16 @@ const Customer_Menu = () => {
               <option value="price-desc">Price: High to Low</option>
               <option value="newest">Newest</option>
             </select>
-            <div className="flex rounded-xl border gap-1 p-1" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
-              <button onClick={() => setFoodTypeFilter("")} className={`flex-1 rounded-lg px-2 py-2 text-xs font-bold transition-all ${foodTypeFilter === "" ? "text-white shadow-md" : ""}`} style={{ backgroundColor: foodTypeFilter === "" ? theme.primaryColor : "transparent", color: foodTypeFilter === "" ? "#fff" : palette.text }}>All</button>
-              <button onClick={() => setFoodTypeFilter("veg")} className={`flex-1 rounded-lg px-2 py-2 text-xs font-bold transition-all ${foodTypeFilter === "veg" ? "text-white shadow-md" : ""}`} style={{ backgroundColor: foodTypeFilter === "veg" ? "#16a34a" : "transparent", color: foodTypeFilter === "veg" ? "#fff" : palette.text }}>Veg</button>
-              <button onClick={() => setFoodTypeFilter("non_veg")} className={`flex-1 rounded-lg px-2 py-2 text-xs font-bold transition-all ${foodTypeFilter === "non_veg" ? "text-white shadow-md" : ""}`} style={{ backgroundColor: foodTypeFilter === "non_veg" ? "#dc2626" : "transparent", color: foodTypeFilter === "non_veg" ? "#fff" : palette.text }}>Non-Veg</button>
+            <div className="flex h-10 rounded-lg border gap-1 p-1" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
+              <button onClick={() => setFoodTypeFilter("")} className={`flex-1 rounded-md px-2 py-1 text-xs font-bold transition-all ${foodTypeFilter === "" ? "text-white shadow-md" : ""}`} style={{ backgroundColor: foodTypeFilter === "" ? theme.primaryColor : "transparent", color: foodTypeFilter === "" ? "#fff" : palette.text }}>All</button>
+              <button onClick={() => setFoodTypeFilter("veg")} className={`flex-1 rounded-md px-2 py-1 text-xs font-bold transition-all ${foodTypeFilter === "veg" ? "text-white shadow-md" : ""}`} style={{ backgroundColor: foodTypeFilter === "veg" ? "#16a34a" : "transparent", color: foodTypeFilter === "veg" ? "#fff" : palette.text }}>Veg</button>
+              <button onClick={() => setFoodTypeFilter("non_veg")} className={`flex-1 rounded-md px-2 py-1 text-xs font-bold transition-all ${foodTypeFilter === "non_veg" ? "text-white shadow-md" : ""}`} style={{ backgroundColor: foodTypeFilter === "non_veg" ? "#dc2626" : "transparent", color: foodTypeFilter === "non_veg" ? "#fff" : palette.text }}>Non-Veg</button>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="mx-auto mt-6 grid w-full max-w-[96rem] gap-6 px-4 md:px-8 xl:grid-cols-[1fr_380px]">
+      <div className="mx-auto mt-4 grid w-full max-w-[90rem] gap-4 px-4 md:px-8 xl:grid-cols-[1fr_360px]">
         <div>
           <PublicMenuSections
             categories={menuData.categories}
@@ -240,115 +319,247 @@ const Customer_Menu = () => {
           />
         </div>
 
-        <aside className="space-y-4 xl:sticky xl:top-24 xl:h-fit">
+        <aside className="space-y-3">
           <section className="card-elevated overflow-hidden p-0" style={{ backgroundColor: palette.panelBg }}>
-            <div className="bg-gradient-to-r p-5" style={{ background: `linear-gradient(135deg, ${theme.primaryColor} 0%, #10b981 100%)` }}>
-              <h3 className="inline-flex items-center gap-2 heading-4 text-white"><FiShoppingCart className="h-5 w-5" />Order Tray ({cart.length})</h3>
+            <div className="border-b px-4 py-3" style={{ borderColor: palette.border }}>
+              <div className="flex items-center justify-between">
+                <h3 className="inline-flex items-center gap-2 text-sm font-extrabold" style={{ color: palette.text }}>
+                  <FiShoppingCart className="h-4 w-4" />
+                  Order Tray
+                </h3>
+                <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ backgroundColor: palette.pageBg, color: palette.text }}>{cart.length} items</span>
+              </div>
             </div>
-            <div className="max-h-[280px] space-y-2 overflow-auto p-5">
+            <div className="max-h-[260px] space-y-2 overflow-auto p-3">
               {cart.map((item) => (
-                <div key={item.menuItem} className="card-base space-y-3 border-l-4 p-4" style={{ borderColor: theme.primaryColor }}>
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <p className="font-bold" style={{ color: palette.text }}>{item.name}</p>
-                      <p className="text-xs font-semibold" style={{ color: theme.primaryColor }}>Rs {Number(item.unitPrice).toFixed(2)} each</p>
+                <div key={item.menuItem} className="rounded-xl border p-2.5" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
+                  <div className="flex items-start gap-2.5">
+                    <img
+                      src={item.image || "https://via.placeholder.com/64x64?text=Dish"}
+                      alt={item.name}
+                      className="h-12 w-12 rounded-lg object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="line-clamp-2 text-xs font-bold leading-4" style={{ color: palette.text }}>{item.name}</p>
+                        <button onClick={() => removeCartItem(item.menuItem)} className="inline-flex items-center rounded-md bg-red-600 p-1 text-white hover:bg-red-700">
+                          <FiTrash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <p className="mt-0.5 text-[11px] font-semibold" style={{ color: theme.primaryColor }}>Rs {Number(item.unitPrice).toFixed(2)} each</p>
+                      <div className="mt-1.5 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1 rounded-lg px-1 py-0.5" style={{ backgroundColor: palette.pageBg }}>
+                          <button onClick={() => updateCartItem(item.menuItem, { quantity: Math.max(1, item.quantity - 1) })} className="inline-flex rounded p-1 text-slate-700 hover:bg-slate-200">
+                            <FiMinus className="h-3 w-3" />
+                          </button>
+                          <span className="w-5 text-center text-xs font-bold">{item.quantity}</span>
+                          <button onClick={() => updateCartItem(item.menuItem, { quantity: item.quantity + 1 })} className="inline-flex rounded p-1 text-slate-700 hover:bg-slate-200">
+                            <FiPlus className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <p className="text-xs font-bold" style={{ color: palette.text }}>
+                          Rs {(Number(item.unitPrice || 0) * Number(item.quantity || 0)).toFixed(2)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 rounded-lg p-1" style={{ backgroundColor: palette.pageBg }}>
-                      <button onClick={() => updateCartItem(item.menuItem, { quantity: Math.max(1, item.quantity - 1) })} className="btn-icon text-sm"><FiMinus className="h-3.5 w-3.5" /></button>
-                      <span className="w-6 text-center font-bold">{item.quantity}</span>
-                      <button onClick={() => updateCartItem(item.menuItem, { quantity: item.quantity + 1 })} className="btn-icon text-sm"><FiPlus className="h-3.5 w-3.5" /></button>
-                    </div>
-                    <button onClick={() => removeCartItem(item.menuItem)} className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-2 py-1 text-xs font-semibold text-white hover:bg-red-700">
-                      <FiTrash2 className="h-3 w-3" />Remove
-                    </button>
                   </div>
                   <input
                     type="text"
                     placeholder="Special request"
                     value={item.notes}
                     onChange={(e) => updateCartItem(item.menuItem, { notes: e.target.value })}
-                    className="input-base w-full text-xs"
+                    className="mt-2 h-8 w-full rounded-lg border px-2 text-[11px]"
+                    style={{ borderColor: palette.border, backgroundColor: palette.pageBg, color: palette.text }}
                   />
                 </div>
               ))}
-              {!cart.length ? <p className="py-8 text-center text-sm" style={{ color: palette.muted }}>Order tray is empty. Add items from menu.</p> : null}
+              {!cart.length ? <p className="py-6 text-center text-xs" style={{ color: palette.muted }}>Order tray is empty. Add items from menu.</p> : null}
             </div>
 
-            <div className="space-y-2 border-t p-5" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
-              <div className="flex justify-between text-sm">
+            <div className="space-y-1.5 border-t px-4 py-3" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
+              <div className="flex justify-between text-xs">
                 <span style={{ color: palette.muted }}>Subtotal:</span>
                 <span className="font-semibold">Rs {cartTotals.subTotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs">
                 <span style={{ color: palette.muted }}>Tax (5%):</span>
                 <span className="font-semibold">Rs {cartTotals.tax.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between border-t pt-2 text-base" style={{ borderColor: palette.border }}>
+              <div className="flex justify-between border-t pt-2 text-sm" style={{ borderColor: palette.border }}>
                 <span className="font-bold">Total:</span>
-                <span className="heading-4" style={{ color: theme.primaryColor }}>Rs {cartTotals.grandTotal.toFixed(2)}</span>
+                <span className="text-base font-black" style={{ color: theme.primaryColor }}>Rs {cartTotals.grandTotal.toFixed(2)}</span>
               </div>
             </div>
           </section>
 
-          <section className="card-elevated space-y-4 p-5" style={{ backgroundColor: palette.panelBg }}>
-            <h3 className="inline-flex items-center gap-2 heading-4" style={{ color: palette.text }}><FiCreditCard className="h-5 w-5" />Checkout</h3>
-            <div className="form-group">
-              <label className="form-label">Table Number *</label>
+          <section className="card-elevated space-y-3 p-4" style={{ backgroundColor: palette.panelBg }}>
+            <h3 className="inline-flex items-center gap-2 text-sm font-extrabold" style={{ color: palette.text }}>
+              <FiCreditCard className="h-4 w-4" />
+              Quick Checkout
+            </h3>
+            <div className="grid grid-cols-2 gap-1 rounded-lg border p-1" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
+              <button
+                onClick={() => setOrderMode("online")}
+                className={`inline-flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-bold ${
+                  orderMode === "online" ? "text-white" : ""
+                }`}
+                style={{ backgroundColor: orderMode === "online" ? theme.primaryColor : "transparent", color: orderMode === "online" ? "#fff" : palette.text }}
+              >
+                <FiGlobe className="h-3.5 w-3.5" />
+                Online
+              </button>
+              <button
+                onClick={() => setOrderMode("dine_in")}
+                className={`inline-flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-bold ${
+                  orderMode === "dine_in" ? "text-white" : ""
+                }`}
+                style={{ backgroundColor: orderMode === "dine_in" ? theme.primaryColor : "transparent", color: orderMode === "dine_in" ? "#fff" : palette.text }}
+              >
+                <FiHome className="h-3.5 w-3.5" />
+                Dine In
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="text-[11px] font-semibold" style={{ color: palette.muted }}>
+                {orderMode === "dine_in" ? "Table Number *" : "Order Type"}
+              </label>
+              <label className="text-[11px] font-semibold" style={{ color: palette.muted }}>Your Name *</label>
               <input
                 type="text"
-                placeholder="e.g., T01"
+                placeholder={orderMode === "dine_in" ? "e.g., T01" : "Online order"}
                 value={checkout.tableNumber}
                 onChange={(e) => setCheckout((prev) => ({ ...prev, tableNumber: e.target.value }))}
-                className="input-base"
-                readOnly={Boolean(checkout.qrToken)}
+                className="h-9 rounded-lg border px-2.5 text-xs"
+                style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
+                readOnly={orderMode === "online" || Boolean(checkout.qrToken)}
               />
-              {checkout.qrToken ? (
-                <p className="text-xs text-emerald-700 mt-1">Table locked by scanned QR token.</p>
-              ) : null}
+              <input
+                type="text"
+                value={checkout.customerName}
+                onChange={(e) => setCheckout((prev) => ({ ...prev, customerName: e.target.value }))}
+                className="h-9 rounded-lg border px-2.5 text-xs"
+                style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
+              />
             </div>
-            <div className="form-group">
-              <label className="form-label">Your Name *</label>
-              <input type="text" value={checkout.customerName} onChange={(e) => setCheckout((prev) => ({ ...prev, customerName: e.target.value }))} className="input-base" />
+            {orderMode === "dine_in" && checkout.qrToken ? <p className="text-[11px] text-emerald-700">Table locked by scanned QR token.</p> : null}
+            {orderMode === "dine_in" && !checkout.qrToken ? (
+              <p className="text-[11px] text-amber-700">For customer dine-in, scan table QR before checkout.</p>
+            ) : null}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold" style={{ color: palette.muted }}>Email</label>
+                <input
+                  type="email"
+                  value={checkout.customerEmail}
+                  onChange={(e) => setCheckout((prev) => ({ ...prev, customerEmail: e.target.value }))}
+                  className="h-9 w-full rounded-lg border px-2.5 text-xs"
+                  style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold" style={{ color: palette.muted }}>Phone</label>
+                <input
+                  type="tel"
+                  value={checkout.customerPhone}
+                  onChange={(e) => setCheckout((prev) => ({ ...prev, customerPhone: e.target.value }))}
+                  className="h-9 w-full rounded-lg border px-2.5 text-xs"
+                  style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
+                />
+              </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Email</label>
-              <input type="email" value={checkout.customerEmail} onChange={(e) => setCheckout((prev) => ({ ...prev, customerEmail: e.target.value }))} className="input-base" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Phone</label>
-              <input type="tel" value={checkout.customerPhone} onChange={(e) => setCheckout((prev) => ({ ...prev, customerPhone: e.target.value }))} className="input-base" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Special Requests</label>
-              <textarea placeholder="Less spicy, no onions, extra sauce" value={checkout.notes} onChange={(e) => setCheckout((prev) => ({ ...prev, notes: e.target.value }))} className="input-base" rows={2} />
+            {orderMode === "online" ? (
+              <div>
+                {savedAddresses.length ? (
+                  <div className="mb-2">
+                    <label className="mb-1 block text-[11px] font-semibold" style={{ color: palette.muted }}>
+                      Saved Addresses
+                    </label>
+                    <select
+                      value={selectedAddressId}
+                      onChange={(e) => onSavedAddressChange(e.target.value)}
+                      className="h-9 w-full rounded-lg border px-2.5 text-xs"
+                      style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
+                    >
+                      <option value="">Select saved address</option>
+                      {savedAddresses.map((address) => (
+                        <option key={address.id} value={address.id}>
+                          {formatAddressLabel(address)}{address.isDefault ? " (Default)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-[11px]" style={{ color: palette.muted }}>
+                      Manage addresses from Profile page.
+                    </p>
+                    {selectedAddressId && selectedSavedAddress && !selectedSavedAddress.isDefault ? (
+                      <label className="mt-2 inline-flex items-center gap-2 text-[11px] font-semibold" style={{ color: palette.text }}>
+                        <input
+                          type="checkbox"
+                          checked={useSelectedAsDefault}
+                          onChange={(e) => setUseSelectedAsDefault(e.target.checked)}
+                        />
+                        Use selected address as default
+                      </label>
+                    ) : null}
+                    {selectedAddressId && selectedSavedAddress?.isDefault ? (
+                      <p className="mt-2 text-[11px] font-semibold text-emerald-700">Selected address is already default.</p>
+                    ) : null}
+                  </div>
+                ) : null}
+                <label className="mb-1 block text-[11px] font-semibold" style={{ color: palette.muted }}>Delivery Address</label>
+                <textarea
+                  placeholder="House no, street, city..."
+                  value={checkout.deliveryAddress}
+                  onChange={(e) => setCheckout((prev) => ({ ...prev, deliveryAddress: e.target.value }))}
+                  className="h-14 w-full rounded-lg border px-2.5 py-2 text-xs"
+                  style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
+                />
+              </div>
+            ) : null}
+            <div>
+              <label className="mb-1 block text-[11px] font-semibold" style={{ color: palette.muted }}>Special Requests</label>
+              <textarea
+                placeholder="Less spicy, no onions..."
+                value={checkout.notes}
+                onChange={(e) => setCheckout((prev) => ({ ...prev, notes: e.target.value }))}
+                className="h-16 w-full rounded-lg border px-2.5 py-2 text-xs"
+                style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
+              />
             </div>
             {message && <div className={message.includes("successfully") ? "alert-success" : "alert-error"}>{message}</div>}
-            <button onClick={checkoutOrder} disabled={submitting} className="btn-primary w-full">
+            <button
+              onClick={checkoutOrder}
+              disabled={submitting}
+              className="w-full rounded-lg py-2 text-xs font-bold text-white"
+              style={{ backgroundColor: theme.primaryColor }}
+            >
               {submitting ? "Placing order..." : "Checkout and Place Order"}
             </button>
           </section>
 
-          <section className="card-elevated space-y-4 p-5" style={{ backgroundColor: palette.panelBg }}>
+          <section className="card-elevated space-y-3 p-4" style={{ backgroundColor: palette.panelBg }}>
             <div className="flex items-center justify-between">
-              <h3 className="inline-flex items-center gap-2 heading-4" style={{ color: palette.text }}><FiClock className="h-5 w-5" />Live Orders ({orders.length})</h3>
+              <h3 className="inline-flex items-center gap-2 text-sm font-extrabold" style={{ color: palette.text }}>
+                <FiClock className="h-4 w-4" />
+                Live Orders ({orders.length})
+              </h3>
             </div>
-            <div className="max-h-[220px] space-y-2 overflow-auto">
+            <div className="max-h-[190px] space-y-1.5 overflow-auto">
               {orders.map((order) => {
                 const colors = statusMeta[order.status] || statusMeta.placed;
                 return (
-                  <article key={order._id} className={`${colors.bg} space-y-1 rounded-lg p-3 text-xs`}>
-                    <div className="flex items-start justify-between">
-                      <p className="font-bold">{order.orderNumber}</p>
-                      <span className={`${colors.text} rounded-full px-2 py-0.5 text-xs font-bold`}>{colors.label}</span>
+                  <article key={order._id} className={`${colors.bg} rounded-lg p-2 text-[11px]`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate font-bold">{order.orderNumber}</p>
+                      <span className={`${colors.text} whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] font-bold`}>{colors.label}</span>
                     </div>
-                    <p className="text-slate-700">Table {order.tableNumber}</p>
+                    <p className="mt-0.5 text-slate-700">
+                      {order.serviceType === "online" ? "Online" : `Table ${order.tableNumber}`}
+                    </p>
                     <p className="line-clamp-1 text-slate-700">{order.items?.map((x) => `${x.name} x ${x.quantity}`).join(", ")}</p>
                   </article>
                 );
               })}
-              {!orders.length ? <p className="py-6 text-center text-sm" style={{ color: palette.muted }}>No orders placed yet</p> : null}
+              {!orders.length ? <p className="py-5 text-center text-xs" style={{ color: palette.muted }}>No orders placed yet</p> : null}
             </div>
           </section>
         </aside>

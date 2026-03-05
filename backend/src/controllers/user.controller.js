@@ -6,6 +6,24 @@ const Employee = require("../models/employee.model");
 const { sendMailSafely } = require("../utils/mailer");
 
 const staffRoles = ["super_admin", "admin", "manager", "kitchen", "cashier", "waiter"];
+const addressLabels = ["home", "office", "other"];
+
+const toAddressView = (address) => ({
+    id: address._id,
+    label: address.label,
+    customLabel: address.customLabel || "",
+    fullName: address.fullName,
+    phone: address.phone,
+    street: address.street,
+    area: address.area || "",
+    landmark: address.landmark || "",
+    city: address.city,
+    state: address.state,
+    pincode: address.pincode,
+    country: address.country || "India",
+    location: address.location || null,
+    isDefault: Boolean(address.isDefault),
+});
 
 const resolvePhone = async (user) => {
     if (user.roles?.some((role) => staffRoles.includes(role))) {
@@ -17,16 +35,28 @@ const resolvePhone = async (user) => {
     return customer?.phone || "";
 };
 
-const sanitizeUser = async (user) => ({
-    id: user._id,
-    name: user.name,
-    email: user.email,
-    phone: await resolvePhone(user),
-    roles: user.roles,
-    theme: user.theme,
-    profileImage: user.profileImage || "",
-    isActive: user.isActive,
-});
+const sanitizeUser = async (user) => {
+    const base = {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: await resolvePhone(user),
+        roles: user.roles,
+        theme: user.theme,
+        profileImage: user.profileImage || "",
+        isActive: user.isActive,
+    };
+
+    if (user.roles?.includes("customer")) {
+        const customer = await Customer.findOne({ user: user._id }).select("addresses");
+        return {
+            ...base,
+            addresses: (customer?.addresses || []).map(toAddressView),
+        };
+    }
+
+    return base;
+};
 
 exports.signup = async (req, res) => {
     try {
@@ -232,6 +262,227 @@ exports.updateProfile = async (req, res) => {
         });
     } catch (err) {
         console.error("UPDATE PROFILE ERROR:", err);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+const normalizeAddressInput = (payload = {}, { partial = false } = {}) => {
+    const normalized = {};
+    const requiredFields = ["fullName", "phone", "street", "city", "state", "pincode"];
+    const allFields = [
+        "label",
+        "customLabel",
+        "fullName",
+        "phone",
+        "street",
+        "area",
+        "landmark",
+        "city",
+        "state",
+        "pincode",
+        "country",
+        "location",
+        "isDefault",
+    ];
+
+    for (const key of allFields) {
+        if (payload[key] !== undefined) normalized[key] = payload[key];
+    }
+
+    if (!partial) {
+        for (const field of requiredFields) {
+            if (!String(normalized[field] || "").trim()) {
+                return { error: `${field} is required` };
+            }
+        }
+    }
+
+    if (normalized.label !== undefined) {
+        const label = String(normalized.label || "").toLowerCase().trim();
+        if (!addressLabels.includes(label)) {
+            return { error: "label must be one of home, office, other" };
+        }
+        normalized.label = label;
+    }
+
+    for (const field of ["customLabel", "fullName", "phone", "street", "area", "landmark", "city", "state", "pincode", "country"]) {
+        if (normalized[field] !== undefined) normalized[field] = String(normalized[field] || "").trim();
+    }
+
+    if (normalized.isDefault !== undefined) {
+        normalized.isDefault = Boolean(normalized.isDefault);
+    }
+
+    return { normalized };
+};
+
+const getOrCreateCustomerProfile = async (userId) => {
+    let customer = await Customer.findOne({ user: userId });
+    if (!customer) customer = await Customer.create({ user: userId, addresses: [] });
+    return customer;
+};
+
+exports.getAddresses = async (req, res) => {
+    try {
+        if (!req.user.roles?.includes("customer")) {
+            return res.status(403).json({ message: "Only customers have address book" });
+        }
+
+        const customer = await getOrCreateCustomerProfile(req.user._id);
+        const addresses = (customer.addresses || [])
+            .map(toAddressView)
+            .sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
+
+        return res.status(200).json({ addresses });
+    } catch (err) {
+        console.error("GET ADDRESSES ERROR:", err);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+exports.addAddress = async (req, res) => {
+    try {
+        if (!req.user.roles?.includes("customer")) {
+            return res.status(403).json({ message: "Only customers can add addresses" });
+        }
+
+        const { normalized, error } = normalizeAddressInput(req.body, { partial: false });
+        if (error) return res.status(400).json({ message: error });
+
+        const customer = await getOrCreateCustomerProfile(req.user._id);
+        const addresses = customer.addresses || [];
+
+        const shouldBeDefault = normalized.isDefault || addresses.length === 0;
+        if (shouldBeDefault) {
+            addresses.forEach((address) => {
+                address.isDefault = false;
+            });
+        }
+
+        addresses.push({
+            label: normalized.label || "home",
+            customLabel: normalized.customLabel || "",
+            fullName: normalized.fullName,
+            phone: normalized.phone,
+            street: normalized.street,
+            area: normalized.area || "",
+            landmark: normalized.landmark || "",
+            city: normalized.city,
+            state: normalized.state,
+            pincode: normalized.pincode,
+            country: normalized.country || "India",
+            location: normalized.location,
+            isDefault: shouldBeDefault,
+        });
+
+        if (!customer.phone) customer.phone = normalized.phone;
+        await customer.save();
+
+        return res.status(201).json({
+            message: "Address added",
+            addresses: customer.addresses.map(toAddressView).sort((a, b) => Number(b.isDefault) - Number(a.isDefault)),
+        });
+    } catch (err) {
+        console.error("ADD ADDRESS ERROR:", err);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+exports.updateAddress = async (req, res) => {
+    try {
+        if (!req.user.roles?.includes("customer")) {
+            return res.status(403).json({ message: "Only customers can update addresses" });
+        }
+
+        const { id } = req.params;
+        const { normalized, error } = normalizeAddressInput(req.body, { partial: true });
+        if (error) return res.status(400).json({ message: error });
+
+        const customer = await getOrCreateCustomerProfile(req.user._id);
+        const address = customer.addresses.id(id);
+        if (!address) {
+            return res.status(404).json({ message: "Address not found" });
+        }
+
+        if (normalized.isDefault) {
+            customer.addresses.forEach((entry) => {
+                entry.isDefault = false;
+            });
+        }
+
+        Object.assign(address, normalized);
+
+        const hasDefault = customer.addresses.some((entry) => entry.isDefault);
+        if (!hasDefault && customer.addresses.length > 0) {
+            customer.addresses[0].isDefault = true;
+        }
+
+        await customer.save();
+
+        return res.status(200).json({
+            message: "Address updated",
+            addresses: customer.addresses.map(toAddressView).sort((a, b) => Number(b.isDefault) - Number(a.isDefault)),
+        });
+    } catch (err) {
+        console.error("UPDATE ADDRESS ERROR:", err);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+exports.deleteAddress = async (req, res) => {
+    try {
+        if (!req.user.roles?.includes("customer")) {
+            return res.status(403).json({ message: "Only customers can delete addresses" });
+        }
+
+        const { id } = req.params;
+        const customer = await getOrCreateCustomerProfile(req.user._id);
+        const address = customer.addresses.id(id);
+        if (!address) {
+            return res.status(404).json({ message: "Address not found" });
+        }
+
+        const wasDefault = Boolean(address.isDefault);
+        customer.addresses.pull({ _id: id });
+        if (wasDefault && customer.addresses.length > 0) {
+            customer.addresses[0].isDefault = true;
+        }
+
+        await customer.save();
+        return res.status(200).json({
+            message: "Address deleted",
+            addresses: customer.addresses.map(toAddressView).sort((a, b) => Number(b.isDefault) - Number(a.isDefault)),
+        });
+    } catch (err) {
+        console.error("DELETE ADDRESS ERROR:", err);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+exports.setDefaultAddress = async (req, res) => {
+    try {
+        if (!req.user.roles?.includes("customer")) {
+            return res.status(403).json({ message: "Only customers can set default address" });
+        }
+
+        const { id } = req.params;
+        const customer = await getOrCreateCustomerProfile(req.user._id);
+        const address = customer.addresses.id(id);
+        if (!address) {
+            return res.status(404).json({ message: "Address not found" });
+        }
+
+        customer.addresses.forEach((entry) => {
+            entry.isDefault = String(entry._id) === String(id);
+        });
+        await customer.save();
+
+        return res.status(200).json({
+            message: "Default address updated",
+            addresses: customer.addresses.map(toAddressView).sort((a, b) => Number(b.isDefault) - Number(a.isDefault)),
+        });
+    } catch (err) {
+        console.error("SET DEFAULT ADDRESS ERROR:", err);
         return res.status(500).json({ message: "Internal server error" });
     }
 };

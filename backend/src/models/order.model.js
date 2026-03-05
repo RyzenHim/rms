@@ -44,9 +44,19 @@ const orderSchema = new mongoose.Schema(
             unique: true,
             trim: true,
         },
+        serviceType: {
+            type: String,
+            enum: ["dine_in", "online"],
+            default: "dine_in",
+        },
         tableNumber: {
             type: String,
             required: true,
+            trim: true,
+        },
+        deliveryAddress: {
+            type: String,
+            default: "",
             trim: true,
         },
         customerName: {
