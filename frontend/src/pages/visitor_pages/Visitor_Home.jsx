@@ -66,7 +66,6 @@ const Visitor_Home = ({ isCustomerView = false }) => {
   }, [featuredSlides.length]);
 
   const menuPath = isCustomerView ? "/customer/menu" : "#full-menu";
-  const reservationPath = isCustomerView ? "/customer/reservation-form" : "/auth/login";
   const onPublicItemTap = () => {
     if (!isAuthenticated) {
       navigate("/auth/login");
@@ -81,11 +80,11 @@ const Visitor_Home = ({ isCustomerView = false }) => {
 
   const handleReserveClick = () => {
     if (!isAuthenticated) {
-      navigate("/auth/login", { state: { from: "/customer/reservation-form" } });
+      navigate("/auth/login", { state: { from: "/customer/my-reservations" } });
       return;
     }
     if (user?.roles?.includes("customer")) {
-      navigate("/customer/reservation-form");
+      navigate("/customer/my-reservations");
       return;
     }
     navigate("/dashboard");

@@ -52,19 +52,21 @@ const Customer_Orders = () => {
   };
 
   return (
-    <div className="min-h-screen pb-10" style={{ backgroundColor: palette.pageBg, color: palette.text }}>
-      <section className="mx-auto w-full max-w-[96rem] px-4 py-10 md:px-8">
-        <div className="mb-8 space-y-2">
-          <h1 className="inline-flex items-center gap-2 heading-1" style={{ color: palette.text }}>
-            <FiClipboard className="h-7 w-7" />
+    <div className="min-h-screen pb-8" style={{ backgroundColor: palette.pageBg, color: palette.text }}>
+      <section className="mx-auto w-full max-w-5xl px-4 py-6 md:px-6">
+        <div className="mb-4 space-y-1">
+          <h1 className="inline-flex items-center gap-2 text-2xl font-bold md:text-3xl" style={{ color: palette.text }}>
+            <FiClipboard className="h-6 w-6" />
             Order History
           </h1>
-          <p className="text-lg" style={{ color: palette.muted }}>Track the status of your orders from placement to completion.</p>
+          <p className="text-sm md:text-base" style={{ color: palette.muted }}>
+            Track the status of your orders from placement to completion.
+          </p>
         </div>
 
-        {message && <div className="alert-error mb-6">{message}</div>}
+        {message && <div className="alert-error mb-4 text-sm">{message}</div>}
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {orders.length ? (
             orders.map((order) => {
               const statusBadge = getStatusBadge(order.status);
@@ -77,41 +79,51 @@ const Customer_Orders = () => {
               });
 
               return (
-                <article key={order._id} className="card-elevated space-y-4 p-6">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
+                <article key={order._id} className="card-elevated space-y-3 p-4 md:p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex-1">
-                      <div className="mb-2 flex items-center gap-3">
-                        <h2 className="heading-4" style={{ color: palette.text }}>{order.orderNumber}</h2>
-                        <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusBadge.color}`}>
+                      <div className="mb-1.5 flex items-center gap-2">
+                        <h2 className="text-base font-semibold md:text-lg" style={{ color: palette.text }}>
+                          {order.orderNumber}
+                        </h2>
+                        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${statusBadge.color}`}>
                           {statusBadge.label || order.status}
                         </span>
                       </div>
-                      <p className="inline-flex items-center gap-2 text-sm" style={{ color: palette.muted }}>
-                        <FiClock className="h-4 w-4" />
+                      <p className="inline-flex items-center gap-1.5 text-xs md:text-sm" style={{ color: palette.muted }}>
+                        <FiClock className="h-3.5 w-3.5" />
                         {orderDate}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="inline-flex items-center gap-1 heading-5" style={{ color: "#10b981" }}>
+                      <p className="inline-flex items-center justify-end gap-1 text-sm font-semibold md:text-base" style={{ color: "#10b981" }}>
                         Rs {Number(order.grandTotal || 0).toFixed(2)}
                       </p>
-                      <p className="text-xs" style={{ color: palette.muted }}>
+                      <p className="mt-0.5 text-[11px] md:text-xs" style={{ color: palette.muted }}>
                         {order.serviceType === "online" ? "Online Order" : `Table ${order.tableNumber}`}
                       </p>
                     </div>
                   </div>
 
-                  <div className="border-t pt-4" style={{ borderColor: palette.border }}>
-                    <h3 className="mb-3 inline-flex items-center gap-2 heading-5" style={{ color: palette.text }}>
-                      <FiGrid className="h-4 w-4" />
+                  <div className="border-t pt-3" style={{ borderColor: palette.border }}>
+                    <h3 className="mb-2 inline-flex items-center gap-2 text-sm font-semibold" style={{ color: palette.text }}>
+                      <FiGrid className="h-3.5 w-3.5" />
                       Items Ordered
                     </h3>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       {order.items?.map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between rounded-lg p-3" style={{ backgroundColor: palette.cardBg }}>
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between rounded-lg px-3 py-2"
+                          style={{ backgroundColor: palette.cardBg }}
+                        >
                           <div>
-                            <p className="font-semibold" style={{ color: palette.text }}>{item.name}</p>
-                            <p className="text-xs" style={{ color: palette.muted }}>Qty: {item.quantity}</p>
+                            <p className="text-sm font-semibold" style={{ color: palette.text }}>
+                              {item.name}
+                            </p>
+                            <p className="text-[11px]" style={{ color: palette.muted }}>
+                              Qty: {item.quantity}
+                            </p>
                           </div>
                           <p className="font-bold" style={{ color: "#10b981" }}>
                             Rs {Number(item.unitPrice * item.quantity || 0).toFixed(2)}
@@ -121,29 +133,56 @@ const Customer_Orders = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
-                    <div className="rounded-lg p-3" style={{ backgroundColor: palette.cardBg }}>
-                      <p className="mb-1 text-xs font-semibold" style={{ color: palette.muted }}>Customer</p>
-                      <p className="inline-flex items-center gap-2 font-semibold" style={{ color: palette.text }}><FiUser className="h-4 w-4" />{order.customerName}</p>
-                      <p className="inline-flex items-center gap-2 text-xs" style={{ color: palette.muted }}><FiPhone className="h-3 w-3" />{order.customerPhone || "N/A"}</p>
+                  <div className="grid grid-cols-1 gap-2 text-xs md:grid-cols-2 md:text-sm">
+                    <div className="rounded-lg px-3 py-2.5" style={{ backgroundColor: palette.cardBg }}>
+                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: palette.muted }}>
+                        Customer
+                      </p>
+                      <p className="inline-flex items-center gap-1.5 font-semibold" style={{ color: palette.text }}>
+                        <FiUser className="h-3.5 w-3.5" />
+                        {order.customerName}
+                      </p>
+                      <p className="mt-0.5 inline-flex items-center gap-1.5 text-[11px]" style={{ color: palette.muted }}>
+                        <FiPhone className="h-3 w-3" />
+                        {order.customerPhone || "N/A"}
+                      </p>
                     </div>
-                    <div className="rounded-lg p-3" style={{ backgroundColor: palette.cardBg }}>
-                      <p className="mb-1 text-xs font-semibold" style={{ color: palette.muted }}>Contact</p>
-                      <p className="inline-flex items-center gap-2 text-xs break-all" style={{ color: palette.text }}><FiMail className="h-3 w-3" />{order.customerEmail || "N/A"}</p>
+                    <div className="rounded-lg px-3 py-2.5" style={{ backgroundColor: palette.cardBg }}>
+                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: palette.muted }}>
+                        Contact
+                      </p>
+                      <p className="inline-flex items-center gap-1.5 break-all text-[11px] md:text-xs" style={{ color: palette.text }}>
+                        <FiMail className="h-3 w-3" />
+                        {order.customerEmail || "N/A"}
+                      </p>
                     </div>
                   </div>
 
                   {order.notes && (
-                    <div className="rounded-lg border-l-4 p-3" style={{ borderColor: "#0b6b49", backgroundColor: palette.cardBg }}>
-                      <p className="text-xs font-semibold" style={{ color: palette.muted }}>Special Requests</p>
-                      <p className="mt-1 text-sm" style={{ color: palette.text }}>{order.notes}</p>
+                    <div
+                      className="rounded-lg border-l-4 px-3 py-2.5"
+                      style={{ borderColor: "#0b6b49", backgroundColor: palette.cardBg }}
+                    >
+                      <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: palette.muted }}>
+                        Special Requests
+                      </p>
+                      <p className="mt-1 text-xs md:text-sm" style={{ color: palette.text }}>
+                        {order.notes}
+                      </p>
                     </div>
                   )}
 
                   {order.serviceType === "online" && order.deliveryAddress ? (
-                    <div className="rounded-lg border-l-4 p-3" style={{ borderColor: "#1d4ed8", backgroundColor: palette.cardBg }}>
-                      <p className="text-xs font-semibold" style={{ color: palette.muted }}>Delivery Address</p>
-                      <p className="mt-1 text-sm" style={{ color: palette.text }}>{order.deliveryAddress}</p>
+                    <div
+                      className="rounded-lg border-l-4 px-3 py-2.5"
+                      style={{ borderColor: "#1d4ed8", backgroundColor: palette.cardBg }}
+                    >
+                      <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: palette.muted }}>
+                        Delivery Address
+                      </p>
+                      <p className="mt-1 text-xs md:text-sm" style={{ color: palette.text }}>
+                        {order.deliveryAddress}
+                      </p>
                     </div>
                   ) : null}
 
@@ -151,7 +190,7 @@ const Customer_Orders = () => {
                     <div className="pt-1">
                       <button
                         onClick={() => cancelOrder(order._id)}
-                        className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-700"
+                        className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700"
                       >
                         Cancel Order
                       </button>
@@ -161,9 +200,11 @@ const Customer_Orders = () => {
               );
             })
           ) : (
-            <div className="card-elevated space-y-4 p-12 text-center" style={{ backgroundColor: palette.panelBg }}>
-              <FiInbox className="mx-auto h-10 w-10" style={{ color: palette.muted }} />
-              <p className="heading-4" style={{ color: palette.text }}>No Orders Yet</p>
+            <div className="card-elevated space-y-3 p-8 text-center text-sm" style={{ backgroundColor: palette.panelBg }}>
+              <FiInbox className="mx-auto h-8 w-8" style={{ color: palette.muted }} />
+              <p className="text-lg font-semibold" style={{ color: palette.text }}>
+                No Orders Yet
+              </p>
               <p style={{ color: palette.muted }}>Start ordering from the menu to see your history.</p>
             </div>
           )}

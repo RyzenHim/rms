@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import api, { withAuth } from "../../services/api";
+import { ReservationFormContent } from "./ReservationForm";
 
 const CustomerReservations = () => {
-  const navigate = useNavigate();
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -22,9 +21,9 @@ const CustomerReservations = () => {
     setLoading(true);
     try {
       const params = statusFilter !== "all" ? { status: statusFilter } : {};
-      const response = await axios.get("/api/reservations/my-reservations", {
+      const response = await api.get("/reservations/my-reservations", {
         params,
-        headers: { Authorization: `Bearer ${token}` },
+        ...withAuth(token),
       });
       setReservations(response.data.reservations || []);
       setError("");
@@ -39,10 +38,10 @@ const CustomerReservations = () => {
     if (!selectedReservation) return;
 
     try {
-      await axios.patch(
-        `/api/reservations/${selectedReservation._id}/cancel`,
+      await api.patch(
+        `/reservations/${selectedReservation._id}/cancel`,
         { reason: cancellationReason },
-        { headers: { Authorization: `Bearer ${token}` } }
+        withAuth(token)
       );
 
       setReservations(
@@ -82,193 +81,202 @@ const CustomerReservations = () => {
   const canCancel = (status) => ["pending", "confirmed"].includes(status);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Reservations</h1>
-          <button
-            onClick={() => navigate("/customer/reservation-form")}
-            className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-6 rounded-lg transition"
-          >
-            Book New Table
-          </button>
+    <div className="min-h-screen py-6 sm:py-8 px-3 sm:px-4">
+      <div className="mx-auto flex max-w-6xl flex-col gap-5 lg:gap-6">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-50">
+              Book a Table & My Reservations
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+              Choose your date, time and guests, then manage all your upcoming visits in one place.
+            </p>
+          </div>
         </div>
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
-          </div>
-        )}
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.1fr)] items-start">
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft dark:border-slate-700 dark:bg-[#27374D]">
+            <ReservationFormContent />
+          </section>
 
-        {/* Status Filter */}
-        <div className="mb-6 flex gap-2 flex-wrap">
-          {["all", "pending", "confirmed", "arrived", "completed", "cancelled"].map(
-            (status) => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`px-4 py-2 rounded-lg font-medium transition ${
-                  statusFilter === status
-                    ? "bg-orange-600 text-white"
-                    : "bg-white text-gray-700 border border-gray-300 hover:border-orange-600"
-                }`}
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </button>
-            )
-          )}
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center items-center h-40">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
-          </div>
-        ) : reservations.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-            <p className="text-gray-600 text-lg mb-4">No reservations found</p>
-            <button
-              onClick={() => navigate("/customer/reservation-form")}
-              className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-6 rounded-lg transition"
-            >
-              Book Your First Table
-            </button>
-          </div>
-        ) : (
-          <div className="grid gap-6">
-            {reservations.map((reservation) => (
-              <div
-                key={reservation._id}
-                className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Reservation Details */}
-                  <div>
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h2 className="text-xl font-bold text-gray-900">
-                          Table {reservation.table?.tableNumber}
-                        </h2>
-                        <p className="text-gray-600">
-                          {reservation.table?.location && 
-                            `${reservation.table.location.charAt(0).toUpperCase() + reservation.table.location.slice(1)} Location`}
-                        </p>
-                      </div>
-                      <span className={`px-4 py-2 rounded-full text-sm font-semibold ${getStatusColor(reservation.status)}`}>
-                        {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}
-                      </span>
-                    </div>
-
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Date:</span>
-                        <span className="font-medium text-gray-900">
-                          {formatDate(reservation.reservationDate)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Time:</span>
-                        <span className="font-medium text-gray-900">
-                          {reservation.reservationTime}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Guests:</span>
-                        <span className="font-medium text-gray-900">
-                          {reservation.numberOfGuests}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Occasion:</span>
-                        <span className="font-medium text-gray-900 capitalize">
-                          {reservation.occasion}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Table Capacity:</span>
-                        <span className="font-medium text-gray-900">
-                          {reservation.table?.capacity} guests
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Additional Info */}
-                  <div>
-                    {reservation.specialRequests && (
-                      <div className="mb-4">
-                        <h3 className="font-semibold text-gray-900 mb-2">Special Requests</h3>
-                        <p className="text-gray-600 text-sm">
-                          {reservation.specialRequests}
-                        </p>
-                      </div>
-                    )}
-
-                    {reservation.checkinTime && (
-                      <div className="mb-4">
-                        <h3 className="font-semibold text-gray-900 mb-2">Check-in Time</h3>
-                        <p className="text-gray-600 text-sm">
-                          {new Date(reservation.checkinTime).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </div>
-                    )}
-
-                    {reservation.checkoutTime && (
-                      <div className="mb-4">
-                        <h3 className="font-semibold text-gray-900 mb-2">Check-out Time</h3>
-                        <p className="text-gray-600 text-sm">
-                          {new Date(reservation.checkoutTime).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </div>
-                    )}
-
-                    {reservation.cancellationReason && (
-                      <div className="mb-4">
-                        <h3 className="font-semibold text-gray-900 mb-2">Cancellation Reason</h3>
-                        <p className="text-gray-600 text-sm">
-                          {reservation.cancellationReason}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    {canCancel(reservation.status) && (
-                      <button
-                        onClick={() => {
-                          setSelectedReservation(reservation);
-                          setShowCancelModal(true);
-                        }}
-                        className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition"
-                      >
-                        Cancel Reservation
-                      </button>
-                    )}
-                  </div>
-                </div>
+          <section className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 shadow-soft dark:border-slate-700 dark:bg-[#27374D] max-h-[calc(100vh-9rem)] overflow-y-auto">
+            {error && (
+              <div className="mb-3 rounded-lg border border-red-300 bg-red-50 p-3 text-xs sm:text-sm text-red-700 dark:border-red-700 dark:bg-red-900/20 dark:text-red-200">
+                {error}
               </div>
-            ))}
-          </div>
-        )}
+            )}
+
+            <div className="mb-3 flex flex-wrap gap-2">
+              {["all", "pending", "confirmed", "arrived", "completed", "cancelled"].map(
+                (status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => setStatusFilter(status)}
+                    className={`rounded-full px-3 py-1.5 text-xs sm:text-sm font-medium transition ${
+                      statusFilter === status
+                        ? "bg-emerald-600 text-white"
+                        : "border border-slate-300 bg-white text-slate-700 hover:border-emerald-500 dark:bg-[#1a2332] dark:text-slate-200 dark:border-slate-600"
+                    }`}
+                  >
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </button>
+                )
+              )}
+            </div>
+
+            {loading ? (
+              <div className="flex h-40 items-center justify-center">
+                <div className="h-10 w-10 animate-spin rounded-full border-2 border-slate-300 border-b-emerald-600" />
+              </div>
+            ) : reservations.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-600 dark:border-slate-600 dark:bg-[#1a2332] dark:text-slate-200">
+                You don't have any reservations yet. Use the form on the left to book your first table.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {reservations.map((reservation) => (
+                  <article
+                    key={reservation._id}
+                    className="rounded-xl border border-slate-200 bg-white p-4 text-xs sm:text-sm shadow-soft hover-lift dark:border-slate-600 dark:bg-[#1a2332]"
+                  >
+                    <div className="grid gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                      <div>
+                        <div className="mb-3 flex items-start justify-between gap-2">
+                          <div>
+                            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-50">
+                              Table {reservation.table?.tableNumber}
+                            </h2>
+                            <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300">
+                              {reservation.table?.location &&
+                                `${reservation.table.location.charAt(0).toUpperCase() + reservation.table.location.slice(1)} location • Capacity ${reservation.table?.capacity} guests`}
+                            </p>
+                          </div>
+                          <span
+                            className={`rounded-full px-3 py-1 text-[11px] font-semibold ${getStatusColor(
+                              reservation.status
+                            )}`}
+                          >
+                            {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}
+                          </span>
+                        </div>
+
+                        <dl className="space-y-1.5 text-[11px] sm:text-xs">
+                          <div className="flex justify-between gap-3">
+                            <dt className="text-slate-500 dark:text-slate-300">Date</dt>
+                            <dd className="font-medium text-slate-900 dark:text-slate-50">
+                              {formatDate(reservation.reservationDate)}
+                            </dd>
+                          </div>
+                          <div className="flex justify-between gap-3">
+                            <dt className="text-slate-500 dark:text-slate-300">Time</dt>
+                            <dd className="font-medium text-slate-900 dark:text-slate-50">
+                              {reservation.reservationTime}
+                            </dd>
+                          </div>
+                          <div className="flex justify-between gap-3">
+                            <dt className="text-slate-500 dark:text-slate-300">Guests</dt>
+                            <dd className="font-medium text-slate-900 dark:text-slate-50">
+                              {reservation.numberOfGuests}
+                            </dd>
+                          </div>
+                          <div className="flex justify-between gap-3">
+                            <dt className="text-slate-500 dark:text-slate-300">Occasion</dt>
+                            <dd className="font-medium capitalize text-slate-900 dark:text-slate-50">
+                              {reservation.occasion}
+                            </dd>
+                          </div>
+                        </dl>
+                      </div>
+
+                      <div className="space-y-2">
+                        {reservation.specialRequests && (
+                          <div>
+                            <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-50">
+                              Special Requests
+                            </h3>
+                            <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                              {reservation.specialRequests}
+                            </p>
+                          </div>
+                        )}
+
+                        {reservation.checkinTime && (
+                          <div>
+                            <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-50">
+                              Check-in Time
+                            </h3>
+                            <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                              {new Date(reservation.checkinTime).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          </div>
+                        )}
+
+                        {reservation.checkoutTime && (
+                          <div>
+                            <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-50">
+                              Check-out Time
+                            </h3>
+                            <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                              {new Date(reservation.checkoutTime).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          </div>
+                        )}
+
+                        {reservation.cancellationReason && (
+                          <div>
+                            <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-50">
+                              Cancellation Reason
+                            </h3>
+                            <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                              {reservation.cancellationReason}
+                            </p>
+                          </div>
+                        )}
+
+                        {canCancel(reservation.status) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedReservation(reservation);
+                              setShowCancelModal(true);
+                            }}
+                            className="mt-2 w-full rounded-lg bg-red-600 px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-red-700"
+                          >
+                            Cancel Reservation
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
       </div>
 
       {/* Cancel Modal */}
       {showCancelModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Cancel Reservation</h2>
-            <p className="text-gray-600 mb-4">
+          <div className="bg-white dark:bg-[#27374D] rounded-lg shadow-lg p-5 sm:p-6 max-w-md w-full">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-50 mb-3">
+              Cancel Reservation
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-200 mb-3">
               Are you sure you want to cancel your reservation for Table{" "}
               {selectedReservation?.table?.tableNumber} on{" "}
               {formatDate(selectedReservation?.reservationDate)}?
             </p>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
                 Reason for Cancellation (Optional)
               </label>
               <textarea
@@ -276,24 +284,24 @@ const CustomerReservations = () => {
                 onChange={(e) => setCancellationReason(e.target.value)}
                 placeholder="Please let us know why you're cancelling..."
                 rows="3"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-900 focus:ring-2 focus:ring-emerald-600 focus:border-transparent dark:border-slate-600 dark:bg-[#1a2332] dark:text-slate-50"
               />
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <button
                 onClick={() => {
                   setShowCancelModal(false);
                   setSelectedReservation(null);
                   setCancellationReason("");
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition"
+                className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-[#1a2332]"
               >
                 Keep Reservation
               </button>
               <button
                 onClick={handleCancelReservation}
-                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition"
+                className="flex-1 rounded-lg bg-red-600 px-3 py-2 text-xs sm:text-sm font-semibold text-white transition hover:bg-red-700"
               >
                 Confirm Cancellation
               </button>

@@ -2,6 +2,7 @@ const Order = require("../models/order.model");
 const MenuItem = require("../models/menuItem.model");
 const Customer = require("../models/customer.model");
 const Table = require("../models/table.model");
+const Reservation = require("../models/reservation.model");
 const jwt = require("jsonwebtoken");
 const { executeOrderTransaction } = require("../utils/transactionManager");
 
@@ -155,6 +156,36 @@ exports.createOrder = async (req, res) => {
                 }
             } else if (isDineIn && isCustomer) {
                 throw new Error("Please scan a valid table QR code before placing order");
+            }
+
+            // For dine-in, ensure the table is not currently within an active reservation window
+            if (isDineIn) {
+                const now = new Date();
+                const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+                const todaysReservations = await Reservation.find({
+                    table: table._id,
+                    reservationDate: { $gte: dayStart, $lt: dayEnd },
+                    status: { $in: ["pending", "confirmed", "arrived"] },
+                }).session(session);
+
+                const nowMs = now.getTime();
+                const blocked = todaysReservations.some((r) => {
+                    const start = new Date(r.reservationDate);
+                    const [rh, rm] = String(r.reservationTime || "00:00").split(":").map(Number);
+                    start.setHours(rh || 0, rm || 0, 0, 0);
+                    const end = r.checkoutTime
+                        ? new Date(r.checkoutTime)
+                        : new Date(start.getTime() + (r.duration || 180) * 60 * 1000);
+                    return nowMs >= start.getTime() && nowMs <= end.getTime();
+                });
+
+                if (blocked) {
+                    throw new Error(
+                        "This table is reserved at the moment. Please ask the waiter to provide an available table."
+                    );
+                }
             }
 
             const normalizedItems = [];

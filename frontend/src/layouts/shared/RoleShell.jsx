@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import themeService from "../../services/theme_Service";
 import useResolvedColorMode from "../../hooks/useResolvedColorMode";
-import AppNavbar from "../../components/navigation/AppNavbar";
+import EmployeeSidebar from "../../components/navigation/EmployeeSidebar";
 
 const RoleShell = ({ links = [] }) => {
   const [theme, setTheme] = useState({
@@ -13,6 +13,7 @@ const RoleShell = ({ links = [] }) => {
     allowUserThemeToggle: true,
     surfaceColor: "#f1f5f9",
   });
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { resolvedMode, setUserMode, palette, allowUserThemeToggle } = useResolvedColorMode(theme);
 
   useEffect(() => {
@@ -21,12 +22,21 @@ const RoleShell = ({ links = [] }) => {
       .then((data) => {
         if (data?.theme) setTheme((prev) => ({ ...prev, ...data.theme }));
       })
-      .catch(() => {});
+      .catch(() => { });
+  }, []);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileOpen(false);
   }, []);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: palette.pageBg, color: palette.text }}>
-      <AppNavbar
+    <div
+      className="flex min-h-screen flex-col md:flex-row"
+      style={{ backgroundColor: palette.pageBg, color: palette.text }}
+    >
+      {/* Sidebar */}
+      <EmployeeSidebar
         brandName={theme.logoText || "DelishDrop"}
         brandSub={theme.name || ""}
         logoImage={theme.logoImage || ""}
@@ -35,11 +45,25 @@ const RoleShell = ({ links = [] }) => {
         resolvedMode={resolvedMode}
         setUserMode={setUserMode}
         allowUserThemeToggle={allowUserThemeToggle}
-        showGuestAuth={false}
+        mobileOpen={mobileOpen}
+        setMobileOpen={setMobileOpen}
       />
-      <main className="mx-auto w-full max-w-[96rem] px-4 py-6 md:px-8">
-        <div className="rounded-2xl p-4 shadow-sm sm:p-5 md:p-7" style={{ backgroundColor: palette.panelBg, color: palette.text }}>
-          <Outlet />
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-hidden">
+        <div className="h-screen overflow-y-auto" style={{ backgroundColor: palette.pageBg }}>
+          <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <div
+              className="rounded-2xl p-4 shadow-md sm:p-6 md:p-8 transition-all duration-300"
+              style={{
+                backgroundColor: palette.panelBg,
+                color: palette.text,
+                boxShadow: `0 10px 40px ${resolvedMode === "dark" ? "rgba(0, 0, 0, 0.3)" : "rgba(39, 55, 77, 0.08)"}`,
+              }}
+            >
+              <Outlet />
+            </div>
+          </div>
         </div>
       </main>
     </div>

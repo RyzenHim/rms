@@ -62,22 +62,30 @@ const useResolvedColorMode = (theme = {}) => {
     () =>
       resolvedMode === "dark"
         ? {
-            pageBg: "#0b1220",
-            panelBg: "#111a2d",
-            cardBg: "#17233b",
-            text: "#e2e8f0",
-            muted: "#94a3b8",
-            border: "#25324d",
-          }
+          pageBg: "#1a2332",
+          panelBg: "#27374D",
+          cardBg: "#2f3f54",
+          text: "#DDE6ED",
+          muted: "#9DB2BF",
+          border: "#526D82",
+          primary: "#526D82",
+          secondary: "#9DB2BF",
+          accent: "#526D82",
+          hover: "#354657",
+        }
         : {
-            pageBg: theme.surfaceColor || "#f8faf8",
-            panelBg: "#ffffff",
-            cardBg: "#ffffff",
-            text: "#0f172a",
-            muted: "#475569",
-            border: "#e2e8f0",
-          },
-    [resolvedMode, theme.surfaceColor],
+          pageBg: "#DDE6ED",
+          panelBg: "#ffffff",
+          cardBg: "#f8fafb",
+          text: "#27374D",
+          muted: "#526D82",
+          border: "#9DB2BF",
+          primary: "#27374D",
+          secondary: "#526D82",
+          accent: "#9DB2BF",
+          hover: "#f0f4f8",
+        },
+    [resolvedMode],
   );
 
   return {

@@ -45,7 +45,7 @@ const ProfileHeader = () => {
             className="w-8 h-8 rounded-full object-cover border border-gray-200"
           />
         ) : (
-          <div className="w-8 h-8 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm">
+          <div className="w-8 h-8 rounded-full bg-slate-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm">
             {user.name?.charAt(0) || user.email?.charAt(0) || "U"}
           </div>
         )}
@@ -68,7 +68,7 @@ const ProfileHeader = () => {
                 {user.roles.map((role) => (
                   <span
                     key={role}
-                    className="inline-block px-2 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded capitalize"
+                    className="inline-block px-2 py-1 bg-slate-200 text-slate-700 text-xs font-semibold rounded capitalize"
                   >
                     {role}
                   </span>

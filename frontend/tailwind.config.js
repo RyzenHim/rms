@@ -7,26 +7,27 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Feane inspired - Warm food restaurant theme
-        brand: {
-          50: '#fff7f0',
-          100: '#ffe8d6',
-          200: '#ffd4ad',
-          300: '#ffb880',
-          400: '#ff9d52',
-          500: '#ff8c3a', // Primary - warm orange
-          600: '#e67e2f',
-          700: '#cc7029',
-          800: '#b35f23',
-          900: '#8b491b',
-        }
+        // Professional Blue-Gray Palette
+        slate: {
+          950: '#1a2332',
+          900: '#27374D',
+          800: '#2f3f54',
+          700: '#526D82',
+          600: '#6d8299',
+          500: '#8896b0',
+          400: '#9DB2BF',
+          300: '#b8c8d6',
+          200: '#d3dce4',
+          100: '#DDE6ED',
+          50: '#e8f0f7',
+        },
       },
       boxShadow: {
-        'soft': '0 2px 8px rgba(15, 23, 42, 0.08)',
-        'medium': '0 4px 16px rgba(15, 23, 42, 0.12)',
-        'lg': '0 8px 32px rgba(15, 23, 42, 0.15)',
-        'xl': '0 12px 48px rgba(15, 23, 42, 0.2)',
-        'orange': '0 10px 30px rgba(255, 140, 58, 0.2)',
+        'soft': '0 2px 8px rgba(39, 55, 77, 0.08)',
+        'medium': '0 4px 16px rgba(39, 55, 77, 0.12)',
+        'lg': '0 8px 32px rgba(39, 55, 77, 0.15)',
+        'xl': '0 12px 48px rgba(39, 55, 77, 0.2)',
+        'inset-light': 'inset 0 1px 3px rgba(255, 255, 255, 0.12)',
       },
       backdropBlur: {
         'xs': '2px',
@@ -37,8 +38,13 @@ export default {
       animation: {
         'spin-slow': 'spin 2s linear infinite',
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-      }
+      },
+      backgroundImage: {
+        'gradient-dark': 'linear-gradient(135deg, #27374D 0%, #526D82 100%)',
+        'gradient-light': 'linear-gradient(135deg, #DDE6ED 0%, #9DB2BF 100%)',
+      },
     },
   },
   plugins: [],
+  darkMode: 'class',
 };

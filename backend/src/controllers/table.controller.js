@@ -126,11 +126,11 @@ exports.getAvailableTables = async (req, res) => {
 
     const Reservation = require("../models/reservation.model");
 
-    // Find tables with enough capacity
+    // Find tables with enough capacity (exclude maintenance; other statuses are filtered by reservations below)
     const tables = await Table.find({
       isActive: true,
-      status: "available",
-      capacity: { $gte: parseInt(guests) },
+      status: { $ne: "maintenance" },
+      capacity: { $gte: parseInt(guests, 10) },
     }).sort({ capacity: 1 });
 
     // Filter out reserved tables for this time slot

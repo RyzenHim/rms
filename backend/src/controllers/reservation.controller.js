@@ -8,7 +8,16 @@ const getCustomerFromRequest = async (req) =>
 // Create reservation
 exports.createReservation = async (req, res) => {
   try {
-    const { tableId, numberOfGuests, reservationDate, reservationTime, specialRequests, occasion } = req.body;
+    const {
+      tableId,
+      numberOfGuests,
+      reservationDate,
+      reservationTime,
+      specialRequests,
+      occasion,
+      customerPhone,
+      checkoutTime,
+    } = req.body;
 
     // Validate inputs
     if (!tableId || !numberOfGuests || !reservationDate || !reservationTime) {
@@ -21,6 +30,13 @@ exports.createReservation = async (req, res) => {
       return res.status(404).json({ message: "Customer not found" });
     }
 
+    const effectivePhone = String(customer.user.phone || customerPhone || "").trim();
+    if (!effectivePhone) {
+      return res
+        .status(400)
+        .json({ message: "Customer phone number is required. Please add it in your profile or enter it while booking." });
+    }
+
     // Check table exists and has capacity
     const table = await Table.findOne({ _id: tableId, isActive: true });
     if (!table) {
@@ -31,30 +47,70 @@ exports.createReservation = async (req, res) => {
       return res.status(400).json({ message: `Table capacity is ${table.capacity}, but ${numberOfGuests} guests requested` });
     }
 
-    // Check for conflicting reservations
-    const conflictingReservation = await Reservation.findOne({
+    // Build start and checkout times with max 3-hour window
+    const startDate = new Date(reservationDate);
+    const [sh, sm] = String(reservationTime || "00:00").split(":").map(Number);
+    startDate.setHours(sh || 0, sm || 0, 0, 0);
+
+    let endDate = null;
+    let duration = 180; // minutes
+
+    if (checkoutTime) {
+      endDate = new Date(reservationDate);
+      const [eh, em] = String(checkoutTime || "00:00").split(":").map(Number);
+      endDate.setHours(eh || 0, em || 0, 0, 0);
+      const diffMs = endDate.getTime() - startDate.getTime();
+      const diffMinutes = diffMs / (1000 * 60);
+
+      if (diffMs <= 0) {
+        return res.status(400).json({ message: "Checkout time must be after reservation time" });
+      }
+      if (diffMinutes > 180) {
+        return res.status(400).json({ message: "Reservation duration cannot exceed 3 hours" });
+      }
+
+      duration = Math.round(diffMinutes);
+    } else {
+      endDate = new Date(startDate.getTime() + duration * 60 * 1000);
+    }
+
+    // Check for conflicting reservations on same table and overlapping time window
+    const sameDayReservations = await Reservation.find({
       table: tableId,
       reservationDate: {
-        $gte: new Date(reservationDate),
-        $lt: new Date(new Date(reservationDate).getTime() + 24 * 60 * 60 * 1000),
+        $gte: new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()),
+        $lt: new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + 1),
       },
-      status: { $in: ["confirmed", "arrived"] },
+      status: { $in: ["pending", "confirmed", "arrived"] },
     });
 
-    if (conflictingReservation) {
-      return res.status(400).json({ message: "Table is already reserved for this time" });
+    const overlaps = sameDayReservations.some((existing) => {
+      const existingStart = new Date(existing.reservationDate);
+      const [eh, em] = String(existing.reservationTime || "00:00").split(":").map(Number);
+      existingStart.setHours(eh || 0, em || 0, 0, 0);
+      const existingEnd = existing.checkoutTime
+        ? new Date(existing.checkoutTime)
+        : new Date(existingStart.getTime() + (existing.duration || 180) * 60 * 1000);
+
+      return startDate < existingEnd && endDate > existingStart;
+    });
+
+    if (overlaps) {
+      return res.status(400).json({ message: "Table is already reserved during the selected time window" });
     }
 
     // Create reservation
     const reservation = await Reservation.create({
       customer: customer._id,
       customerName: customer.user.name,
-      customerPhone: customer.user.phone || "",
+      customerPhone: effectivePhone,
       customerEmail: customer.user.email,
       table: tableId,
       numberOfGuests,
-      reservationDate: new Date(reservationDate),
+      reservationDate: startDate,
       reservationTime,
+      duration,
+      checkoutTime: endDate,
       specialRequests,
       occasion,
     });

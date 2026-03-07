@@ -237,9 +237,9 @@ const ProfilePage = () => {
       .join(", ");
 
   return (
-    <div className="mx-auto max-w-[90rem] space-y-4">
-      <section className="grid gap-4 lg:grid-cols-[300px_1fr]">
-        <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:sticky lg:top-20">
+    <div className="mx-auto max-w-[90rem] space-y-4 px-3 py-4 sm:px-4 sm:py-6">
+      <section className="grid gap-4 lg:grid-cols-[300px_1fr] items-start">
+        <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:sticky lg:top-20 dark:border-slate-700 dark:bg-[#27374D]">
           <div className="flex flex-col items-center text-center">
             {profileImage && !imageLoadFailed ? (
               <img
@@ -253,41 +253,46 @@ const ProfilePage = () => {
                 {initials}
               </div>
             )}
-            <p className="mt-3 text-lg font-black text-slate-900">{user?.name}</p>
-            <p className="text-xs text-slate-500">{user?.email}</p>
-            <p className="mt-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-700">{roleLabel}</p>
+            <p className="mt-3 text-lg font-black text-slate-900 dark:text-slate-50">{user?.name}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-300">{user?.email}</p>
+            <p className="mt-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-100">
+              {roleLabel}
+            </p>
           </div>
         </aside>
 
-        <form onSubmit={onProfileSubmit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-sm font-bold text-slate-900">Basic Information</p>
+        <form
+          onSubmit={onProfileSubmit}
+          className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5 dark:border-slate-700 dark:bg-[#27374D]"
+        >
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-600 dark:bg-[#1a2332]">
+            <p className="text-sm font-bold text-slate-900 dark:text-slate-50">Basic Information</p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <label className="text-sm font-semibold text-slate-700">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                 Full Name
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3"
+                  className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-900 dark:border-slate-600 dark:bg-[#27374D] dark:text-slate-50"
                   required
                 />
               </label>
-              <label className="text-sm font-semibold text-slate-700">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                 Role (Fixed)
                 <input
                   type="text"
                   value={roleLabel}
                   disabled
-                  className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-slate-600"
+                  className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600 dark:border-slate-600 dark:bg-[#1a2332] dark:text-slate-300"
                 />
               </label>
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-sm font-bold text-slate-900">Profile Image</p>
-            <label className="mt-3 block text-sm font-semibold text-slate-700">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-600 dark:bg-[#1a2332]">
+            <p className="text-sm font-bold text-slate-900 dark:text-slate-50">Profile Image</p>
+            <label className="mt-3 block text-sm font-semibold text-slate-700 dark:text-slate-200">
               Profile Image URL
               <input
                 type="url"
@@ -297,16 +302,18 @@ const ProfilePage = () => {
                   setImageLoadFailed(false);
                 }}
                 placeholder="https://..."
-                className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3"
+                className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-600 dark:bg-[#27374D] dark:text-slate-50 dark:placeholder:text-slate-400"
               />
             </label>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-600 dark:bg-[#1a2332]">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-bold text-slate-900">Password & Security</p>
-                <p className="text-xs text-slate-600">Password fields are hidden by default.</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-50">Password & Security</p>
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  Password fields are hidden by default.
+                </p>
               </div>
               <button
                 type="button"
@@ -320,7 +327,13 @@ const ProfilePage = () => {
           </div>
 
           {message.text ? (
-            <p className={`rounded-xl px-3 py-2 text-sm font-medium ${message.type === "error" ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+            <p
+              className={`rounded-xl px-3 py-2 text-sm font-medium ${
+                message.type === "error"
+                  ? "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-200"
+                  : "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-200"
+              }`}
+            >
               {message.text}
             </p>
           ) : null}
@@ -338,11 +351,13 @@ const ProfilePage = () => {
       </section>
 
       {isCustomer ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5 dark:border-slate-700 dark:bg-[#27374D]">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div>
-              <h3 className="text-lg font-black text-slate-900">Address Book</h3>
-              <p className="text-sm text-slate-600">Tap arrow to view full address details.</p>
+              <h3 className="text-lg font-black text-slate-900 dark:text-slate-50">Address Book</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                Tap arrow to view full address details.
+              </p>
             </div>
             <button
               type="button"
@@ -355,7 +370,13 @@ const ProfilePage = () => {
           </div>
 
           {addressMessage.text ? (
-            <p className={`mb-3 rounded-lg px-3 py-2 text-xs font-semibold ${addressMessage.type === "error" ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+            <p
+              className={`mb-3 rounded-lg px-3 py-2 text-xs font-semibold ${
+                addressMessage.type === "error"
+                  ? "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-200"
+                  : "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-200"
+              }`}
+            >
               {addressMessage.text}
             </p>
           ) : null}
@@ -364,14 +385,23 @@ const ProfilePage = () => {
             {addresses.map((address) => {
               const expanded = expandedAddressId === address.id;
               return (
-                <article key={address.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <article
+                  key={address.id}
+                  className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-600 dark:bg-[#1a2332]"
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-sm font-black capitalize text-slate-900">{labelText(address)}</p>
-                      <p className="text-xs font-semibold text-slate-700">{address.fullName} | {address.phone}</p>
-                      <p className="mt-0.5 line-clamp-1 text-xs text-slate-600">{shortAddress(address)}</p>
+                      <p className="text-sm font-black capitalize text-slate-900 dark:text-slate-50">
+                        {labelText(address)}
+                      </p>
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                        {address.fullName} | {address.phone}
+                      </p>
+                      <p className="mt-0.5 line-clamp-1 text-xs text-slate-600 dark:text-slate-300">
+                        {shortAddress(address)}
+                      </p>
                       {address.isDefault ? (
-                        <p className="mt-1 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                        <p className="mt-1 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">
                           Default
                         </p>
                       ) : null}
@@ -387,7 +417,7 @@ const ProfilePage = () => {
 
                   {expanded ? (
                     <div className="mt-2 border-t border-slate-200 pt-2">
-                      <p className="text-xs text-slate-700">{fullAddress(address)}</p>
+                      <p className="text-xs text-slate-700 dark:text-slate-200">{fullAddress(address)}</p>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <button
                           type="button"
@@ -400,7 +430,7 @@ const ProfilePage = () => {
                           <button
                             type="button"
                             onClick={() => onSetDefault(address.id)}
-                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-bold"
+                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-bold dark:border-slate-500"
                           >
                             Set Default
                           </button>
@@ -419,7 +449,9 @@ const ProfilePage = () => {
               );
             })}
           </div>
-          {!addresses.length ? <p className="text-sm text-slate-500">No saved addresses yet.</p> : null}
+          {!addresses.length ? (
+            <p className="text-sm text-slate-500 dark:text-slate-300">No saved addresses yet.</p>
+          ) : null}
         </section>
       ) : null}
 
@@ -433,24 +465,24 @@ const ProfilePage = () => {
       >
         <form onSubmit={onAddressSubmit} className="space-y-3">
           <div className="grid gap-2 sm:grid-cols-2">
-            <label className="text-xs font-semibold text-slate-600">
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-200">
               Label
               <select
                 value={addressForm.label}
                 onChange={(e) => setAddressForm((prev) => ({ ...prev, label: e.target.value }))}
-                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm"
+                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-[#27374D] dark:text-slate-50"
               >
                 <option value="home">Home</option>
                 <option value="office">Office</option>
                 <option value="other">Other</option>
               </select>
             </label>
-            <label className="text-xs font-semibold text-slate-600">
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-200">
               Custom Label
               <input
                 value={addressForm.customLabel}
                 onChange={(e) => setAddressForm((prev) => ({ ...prev, customLabel: e.target.value }))}
-                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm"
+                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-[#27374D] dark:text-slate-50"
                 placeholder="e.g., Mom's House"
                 disabled={addressForm.label !== "other"}
               />
@@ -458,72 +490,72 @@ const ProfilePage = () => {
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2">
-            <label className="text-xs font-semibold text-slate-600">
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-200">
               Full Name
               <input
                 required
                 value={addressForm.fullName}
                 onChange={(e) => setAddressForm((prev) => ({ ...prev, fullName: e.target.value }))}
-                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm"
+                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-[#27374D] dark:text-slate-50"
               />
             </label>
-            <label className="text-xs font-semibold text-slate-600">
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-200">
               Phone
               <input
                 required
                 value={addressForm.phone}
                 onChange={(e) => setAddressForm((prev) => ({ ...prev, phone: e.target.value }))}
-                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm"
+                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-[#27374D] dark:text-slate-50"
               />
             </label>
           </div>
 
-          <label className="text-xs font-semibold text-slate-600">
+          <label className="text-xs font-semibold text-slate-600 dark:text-slate-200">
             Street
             <input
               required
               value={addressForm.street}
               onChange={(e) => setAddressForm((prev) => ({ ...prev, street: e.target.value }))}
-              className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm"
+              className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-[#27374D] dark:text-slate-50"
             />
           </label>
 
           <div className="grid gap-2 sm:grid-cols-2">
-            <label className="text-xs font-semibold text-slate-600">
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-200">
               Area
               <input
                 value={addressForm.area}
                 onChange={(e) => setAddressForm((prev) => ({ ...prev, area: e.target.value }))}
-                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm"
+                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-[#27374D] dark:text-slate-50"
               />
             </label>
-            <label className="text-xs font-semibold text-slate-600">
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-200">
               Landmark
               <input
                 value={addressForm.landmark}
                 onChange={(e) => setAddressForm((prev) => ({ ...prev, landmark: e.target.value }))}
-                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm"
+                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-[#27374D] dark:text-slate-50"
               />
             </label>
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2">
-            <label className="text-xs font-semibold text-slate-600">
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-200">
               City
               <input
                 required
                 value={addressForm.city}
                 onChange={(e) => setAddressForm((prev) => ({ ...prev, city: e.target.value }))}
-                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm"
+                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-[#27374D] dark:text-slate-50"
               />
             </label>
-            <label className="text-xs font-semibold text-slate-600">
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-200">
               State
               <input
                 required
                 value={addressForm.state}
                 onChange={(e) => setAddressForm((prev) => ({ ...prev, state: e.target.value }))}
-                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm"
+                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-[#27374D] dark:text-slate-50"
               />
             </label>
           </div>
@@ -548,7 +580,7 @@ const ProfilePage = () => {
             </label>
           </div>
 
-          <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700">
+          <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200">
             <input
               type="checkbox"
               checked={addressForm.isDefault}
@@ -558,7 +590,13 @@ const ProfilePage = () => {
           </label>
 
           {addressMessage.text && isAddressModalOpen ? (
-            <p className={`rounded-lg px-3 py-2 text-xs font-semibold ${addressMessage.type === "error" ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+            <p
+              className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+                addressMessage.type === "error"
+                  ? "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-200"
+                  : "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-200"
+              }`}
+            >
               {addressMessage.text}
             </p>
           ) : null}
@@ -570,7 +608,7 @@ const ProfilePage = () => {
                 setIsAddressModalOpen(false);
                 resetAddressForm();
               }}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold"
+              className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-[#1a2332]"
             >
               Cancel
             </button>
@@ -591,36 +629,42 @@ const ProfilePage = () => {
         maxWidth="max-w-lg"
       >
         <form onSubmit={onPasswordSubmit} className="space-y-3">
-          <label className="block text-xs font-semibold text-slate-600">
+          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-200">
             Current Password
             <input
               type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3"
+              className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-900 dark:border-slate-600 dark:bg-[#27374D] dark:text-slate-50"
             />
           </label>
-          <label className="block text-xs font-semibold text-slate-600">
+          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-200">
             New Password
             <input
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3"
+              className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-900 dark:border-slate-600 dark:bg-[#27374D] dark:text-slate-50"
             />
           </label>
-          <label className="block text-xs font-semibold text-slate-600">
+          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-200">
             Confirm New Password
             <input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3"
+              className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-900 dark:border-slate-600 dark:bg-[#27374D] dark:text-slate-50"
             />
           </label>
 
           {passwordMessage.text ? (
-            <p className={`rounded-lg px-3 py-2 text-xs font-semibold ${passwordMessage.type === "error" ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+            <p
+              className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+                passwordMessage.type === "error"
+                  ? "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-200"
+                  : "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-200"
+              }`}
+            >
               {passwordMessage.text}
             </p>
           ) : null}
@@ -629,7 +673,7 @@ const ProfilePage = () => {
             <button
               type="button"
               onClick={() => setIsPasswordModalOpen(false)}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold"
+              className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-[#1a2332]"
             >
               Cancel
             </button>

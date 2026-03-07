@@ -50,11 +50,11 @@ const AppNavbar = ({
               key={link.to}
               to={link.to}
               end={link.end}
-              className={({ isActive }) =>
-                `rounded-full px-4 py-2 text-sm font-semibold ${isActive ? "bg-emerald-700 text-white" : ""}`
-              }
+              className={({ isActive }) => `rounded-full px-4 py-2 text-sm font-semibold transition-all`}
               style={({ isActive }) =>
-                isActive ? undefined : { color: palette.text, backgroundColor: "transparent" }
+                isActive
+                  ? { backgroundColor: palette.primary, color: "#DDE6ED" }
+                  : { color: palette.text, backgroundColor: "transparent" }
               }
             >
               {link.label}
@@ -66,8 +66,8 @@ const AppNavbar = ({
           {allowUserThemeToggle ? (
             <button
               onClick={() => setUserMode(resolvedMode === "dark" ? "light" : "dark")}
-              className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm"
-              style={{ borderColor: palette.border }}
+              className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition-all"
+              style={{ borderColor: palette.border, color: palette.text }}
             >
               {resolvedMode === "dark" ? <FiSun className="h-4 w-4" /> : <FiMoon className="h-4 w-4" />}
               {resolvedMode === "dark" ? "Light" : "Dark"}
@@ -78,15 +78,16 @@ const AppNavbar = ({
             <>
               <Link
                 to="/auth/login"
-                className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold"
-                style={{ borderColor: palette.border }}
+                className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all"
+                style={{ borderColor: palette.border, color: palette.text }}
               >
                 <FiLogIn className="h-4 w-4" />
                 Login
               </Link>
               <Link
                 to="/auth/signup"
-                className="rounded-full bg-emerald-700 px-4 py-2 text-sm font-semibold text-white"
+                className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white transition-all hover:shadow-lg"
+                style={{ backgroundColor: palette.primary }}
               >
                 Sign Up
               </Link>
@@ -96,7 +97,8 @@ const AppNavbar = ({
           {isAuthenticated ? (
             <button
               onClick={onLogout}
-              className="inline-flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white"
+              className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white transition-all hover:shadow-lg"
+              style={{ backgroundColor: palette.secondary }}
             >
               <FiLogOut className="h-4 w-4" />
               Logout
@@ -123,8 +125,12 @@ const AppNavbar = ({
               to={link.to}
               end={link.end}
               onClick={() => setMobileOpen(false)}
-              className="block rounded-xl px-3 py-2 text-sm font-semibold"
-              style={{ color: palette.text }}
+              className="block rounded-xl px-3 py-2 text-sm font-semibold transition-all"
+              style={({ isActive }) =>
+                isActive
+                  ? { backgroundColor: palette.primary, color: "#DDE6ED" }
+                  : { color: palette.text }
+              }
             >
               {link.label}
             </NavLink>
@@ -133,8 +139,8 @@ const AppNavbar = ({
           {allowUserThemeToggle ? (
             <button
               onClick={() => setUserMode(resolvedMode === "dark" ? "light" : "dark")}
-              className="inline-flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm font-semibold"
-              style={{ borderColor: palette.border }}
+              className="inline-flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm font-semibold transition-all"
+              style={{ borderColor: palette.border, color: palette.text }}
             >
               {resolvedMode === "dark" ? <FiSun className="h-4 w-4" /> : <FiMoon className="h-4 w-4" />}
               {resolvedMode === "dark" ? "Light Mode" : "Dark Mode"}
@@ -146,8 +152,8 @@ const AppNavbar = ({
               <Link
                 to="/auth/login"
                 onClick={() => setMobileOpen(false)}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold"
-                style={{ borderColor: palette.border }}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-all"
+                style={{ borderColor: palette.border, color: palette.text }}
               >
                 <FiLogIn className="h-4 w-4" />
                 Login
@@ -155,7 +161,8 @@ const AppNavbar = ({
               <Link
                 to="/auth/signup"
                 onClick={() => setMobileOpen(false)}
-                className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-3 py-2 text-sm font-semibold text-white"
+                className="inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm font-semibold text-white transition-all"
+                style={{ backgroundColor: palette.primary }}
               >
                 Sign Up
               </Link>
@@ -165,7 +172,8 @@ const AppNavbar = ({
           {isAuthenticated ? (
             <button
               onClick={onLogout}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-white transition-all"
+              style={{ backgroundColor: palette.secondary }}
             >
               <FiLogOut className="h-4 w-4" />
               Logout

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FiRefresh, FiEdit2, FiInfo } from "react-icons/fi";
+import { FiRefreshCw, FiEdit2, FiInfo } from "react-icons/fi";
 import api, { withAuth } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 
@@ -25,7 +25,8 @@ const TableStatusManager = () => {
     const loadTables = async () => {
         setLoading(true);
         try {
-            const { data } = await api.get("/api/tables", withAuth(token));
+            // baseURL already includes "/api", so we just call "/tables"
+            const { data } = await api.get("/tables", withAuth(token));
             setTables(data.tables || []);
             setMessage("");
         } catch (error) {
@@ -62,7 +63,7 @@ const TableStatusManager = () => {
         setUpdatingId(tableId);
         try {
             const { data } = await api.patch(
-                `/api/tables/${tableId}/status`,
+                `/tables/${tableId}/status`,
                 { status: newStatus },
                 withAuth(token)
             );
@@ -91,7 +92,7 @@ const TableStatusManager = () => {
                     disabled={loading}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
                 >
-                    <FiRefresh className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                    <FiRefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                     Refresh
                 </button>
             </div>
@@ -132,7 +133,7 @@ const TableStatusManager = () => {
             {loading ? (
                 <div className="flex items-center justify-center py-12">
                     <div className="animate-spin">
-                        <FiRefresh className="h-8 w-8 text-emerald-600" />
+                        <FiRefreshCw className="h-8 w-8 text-emerald-600" />
                     </div>
                 </div>
             ) : filteredTables.length === 0 ? (

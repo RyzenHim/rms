@@ -23,7 +23,7 @@ const ResetPassword = () => {
                     <p className="text-red-400 mb-4">Invalid or missing reset token</p>
                     <button
                         onClick={() => navigate("/auth/login")}
-                        className="text-orange-500 hover:text-orange-400 font-semibold"
+                        className="text-slate-300 hover:text-white font-semibold"
                     >
                         Back to Login
                     </button>
@@ -92,8 +92,8 @@ const ResetPassword = () => {
                 <div className="bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700">
                     <div className="text-center mb-8">
                         <div className="flex justify-center mb-4">
-                            <div className="p-3 bg-orange-500/20 rounded-full">
-                                <FiLock className="h-8 w-8 text-orange-500" />
+                            <div className="p-3 bg-slate-700/50 rounded-full">
+                                <FiLock className="h-8 w-8 text-slate-300" />
                             </div>
                         </div>
                         <h1 className="text-2xl font-bold text-white mb-2">Reset Password</h1>
@@ -111,7 +111,7 @@ const ResetPassword = () => {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="Enter new password"
-                                    className="w-full px-4 py-3 rounded-lg bg-slate-700 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-orange-500 transition-colors pr-10"
+                                    className="w-full px-4 py-3 rounded-lg bg-slate-700 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-slate-500 transition-colors pr-10"
                                 />
                                 <button
                                     type="button"
@@ -137,7 +137,7 @@ const ResetPassword = () => {
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                     placeholder="Confirm password"
-                                    className="w-full px-4 py-3 rounded-lg bg-slate-700 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-orange-500 transition-colors pr-10"
+                                    className="w-full px-4 py-3 rounded-lg bg-slate-700 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-slate-500 transition-colors pr-10"
                                 />
                                 <button
                                     type="button"
@@ -156,8 +156,8 @@ const ResetPassword = () => {
                         {message && (
                             <div
                                 className={`p-3 rounded-lg text-sm ${messageType === "success"
-                                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                                        : "bg-red-500/20 text-red-400 border border-red-500/30"
+                                    ? "bg-slate-700/50 text-slate-300 border border-slate-600"
+                                    : "bg-red-500/20 text-red-400 border border-red-500/30"
                                     }`}
                             >
                                 {message}
@@ -167,7 +167,7 @@ const ResetPassword = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-3 px-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-orange-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full py-3 px-4 bg-gradient-to-r from-slate-600 to-slate-700 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-slate-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? "Resetting..." : "Reset Password"}
                         </button>

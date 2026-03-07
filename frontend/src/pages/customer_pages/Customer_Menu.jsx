@@ -5,6 +5,7 @@ import menuService from "../../services/menu_Service";
 import themeService from "../../services/theme_Service";
 import orderService from "../../services/order_Service";
 import authService from "../../services/auth_Service";
+import api from "../../services/api";
 import PublicMenuSections from "../../components/menu/PublicMenuSections";
 import useResolvedColorMode from "../../hooks/useResolvedColorMode";
 import { useAuth } from "../../context/AuthContext";
@@ -54,6 +55,7 @@ const Customer_Menu = () => {
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [useSelectedAsDefault, setUseSelectedAsDefault] = useState(false);
+  const [dineInTables, setDineInTables] = useState([]);
   const [checkout, setCheckout] = useState({
     tableNumber: searchParams.get("table") || "",
     qrToken: searchParams.get("qrToken") || "",
@@ -77,11 +79,12 @@ const Customer_Menu = () => {
 
   const loadData = async () => {
     try {
-      const [themeRes, menuRes, ordersRes, addressesRes] = await Promise.all([
+      const [themeRes, menuRes, ordersRes, addressesRes, tablesRes] = await Promise.all([
         themeService.getActiveTheme(),
         menuService.getPublicMenu(),
         orderService.getOrders(token),
         authService.getAddresses(token).catch(() => ({ addresses: [] })),
+        api.get("/tables").catch(() => ({ data: { tables: [] } })),
       ]);
       setTheme((prev) => ({ ...prev, ...themeRes.theme }));
       setMenuData({
@@ -93,6 +96,7 @@ const Customer_Menu = () => {
 
       const incomingAddresses = addressesRes.addresses || [];
       setSavedAddresses(incomingAddresses);
+      setDineInTables((tablesRes.data?.tables || []).filter((t) => t.isActive && t.status !== "maintenance"));
 
       const defaultAddress = incomingAddresses.find((addr) => addr.isDefault) || incomingAddresses[0] || null;
       setSelectedAddressId((prev) => prev || defaultAddress?.id || "");
@@ -184,7 +188,7 @@ const Customer_Menu = () => {
         return;
       }
       if (orderMode === "dine_in" && !checkout.tableNumber) {
-        setMessage("Please enter table number for dine-in");
+        setMessage("Please select a table for dine-in");
         return;
       }
       if (orderMode === "online" && !checkout.customerPhone && !checkout.customerEmail) {
@@ -397,42 +401,67 @@ const Customer_Menu = () => {
               <FiCreditCard className="h-4 w-4" />
               Quick Checkout
             </h3>
-            <div className="grid grid-cols-2 gap-1 rounded-lg border p-1" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
-              <button
-                onClick={() => setOrderMode("online")}
-                className={`inline-flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-bold ${
-                  orderMode === "online" ? "text-white" : ""
-                }`}
-                style={{ backgroundColor: orderMode === "online" ? theme.primaryColor : "transparent", color: orderMode === "online" ? "#fff" : palette.text }}
-              >
-                <FiGlobe className="h-3.5 w-3.5" />
-                Online
-              </button>
-              <button
-                onClick={() => setOrderMode("dine_in")}
-                className={`inline-flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-bold ${
-                  orderMode === "dine_in" ? "text-white" : ""
-                }`}
-                style={{ backgroundColor: orderMode === "dine_in" ? theme.primaryColor : "transparent", color: orderMode === "dine_in" ? "#fff" : palette.text }}
-              >
-                <FiHome className="h-3.5 w-3.5" />
-                Dine In
-              </button>
+            <div
+              className="rounded-lg border px-3 py-2 text-xs font-semibold"
+              style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
+            >
+              {checkout.qrToken ? (
+                <span className="inline-flex items-center gap-2">
+                  <FiHome className="h-3.5 w-3.5" />
+                  Dine-in order for Table {checkout.tableNumber || "—"} (via QR)
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-2">
+                  <FiGlobe className="h-3.5 w-3.5" />
+                  Online order (home delivery / takeaway)
+                </span>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-2">
               <label className="text-[11px] font-semibold" style={{ color: palette.muted }}>
-                {orderMode === "dine_in" ? "Table Number *" : "Order Type"}
+                {orderMode === "dine_in" ? "Select Table *" : "Order Type"}
               </label>
-              <label className="text-[11px] font-semibold" style={{ color: palette.muted }}>Your Name *</label>
-              <input
-                type="text"
-                placeholder={orderMode === "dine_in" ? "e.g., T01" : "Online order"}
-                value={checkout.tableNumber}
-                onChange={(e) => setCheckout((prev) => ({ ...prev, tableNumber: e.target.value }))}
-                className="h-9 rounded-lg border px-2.5 text-xs"
-                style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
-                readOnly={orderMode === "online" || Boolean(checkout.qrToken)}
-              />
+              <label className="text-[11px] font-semibold" style={{ color: palette.muted }}>
+                Your Name *
+              </label>
+
+              {orderMode === "dine_in" && checkout.qrToken ? (
+                <input
+                  type="text"
+                  value={checkout.tableNumber ? `Table ${checkout.tableNumber}` : "Table from QR"}
+                  readOnly
+                  className="h-9 rounded-lg border px-2.5 text-xs"
+                  style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
+                />
+              ) : orderMode === "dine_in" ? (
+                <select
+                  value={checkout.tableNumber}
+                  onChange={(e) =>
+                    setCheckout((prev) => ({
+                      ...prev,
+                      tableNumber: e.target.value,
+                    }))
+                  }
+                  className="h-9 rounded-lg border px-2.5 text-xs"
+                  style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
+                >
+                  <option value="">Select table</option>
+                  {dineInTables.map((table) => (
+                    <option key={table._id} value={table.tableNumber}>
+                      {`Table ${table.tableNumber} • ${table.capacity} guests • ${table.location}`}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value="Online order"
+                  readOnly
+                  className="h-9 rounded-lg border px-2.5 text-xs"
+                  style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
+                />
+              )}
+
               <input
                 type="text"
                 value={checkout.customerName}

@@ -33,7 +33,6 @@ const AdminAnalytics = lazy(() => import("../pages/admin_pages/AdminAnalytics"))
 const AdminInventory = lazy(() => import("../pages/admin_pages/AdminInventory"));
 const AdminReservationManager = lazy(() => import("../pages/Admin/AdminReservationManager"));
 const AdminTableManager = lazy(() => import("../pages/Admin/AdminTableManager"));
-const ReservationForm = lazy(() => import("../pages/Customer/ReservationForm"));
 const CustomerReservations = lazy(() => import("../pages/Customer/CustomerReservations"));
 const WaiterOrders = lazy(() => import("../pages/waiter_pages/Waiter_Orders"));
 const KitchenOrders = lazy(() => import("../pages/kitchen_pages/Kitchen_Orders"));
@@ -105,10 +104,6 @@ const router = createBrowserRouter([
           {
             path: "orders",
             element: withLazy(<Customer_Orders />),
-          },
-          {
-            path: "reservation-form",
-            element: withLazy(<ReservationForm />),
           },
           {
             path: "my-reservations",

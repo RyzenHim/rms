@@ -30,7 +30,6 @@ const Customer_Main_Layout = () => {
     { to: "/customer/menu", label: "Order Tray" },
     { to: "/customer/orders", label: "Orders" },
     { to: "/customer/my-reservations", label: "Reservations" },
-    { to: "/customer/reservation-form", label: "Book Table" },
     { to: "/customer/profile", label: "Profile" },
   ];
 

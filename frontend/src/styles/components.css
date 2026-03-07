@@ -1,6 +1,6 @@
-/* Beautiful Button Variants - Feane Warm Orange Theme */
+/* Professional Button Variants - Blue-Gray Theme */
 .btn-primary {
-  @apply rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-3.5 font-bold text-white shadow-lg shadow-orange-500/30 transition duration-200 hover:shadow-xl hover:shadow-orange-500/40 hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-4 focus:ring-orange-500/20;
+  @apply rounded-2xl bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-3.5 font-bold text-white shadow-lg shadow-slate-700/30 transition duration-200 hover:shadow-xl hover:shadow-slate-700/40 hover:from-slate-800 hover:to-slate-900 focus:outline-none focus:ring-4 focus:ring-slate-500/20;
 }
 
 .btn-primary:disabled {
@@ -12,7 +12,7 @@
 }
 
 .btn-outline {
-  @apply rounded-2xl border-2 border-orange-500 bg-white px-6 py-3.5 font-bold text-orange-500 transition duration-200 hover:bg-orange-50 focus:outline-none focus:ring-4 focus:ring-orange-500/20;
+  @apply rounded-2xl border-2 border-slate-500 bg-white px-6 py-3.5 font-bold text-slate-600 transition duration-200 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-500/20;
 }
 
 .btn-danger {
@@ -20,11 +20,11 @@
 }
 
 .btn-small {
-  @apply rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2 font-semibold text-white shadow-md shadow-orange-500/20 transition duration-200 hover:shadow-lg hover:from-orange-600 hover:to-orange-700;
+  @apply rounded-xl bg-gradient-to-r from-slate-600 to-slate-700 px-4 py-2 font-semibold text-white shadow-md shadow-slate-600/20 transition duration-200 hover:shadow-lg hover:from-slate-700 hover:to-slate-800;
 }
 
 .btn-icon {
-  @apply inline-flex items-center justify-center rounded-2xl bg-orange-100 p-3 text-orange-600 transition duration-200 hover:bg-orange-200;
+  @apply inline-flex items-center justify-center rounded-2xl bg-slate-200 p-3 text-slate-700 transition duration-200 hover:bg-slate-300;
 }
 
 /* Card Styles */
@@ -42,11 +42,11 @@
 
 /* Input Styles */
 .input-base {
-  @apply w-full rounded-2xl border-2 border-slate-200 bg-white/50 px-5 py-3.5 text-slate-900 placeholder-slate-400 backdrop-blur-sm transition duration-200 hover:border-slate-300 focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-0 focus:shadow-lg focus:shadow-orange-100;
+  @apply w-full rounded-2xl border-2 border-slate-200 bg-white/50 px-5 py-3.5 text-slate-900 placeholder-slate-400 backdrop-blur-sm transition duration-200 hover:border-slate-300 focus:border-slate-500 focus:bg-white focus:outline-none focus:ring-0 focus:shadow-lg focus:shadow-slate-200;
 }
 
 .input-focused {
-  @apply border-orange-500 bg-white shadow-lg shadow-orange-100;
+  @apply border-slate-500 bg-white shadow-lg shadow-slate-200;
 }
 
 /* Badge Styles */
@@ -108,7 +108,7 @@
 
 /* Text utilities */
 .text-gradient {
-  background: linear-gradient(135deg, #ff8c3a 0%, #ff6b1a 100%);
+  background: linear-gradient(135deg, #526D82 0%, #27374D 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -173,7 +173,7 @@
 
 /* Focus styles for accessibility */
 .focus-ring {
-  @apply focus:outline-none focus:ring-4 focus:ring-orange-500/20;
+  @apply focus:outline-none focus:ring-4 focus:ring-slate-500/20;
 }
 
 /* Hover effects */
@@ -182,7 +182,7 @@
 }
 
 .hover-glow {
-  @apply transition duration-200 hover:shadow-orange;
+  @apply transition duration-200 hover:shadow-lg hover:shadow-slate-500/30;
 }
 
 /* Typography */

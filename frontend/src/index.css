@@ -7,27 +7,101 @@
 @layer base {
   :root {
     font-family: "Manrope", "Plus Jakarta Sans", sans-serif;
-    color: #44403c;
-    background: #fafaf9;
+    color-scheme: light dark;
+  }
+
+  /* Light mode */
+  :root {
+    color: #27374D;
+    background-color: #DDE6ED;
+  }
+
+  /* Dark mode */
+  :root.dark {
+    color: #DDE6ED;
+    background-color: #1a2332;
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 
   body {
     margin: 0;
     min-height: 100vh;
-    background: #fafaf9;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   * {
     box-sizing: border-box;
   }
+
+  /* Smooth input autofill for light mode */
+  input::-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px #f8fafb inset !important;
+    -webkit-text-fill-color: #27374D !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  /* Dark mode input autofill */
+  .dark input::-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px #2f3f54 inset !important;
+    -webkit-text-fill-color: #DDE6ED !important;
+  }
+
+  /* Focus states */
+  :focus-visible {
+    outline: 2px solid #526D82;
+    outline-offset: 2px;
+  }
+
+  .dark :focus-visible {
+    outline: 2px solid #9DB2BF;
+  }
+}
+
+@layer components {
+
+  /* Professional button styles */
+  .btn-primary {
+    @apply px-4 py-2.5 rounded-lg font-semibold text-white transition-all duration-200;
+    background-color: #526D82;
+  }
+
+  .btn-primary:hover {
+    background-color: #3f5468;
+    box-shadow: 0 4px 12px rgba(82, 109, 130, 0.3);
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2.5 rounded-lg font-semibold transition-all duration-200;
+    color: #27374D;
+    background-color: #9DB2BF;
+  }
+
+  .btn-secondary:hover {
+    background-color: #8896b0;
+  }
+
+  .dark .btn-secondary {
+    color: #DDE6ED;
+    background-color: #526D82;
+  }
+
+  .dark .btn-secondary:hover {
+    background-color: #3f5468;
+  }
 }
 
 @layer utilities {
+
+  /* Animations */
   @keyframes fade-in-up {
     from {
       opacity: 0;
       transform: translateY(20px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -39,6 +113,7 @@
       opacity: 0;
       transform: translateY(24px) scale(0.96);
     }
+
     to {
       opacity: 1;
       transform: translateY(0) scale(1);
@@ -49,24 +124,31 @@
     0% {
       transform: translate3d(0, 0, 0) scale(1);
     }
+
     50% {
       transform: translate3d(0, -20px, 0) scale(1.08);
     }
+
     100% {
       transform: translate3d(0, 0, 0) scale(1);
     }
   }
 
   @keyframes blob {
-    0%, 100% {
+
+    0%,
+    100% {
       transform: translate(0, 0) scale(1);
     }
+
     25% {
       transform: translate(20px, -50px) scale(1.1);
     }
+
     50% {
       transform: translate(-20px, 20px) scale(0.9);
     }
+
     75% {
       transform: translate(50px, 50px) scale(1.05);
     }
@@ -76,8 +158,33 @@
     0% {
       background-position: -1000px 0;
     }
+
     100% {
       background-position: 1000px 0;
+    }
+  }
+
+  @keyframes slide-in-left {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
     }
   }
 
@@ -93,6 +200,18 @@
     animation: blob 7s infinite;
   }
 
+  .animate-slide-in-left {
+    animation: slide-in-left 400ms ease-out both;
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 400ms ease-out both;
+  }
+
+  .animation-delay-1000 {
+    animation-delay: 1s;
+  }
+
   .animation-delay-2000 {
     animation-delay: 2s;
   }
@@ -105,46 +224,43 @@
     animation: shimmer 3s infinite;
   }
 
-  /* Feane theme orbs - Warm orange/red accent colors */
-  .hero-orb-left,
-  .hero-orb-right {
-    position: absolute;
-    width: 14rem;
-    height: 14rem;
-    border-radius: 9999px;
-    filter: blur(65px);
-    opacity: 0.55;
-    animation: float-orb 8s ease-in-out infinite;
+  /* Text utilities with dark mode support */
+  .text-primary {
+    color: #27374D;
   }
 
-  .hero-orb-left {
-    left: 3%;
-    top: 8%;
+  .dark .text-primary {
+    color: #DDE6ED;
   }
 
-  .hero-orb-right {
-    right: 5%;
-    top: 14%;
-    animation-delay: -3s;
+  .text-secondary {
+    color: #526D82;
   }
 
-  /* Smooth scrolling */
-  html {
-    scroll-behavior: smooth;
+  .dark .text-secondary {
+    color: #9DB2BF;
   }
 
-  /* Better input styling */
-  input::-webkit-autofill {
-    -webkit-box-shadow: 0 0 0 1000px white inset !important;
-    -webkit-text-fill-color: #0f172a !important;
+  /* Light mode gradients */
+  .gradient-primary {
+    background: linear-gradient(135deg, #526D82 0%, #9DB2BF 100%);
   }
 
-  /* Smooth transitions */
+  /* Dark mode gradients */
+  .dark .gradient-primary {
+    background: linear-gradient(135deg, #526D82 0%, #27374D 100%);
+  }
+
+  /* Smooth transitions for all elements */
   * {
     @apply transition-colors duration-200;
   }
 
-  button, a {
+  button,
+  a,
+  input,
+  textarea,
+  select {
     @apply transition-all duration-300;
   }
 }
