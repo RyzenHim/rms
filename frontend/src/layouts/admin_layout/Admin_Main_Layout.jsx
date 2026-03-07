@@ -8,8 +8,10 @@ const Admin_Main_Layout = () => {
       links={[
         { to: "/admin", label: "Dashboard", end: true },
         { to: "/admin/orders", label: "Orders" },
+        { to: "/admin/place-order", label: "Place Order" },
         { to: "/admin/menu", label: "Menu" },
         { to: "/admin/tables", label: "Table QR" },
+        { to: "/admin/table-status", label: "Table Status" },
         { to: "/admin/table-management", label: "Table Management" },
         { to: "/admin/reservations", label: "Reservations" },
         { to: "/admin/analytics", label: "Analytics" },

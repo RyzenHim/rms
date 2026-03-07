@@ -66,6 +66,7 @@ const Visitor_Home = ({ isCustomerView = false }) => {
   }, [featuredSlides.length]);
 
   const menuPath = isCustomerView ? "/customer/menu" : "#full-menu";
+  const reservationPath = isCustomerView ? "/customer/reservation-form" : "/auth/login";
   const onPublicItemTap = () => {
     if (!isAuthenticated) {
       navigate("/auth/login");
@@ -73,6 +74,18 @@ const Visitor_Home = ({ isCustomerView = false }) => {
     }
     if (user?.roles?.includes("customer")) {
       navigate("/customer/menu");
+      return;
+    }
+    navigate("/dashboard");
+  };
+
+  const handleReserveClick = () => {
+    if (!isAuthenticated) {
+      navigate("/auth/login", { state: { from: "/customer/reservation-form" } });
+      return;
+    }
+    if (user?.roles?.includes("customer")) {
+      navigate("/customer/reservation-form");
       return;
     }
     navigate("/dashboard");
@@ -144,7 +157,7 @@ const Visitor_Home = ({ isCustomerView = false }) => {
             <p className="text-xs uppercase tracking-[0.22em] font-bold opacity-90">Book A Table</p>
             <h3 className="heading-1 text-white">Reserve Your Seat Now</h3>
             <p className="mx-auto max-w-2xl text-base text-white/90">Enjoy premium dishes crafted by our chef team. Perfect for families, business meetings and special occasions.</p>
-            <Link to={menuPath} className="mt-6 inline-flex items-center gap-2 rounded-full bg-orange-500 px-6 py-3 font-semibold text-white hover:bg-orange-600">Reserve Table</Link>
+            <button onClick={handleReserveClick} className="mt-6 inline-flex items-center gap-2 rounded-full bg-orange-500 px-6 py-3 font-semibold text-white hover:bg-orange-600">Reserve Table</button>
           </div>
           <div className="grid gap-8 px-6 py-12 md:grid-cols-4" style={{ backgroundColor: palette.panelBg, color: palette.text }}>
             <div>

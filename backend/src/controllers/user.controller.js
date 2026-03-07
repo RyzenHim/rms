@@ -486,3 +486,100 @@ exports.setDefaultAddress = async (req, res) => {
         return res.status(500).json({ message: "Internal server error" });
     }
 };
+
+exports.forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ message: "Email is required" });
+        }
+
+        const normalizedEmail = email.toLowerCase().trim();
+        const user = await User.findOne({ email: normalizedEmail, isDeleted: false });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const resetToken = require("crypto").randomBytes(32).toString("hex");
+        const hashedToken = require("crypto").createHash("sha256").update(resetToken).digest("hex");
+
+        user.passwordResetToken = hashedToken;
+        user.passwordResetExpires = new Date(Date.now() + 30 * 60 * 1000);
+        await user.save();
+
+        const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/auth/reset-password?token=${resetToken}`;
+
+        await sendMailSafely({
+            to: user.email,
+            subject: "Password Reset Request - Feane Restaurant",
+            text: `You requested a password reset. Click the link below to reset your password. This link expires in 30 minutes.\n\n${resetUrl}`,
+            html: `
+                <p>You requested a password reset.</p>
+                <p>Click the link below to reset your password. This link expires in 30 minutes.</p>
+                <a href="${resetUrl}" style="display: inline-block; background-color: #ff8c3a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 20px 0;">Reset Password</a>
+                <p>If you didn't request this, please ignore this email.</p>
+            `,
+        });
+
+        return res.status(200).json({
+            message: "Password reset link sent to your email. Please check your inbox.",
+        });
+    } catch (err) {
+        console.error("FORGOT PASSWORD ERROR:", err);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+exports.resetPassword = async (req, res) => {
+    try {
+        const { token, password, confirmPassword } = req.body;
+
+        if (!token || !password || !confirmPassword) {
+            return res.status(400).json({ message: "Token, password and confirm password are required" });
+        }
+
+        if (password !== confirmPassword) {
+            return res.status(400).json({ message: "Passwords do not match" });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({ message: "Password must be at least 6 characters long" });
+        }
+
+        const hashedToken = require("crypto").createHash("sha256").update(token).digest("hex");
+
+        const user = await User.findOne({
+            passwordResetToken: hashedToken,
+            passwordResetExpires: { $gt: Date.now() },
+            isDeleted: false,
+        }).select("+password +passwordResetToken +passwordResetExpires");
+
+        if (!user) {
+            return res.status(400).json({ message: "Password reset token is invalid or expired" });
+        }
+
+        user.password = password;
+        user.passwordResetToken = null;
+        user.passwordResetExpires = null;
+        await user.save();
+
+        await sendMailSafely({
+            to: user.email,
+            subject: "Password Changed - Feane Restaurant",
+            text: "Your password has been changed successfully. If you didn't request this change, please contact support immediately.",
+            html: `
+                <p>Your password has been changed successfully.</p>
+                <p>If you didn't request this change, please contact support immediately.</p>
+            `,
+        });
+
+        return res.status(200).json({
+            message: "Password reset successfully. You can now login with your new password.",
+        });
+    } catch (err) {
+        console.error("RESET PASSWORD ERROR:", err);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};

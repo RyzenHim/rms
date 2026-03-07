@@ -58,6 +58,12 @@ const Login = () => {
           placeholder="••••••••"
         />
 
+        <div className="flex justify-end">
+          <Link to="/auth/forgot-password" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
+            Forgot password?
+          </Link>
+        </div>
+
         {error && (
           <div className="rounded-2xl border-2 border-red-200 bg-red-50 px-5 py-4">
             <div className="flex items-start gap-3">

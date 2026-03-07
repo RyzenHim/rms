@@ -1,4 +1,5 @@
 const Inventory = require("../models/inventory.model");
+const { executeInventoryTransaction, executeWithRetry } = require("../utils/transactionManager");
 
 // Create inventory item
 exports.createInventory = async (req, res) => {
@@ -99,7 +100,7 @@ exports.updateInventory = async (req, res) => {
   }
 };
 
-// Update stock (add/subtract)
+// Update stock (add/subtract) with transaction support for consistency
 exports.updateStock = async (req, res) => {
   try {
     const { id } = req.params;
@@ -109,25 +110,33 @@ exports.updateStock = async (req, res) => {
       return res.status(400).json({ message: "Quantity and type are required" });
     }
 
-    const item = await Inventory.findById(id);
-    if (!item) {
-      return res.status(404).json({ message: "Inventory item not found" });
-    }
+    // Use transaction with retry to ensure atomic stock update
+    const updatedItem = await executeWithRetry(
+      async (session) => {
+        const item = await Inventory.findById(id).session(session);
+        if (!item) {
+          throw new Error("Inventory item not found");
+        }
 
-    let newStock = item.currentStock;
-    if (type === "add") newStock += quantity;
-    if (type === "subtract") newStock -= quantity;
+        let newStock = item.currentStock;
+        if (type === "add") newStock += quantity;
+        if (type === "subtract") newStock -= quantity;
 
-    if (newStock < 0) {
-      return res.status(400).json({ message: "Stock cannot be negative" });
-    }
+        if (newStock < 0) {
+          throw new Error("Stock cannot be negative");
+        }
 
-    item.currentStock = newStock;
-    if (type === "add") item.lastRestocked = new Date();
+        item.currentStock = newStock;
+        if (type === "add") item.lastRestocked = new Date();
 
-    await item.save();
+        await item.save({ session });
+        return item;
+      },
+      3, // max retries
+      100 // delay between retries
+    );
 
-    res.status(200).json({ message: "Stock updated", item });
+    res.status(200).json({ message: "Stock updated", item: updatedItem });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

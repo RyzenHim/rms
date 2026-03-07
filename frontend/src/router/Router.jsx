@@ -14,6 +14,8 @@ const Visitor_Home = lazy(() => import("../pages/visitor_pages/Visitor_Home"));
 const Visitor_Menu = lazy(() => import("../pages/visitor_pages/Visitor_Menu"));
 const Login = lazy(() => import("../pages/auth_pages/Login"));
 const Signup = lazy(() => import("../pages/auth_pages/Signup"));
+const ForgotPassword = lazy(() => import("../pages/auth_pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("../pages/auth_pages/ResetPassword"));
 const Customer_Home = lazy(() => import("../pages/customer_pages/Customer_Home"));
 const Customer_Menu = lazy(() => import("../pages/customer_pages/Customer_Menu"));
 const Customer_Orders = lazy(() => import("../pages/customer_pages/Customer_Orders"));
@@ -26,6 +28,7 @@ const AdminSettings = lazy(() => import("../pages/admin_pages/AdminSettings"));
 const AdminMenuManager = lazy(() => import("../pages/admin_pages/AdminMenuManager"));
 const AdminEmployees = lazy(() => import("../pages/admin_pages/AdminEmployees"));
 const AdminTableQR = lazy(() => import("../pages/admin_pages/AdminTableQR"));
+const AdminTableStatus = lazy(() => import("../pages/admin_pages/AdminTableStatus"));
 const AdminAnalytics = lazy(() => import("../pages/admin_pages/AdminAnalytics"));
 const AdminInventory = lazy(() => import("../pages/admin_pages/AdminInventory"));
 const AdminReservationManager = lazy(() => import("../pages/Admin/AdminReservationManager"));
@@ -62,6 +65,14 @@ const router = createBrowserRouter([
   {
     path: "/auth/signup",
     element: withLazy(<Signup />),
+  },
+  {
+    path: "/auth/forgot-password",
+    element: withLazy(<ForgotPassword />),
+  },
+  {
+    path: "/auth/reset-password",
+    element: withLazy(<ResetPassword />),
   },
   {
     element: <ProtectedRoute />,
@@ -120,8 +131,10 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: withLazy(<RoleDashboard roleLabel="Admin" />) },
           { path: "orders", element: withLazy(<RoleOrders roleLabel="Admin" />) },
+          { path: "place-order", element: withLazy(<Customer_Menu />) },
           { path: "menu", element: withLazy(<AdminMenuManager />) },
           { path: "tables", element: withLazy(<AdminTableQR />) },
+          { path: "table-status", element: withLazy(<AdminTableStatus />) },
           { path: "table-management", element: withLazy(<AdminTableManager />) },
           { path: "reservations", element: withLazy(<AdminReservationManager />) },
           { path: "employees", element: withLazy(<AdminEmployees />) },
@@ -142,6 +155,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: withLazy(<ManagerDashboard />) },
           { path: "orders", element: withLazy(<RoleOrders roleLabel="Manager" />) },
+          { path: "table-status", element: withLazy(<AdminTableStatus />) },
           { path: "settings", element: withLazy(<RoleSettings roleLabel="Manager" />) },
           { path: "profile", element: withLazy(<ProfilePage />) },
         ],
@@ -185,6 +199,7 @@ const router = createBrowserRouter([
         element: <Waiter_Main_Layout />,
         children: [
           { index: true, element: withLazy(<WaiterOrders />) },
+          { path: "table-status", element: withLazy(<AdminTableStatus />) },
           { path: "settings", element: withLazy(<RoleSettings roleLabel="Waiter" />) },
           { path: "profile", element: withLazy(<ProfilePage />) },
         ],

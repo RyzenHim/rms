@@ -3,6 +3,7 @@ const MenuItem = require("../models/menuItem.model");
 const Customer = require("../models/customer.model");
 const Table = require("../models/table.model");
 const jwt = require("jsonwebtoken");
+const { executeOrderTransaction } = require("../utils/transactionManager");
 
 const TAX_RATE = 0.05;
 
@@ -95,137 +96,155 @@ exports.createOrder = async (req, res) => {
         } = req.body;
         const roles = req.user.roles || [];
         const isCustomer = roles.includes("customer");
-        const serviceType = ["dine_in", "online"].includes(String(rawServiceType || "").toLowerCase())
-            ? String(rawServiceType).toLowerCase()
-            : "dine_in";
-        const isDineIn = serviceType === "dine_in";
-        const normalizedTableNumberInput = String(tableNumber || "").trim();
+        const isAdmin = roles.includes("admin");
+        const isOrderingAsCustomer = isCustomer || isAdmin;
 
-        if (isDineIn && !normalizedTableNumberInput) {
-            return res.status(400).json({ message: "Table number is required for dine-in orders" });
-        }
-        if (!isDineIn && isCustomer && !String(customerPhone || "").trim() && !String(customerEmail || "").trim()) {
-            return res.status(400).json({ message: "Phone or email is required for online orders" });
-        }
-        if (!isDineIn && isCustomer && !String(deliveryAddress || "").trim()) {
-            return res.status(400).json({ message: "Delivery address is required for online orders" });
-        }
-        if (!Array.isArray(items) || items.length === 0) {
-            return res.status(400).json({ message: "At least one order item is required" });
-        }
+        // Use transaction to ensure order and customer data consistency
+        const order = await executeOrderTransaction(async (session) => {
+            const serviceType = ["dine_in", "online"].includes(String(rawServiceType || "").toLowerCase())
+                ? String(rawServiceType).toLowerCase()
+                : "dine_in";
+            const isDineIn = serviceType === "dine_in";
+            const normalizedTableNumberInput = String(tableNumber || "").trim();
 
-        let table = null;
-        const normalizedTableNumber = isDineIn ? normalizedTableNumberInput : (normalizedTableNumberInput || "ONLINE");
-        if (isDineIn) {
-            table = await Table.findOne({ tableNumber: normalizedTableNumber, isActive: true }).select("_id tableNumber status");
-            if (!table) {
-                return res.status(400).json({ message: "Invalid or inactive table number" });
+            if (isDineIn && !normalizedTableNumberInput) {
+                return res.status(400).json({ message: "Table number is required for dine-in orders" });
             }
-        }
-
-        const tokenSecret = process.env.QR_SIGNING_SECRET || process.env.JWT_SECRET;
-        if (isDineIn && qrToken) {
-            if (!tokenSecret) {
-                return res.status(500).json({ message: "QR signing secret is not configured" });
+            if (!isDineIn && isOrderingAsCustomer && !String(customerPhone || "").trim() && !String(customerEmail || "").trim()) {
+                return res.status(400).json({ message: "Phone or email is required for online orders" });
+            }
+            if (!isDineIn && isOrderingAsCustomer && !String(deliveryAddress || "").trim()) {
+                return res.status(400).json({ message: "Delivery address is required for online orders" });
+            }
+            if (!Array.isArray(items) || items.length === 0) {
+                return res.status(400).json({ message: "At least one order item is required" });
             }
 
-            let decoded;
-            try {
-                decoded = jwt.verify(String(qrToken), tokenSecret);
-            } catch (error) {
-                return res.status(400).json({ message: "Invalid or expired table QR token" });
+            let table = null;
+            const normalizedTableNumber = isDineIn ? normalizedTableNumberInput : (normalizedTableNumberInput || "ONLINE");
+            if (isDineIn) {
+                table = await Table.findOne({ tableNumber: normalizedTableNumber, isActive: true }).select("_id tableNumber status").session(session);
+                if (!table) {
+                    throw new Error("Invalid or inactive table number");
+                }
             }
 
-            const tokenTableId = String(decoded.tableId || "");
-            const tokenTableNumber = String(decoded.tableNumber || "");
-            const tokenPurpose = String(decoded.purpose || "");
+            const tokenSecret = process.env.QR_SIGNING_SECRET || process.env.JWT_SECRET;
+            if (isDineIn && qrToken) {
+                if (!tokenSecret) {
+                    throw new Error("QR signing secret is not configured");
+                }
 
-            if (
-                tokenPurpose !== "table_qr" ||
-                tokenTableId !== String(table._id) ||
-                tokenTableNumber !== table.tableNumber
-            ) {
-                return res.status(400).json({ message: "QR token does not match selected table" });
+                let decoded;
+                try {
+                    decoded = jwt.verify(String(qrToken), tokenSecret);
+                } catch (error) {
+                    throw new Error("Invalid or expired table QR token");
+                }
+
+                const tokenTableId = String(decoded.tableId || "");
+                const tokenTableNumber = String(decoded.tableNumber || "");
+                const tokenPurpose = String(decoded.purpose || "");
+
+                if (
+                    tokenPurpose !== "table_qr" ||
+                    tokenTableId !== String(table._id) ||
+                    tokenTableNumber !== table.tableNumber
+                ) {
+                    throw new Error("QR token does not match selected table");
+                }
+            } else if (isDineIn && isCustomer) {
+                throw new Error("Please scan a valid table QR code before placing order");
             }
-        } else if (isDineIn && isCustomer) {
-            return res.status(400).json({ message: "Please scan a valid table QR code before placing order" });
-        }
 
-        const normalizedItems = [];
-        let subTotal = 0;
+            const normalizedItems = [];
+            let subTotal = 0;
 
-        for (const item of items) {
-            const menuItemId = item?.menuItem;
-            const quantity = toValidQuantity(item?.quantity);
-            if (!menuItemId || !quantity) {
-                return res.status(400).json({ message: "Each item requires menuItem and quantity >= 1" });
+            for (const item of items) {
+                const menuItemId = item?.menuItem;
+                const quantity = toValidQuantity(item?.quantity);
+                if (!menuItemId || !quantity) {
+                    throw new Error("Each item requires menuItem and quantity >= 1");
+                }
+
+                const menuItem = await MenuItem.findOne({ _id: menuItemId, isActive: true }).select(
+                    "name price"
+                ).session(session);
+                if (!menuItem) {
+                    throw new Error("Invalid menu item in order");
+                }
+
+                const unitPrice = Number(menuItem.price || 0);
+                const totalPrice = Number((unitPrice * quantity).toFixed(2));
+                subTotal += totalPrice;
+
+                normalizedItems.push({
+                    menuItem: menuItem._id,
+                    name: menuItem.name,
+                    quantity,
+                    unitPrice,
+                    totalPrice,
+                    notes: String(item?.notes || "").trim(),
+                });
             }
 
-            const menuItem = await MenuItem.findOne({ _id: menuItemId, isActive: true }).select(
-                "name price"
+            const taxAmount = Number((subTotal * TAX_RATE).toFixed(2));
+            const grandTotal = Number((subTotal + taxAmount).toFixed(2));
+
+            // Create order within transaction
+            const createdOrder = await Order.create(
+                [
+                    {
+                        orderNumber: getOrderNumber(),
+                        serviceType,
+                        tableNumber: isDineIn ? table.tableNumber : normalizedTableNumber,
+                        deliveryAddress: String(deliveryAddress || "").trim(),
+                        customerName: String(customerName || "").trim(),
+                        customerEmail: String(customerEmail || "").trim().toLowerCase(),
+                        customerPhone: String(customerPhone || "").trim(),
+                        createdBy: req.user._id,
+                        items: normalizedItems,
+                        notes: String(notes).trim(),
+                        subTotal,
+                        taxAmount,
+                        grandTotal,
+                    },
+                ],
+                { session }
             );
-            if (!menuItem) {
-                return res.status(400).json({ message: "Invalid menu item in order" });
+
+            const createdOrderData = createdOrder[0];
+
+            // Update customer record within same transaction (atomicity guaranteed)
+            if (isCustomer) {
+                const customer = await Customer.findOne({ user: req.user._id }).session(session);
+                if (customer) {
+                    if (!customer.phone && customerPhone) customer.phone = customerPhone;
+                    customer.totalOrders = Number(customer.totalOrders || 0) + 1;
+                    customer.lastOrderDate = new Date();
+                    await customer.save({ session });
+                }
+            } else if (customerPhone) {
+                const matchedCustomer = await Customer.findOne({ phone: String(customerPhone).trim() }).session(session);
+                if (matchedCustomer) {
+                    matchedCustomer.totalOrders = Number(matchedCustomer.totalOrders || 0) + 1;
+                    matchedCustomer.lastOrderDate = new Date();
+                    await matchedCustomer.save({ session });
+                }
             }
 
-            const unitPrice = Number(menuItem.price || 0);
-            const totalPrice = Number((unitPrice * quantity).toFixed(2));
-            subTotal += totalPrice;
-
-            normalizedItems.push({
-                menuItem: menuItem._id,
-                name: menuItem.name,
-                quantity,
-                unitPrice,
-                totalPrice,
-                notes: String(item?.notes || "").trim(),
-            });
-        }
-
-        const taxAmount = Number((subTotal * TAX_RATE).toFixed(2));
-        const grandTotal = Number((subTotal + taxAmount).toFixed(2));
-
-        const order = await Order.create({
-            orderNumber: getOrderNumber(),
-            serviceType,
-            tableNumber: isDineIn ? table.tableNumber : normalizedTableNumber,
-            deliveryAddress: String(deliveryAddress || "").trim(),
-            customerName: String(customerName || "").trim(),
-            customerEmail: String(customerEmail || "").trim().toLowerCase(),
-            customerPhone: String(customerPhone || "").trim(),
-            createdBy: req.user._id,
-            items: normalizedItems,
-            notes: String(notes).trim(),
-            subTotal,
-            taxAmount,
-            grandTotal,
+            return createdOrderData;
         });
 
+        // Populate order data after transaction commits
         const populated = await Order.findById(order._id)
             .populate("createdBy", "name email roles")
             .populate("items.menuItem", "name image");
 
-        if (isCustomer) {
-            const customer = await Customer.findOne({ user: req.user._id });
-            if (customer) {
-                if (!customer.phone && customerPhone) customer.phone = customerPhone;
-                customer.totalOrders = Number(customer.totalOrders || 0) + 1;
-                customer.lastOrderDate = new Date();
-                await customer.save();
-            }
-        } else if (customerPhone) {
-            const matchedCustomer = await Customer.findOne({ phone: String(customerPhone).trim() });
-            if (matchedCustomer) {
-                matchedCustomer.totalOrders = Number(matchedCustomer.totalOrders || 0) + 1;
-                matchedCustomer.lastOrderDate = new Date();
-                await matchedCustomer.save();
-            }
-        }
-
         return res.status(201).json({ message: "Order created", order: populated });
     } catch (error) {
         console.error("CREATE ORDER ERROR:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        return res.status(500).json({ message: error.message || "Internal server error" });
     }
 };
 

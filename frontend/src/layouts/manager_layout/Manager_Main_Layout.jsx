@@ -8,6 +8,7 @@ const Manager_Main_Layout = () => {
       links={[
         { to: "/manager", label: "Dashboard", end: true },
         { to: "/manager/orders", label: "Orders" },
+        { to: "/manager/table-status", label: "Table Status" },
         { to: "/manager/settings", label: "Settings" },
       ]}
     />
