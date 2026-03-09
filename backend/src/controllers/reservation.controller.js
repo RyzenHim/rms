@@ -43,6 +43,14 @@ exports.createReservation = async (req, res) => {
       return res.status(404).json({ message: "Table not found" });
     }
 
+    // Check table status - only allow reservations on available or reserved tables
+    if (table.status === "occupied") {
+      return res.status(400).json({ message: "Table is currently occupied. Please select a different table." });
+    }
+    if (table.status === "maintenance") {
+      return res.status(400).json({ message: "Table is under maintenance. Please select a different table." });
+    }
+
     if (table.capacity < numberOfGuests) {
       return res.status(400).json({ message: `Table capacity is ${table.capacity}, but ${numberOfGuests} guests requested` });
     }

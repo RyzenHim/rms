@@ -14,9 +14,10 @@ const Admin_Main_Layout = () => {
         { to: "/admin/table-status", label: "Table Status" },
         { to: "/admin/table-management", label: "Table Management" },
         { to: "/admin/reservations", label: "Reservations" },
+        { to: "/admin/employees", label: "Employees" },
+        { to: "/admin/customers", label: "Customers" },
         { to: "/admin/analytics", label: "Analytics" },
         { to: "/admin/inventory", label: "Inventory" },
-        { to: "/admin/employees", label: "Employees" },
         { to: "/admin/settings", label: "Settings" },
       ]}
     />

@@ -129,7 +129,7 @@ exports.getAvailableTables = async (req, res) => {
     // Find tables with enough capacity (exclude maintenance; other statuses are filtered by reservations below)
     const tables = await Table.find({
       isActive: true,
-      status: { $ne: "maintenance" },
+      status: { $nin: ["maintenance", "occupied"] },
       capacity: { $gte: parseInt(guests, 10) },
     }).sort({ capacity: 1 });
 

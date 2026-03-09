@@ -96,7 +96,7 @@ const Customer_Menu = () => {
 
       const incomingAddresses = addressesRes.addresses || [];
       setSavedAddresses(incomingAddresses);
-      setDineInTables((tablesRes.data?.tables || []).filter((t) => t.isActive && t.status !== "maintenance"));
+      setDineInTables((tablesRes.data?.tables || []).filter((t) => t.isActive && t.status !== "maintenance" && t.status !== "occupied"));
 
       const defaultAddress = incomingAddresses.find((addr) => addr.isDefault) || incomingAddresses[0] || null;
       setSelectedAddressId((prev) => prev || defaultAddress?.id || "");

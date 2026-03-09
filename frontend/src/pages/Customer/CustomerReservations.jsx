@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api, { withAuth } from "../../services/api";
 import { ReservationFormContent } from "./ReservationForm";
+import { useAuth } from "../../context/AuthContext";
 
 const CustomerReservations = () => {
   const [reservations, setReservations] = useState([]);
@@ -11,7 +12,7 @@ const CustomerReservations = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
 
-  const token = localStorage.getItem("token");
+  const { token } = useAuth();
 
   useEffect(() => {
     fetchReservations();
@@ -113,11 +114,10 @@ const CustomerReservations = () => {
                     key={status}
                     type="button"
                     onClick={() => setStatusFilter(status)}
-                    className={`rounded-full px-3 py-1.5 text-xs sm:text-sm font-medium transition ${
-                      statusFilter === status
+                    className={`rounded-full px-3 py-1.5 text-xs sm:text-sm font-medium transition ${statusFilter === status
                         ? "bg-emerald-600 text-white"
                         : "border border-slate-300 bg-white text-slate-700 hover:border-emerald-500 dark:bg-[#1a2332] dark:text-slate-200 dark:border-slate-600"
-                    }`}
+                      }`}
                   >
                     {status.charAt(0).toUpperCase() + status.slice(1)}
                   </button>

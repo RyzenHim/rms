@@ -27,11 +27,12 @@ const canViewAllOrders = (roles = []) =>
     roles.includes("admin") ||
     roles.includes("manager") ||
     roles.includes("kitchen") ||
-    roles.includes("cashier");
+    roles.includes("cashier") ||
+    roles.includes("waiter");
 
 const parseOrderStatusUpdate = (roles = [], currentStatus, nextStatus) => {
     const kitchenStatuses = ["received", "preparing", "done_preparing"];
-    const waiterStatuses = ["served", "cancelled"];
+    const waiterStatuses = ["received", "done_preparing", "served", "cancelled"];
     const adminStatuses = [
         "placed",
         "received",
@@ -127,6 +128,14 @@ exports.createOrder = async (req, res) => {
                 table = await Table.findOne({ tableNumber: normalizedTableNumber, isActive: true }).select("_id tableNumber status").session(session);
                 if (!table) {
                     throw new Error("Invalid or inactive table number");
+                }
+
+                // Check table status - don't allow orders on occupied or maintenance tables
+                if (table.status === "occupied") {
+                    throw new Error("This table is currently occupied. Please select a different table.");
+                }
+                if (table.status === "maintenance") {
+                    throw new Error("This table is under maintenance. Please select a different table.");
                 }
             }
 
@@ -246,6 +255,11 @@ exports.createOrder = async (req, res) => {
 
             const createdOrderData = createdOrder[0];
 
+            // Update table status to occupied for dine-in orders
+            if (isDineIn && table) {
+                await Table.findByIdAndUpdate(table._id, { status: "occupied" }, { session });
+            }
+
             // Update customer record within same transaction (atomicity guaranteed)
             if (isCustomer) {
                 const customer = await Customer.findOne({ user: req.user._id }).session(session);
@@ -306,6 +320,15 @@ exports.updateOrderStatus = async (req, res) => {
                 sentAt: null,
             };
         }
+
+        // Update table status when order is served
+        if (status === "served" && order.serviceType === "dine_in") {
+            await Table.findOneAndUpdate(
+                { tableNumber: order.tableNumber },
+                { status: "available" }
+            );
+        }
+
         await order.save();
 
         const populated = await Order.findById(order._id)
@@ -373,6 +396,15 @@ exports.cancelMyOrder = async (req, res) => {
         }
 
         order.status = "cancelled";
+
+        // Free up table if dine-in order is cancelled
+        if (order.serviceType === "dine_in") {
+            await Table.findOneAndUpdate(
+                { tableNumber: order.tableNumber },
+                { status: "available" }
+            );
+        }
+
         await order.save();
 
         const populated = await Order.findById(order._id)
