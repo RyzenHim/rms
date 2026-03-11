@@ -5,7 +5,7 @@ const restaurantThemeSchema = new mongoose.Schema(
         name: {
             type: String,
             required: true,
-            default: "Feane Restaurant",
+            default: "FunChick Fried Chicken",
         },
         heroTitle: {
             type: String,
