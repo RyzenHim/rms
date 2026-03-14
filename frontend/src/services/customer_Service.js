@@ -21,6 +21,11 @@ const customerService = {
         return data;
     },
 
+    async restoreCustomer(token, id) {
+        const { data } = await api.patch(`/customers/${id}/restore`, {}, withAuth(token));
+        return data;
+    },
+
     async deleteCustomer(token, id) {
         const { data } = await api.delete(`/customers/${id}`, withAuth(token));
         return data;

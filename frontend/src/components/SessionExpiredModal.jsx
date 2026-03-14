@@ -1,7 +1,13 @@
 import { useAuth } from "../context/AuthContext";
+import useResolvedColorMode from "../hooks/useResolvedColorMode";
 
 const SessionExpiredModal = () => {
   const { sessionExpired, clearSessionExpired } = useAuth();
+  const { palette } = useResolvedColorMode({
+    colorMode: "system",
+    allowUserThemeToggle: true,
+    surfaceColor: "#f8fafc",
+  });
 
   const handleOK = () => {
     clearSessionExpired();
@@ -13,11 +19,14 @@ const SessionExpiredModal = () => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[9999]">
-      <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full animate-pulse">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+      <div
+        className="max-w-sm w-full rounded-lg p-6 shadow-xl"
+        style={{ backgroundColor: palette.panelBg, color: palette.text, border: `1px solid ${palette.border}` }}
+      >
+        <h2 className="mb-2 text-xl font-bold sm:text-2xl" style={{ color: palette.text }}>
           Session Expired
         </h2>
-        <p className="text-sm sm:text-base text-gray-600 mb-6">
+        <p className="mb-6 text-sm sm:text-base" style={{ color: palette.muted }}>
           Your login session has expired. Please log in again to continue.
         </p>
         <div className="flex gap-3">
@@ -34,3 +43,4 @@ const SessionExpiredModal = () => {
 };
 
 export default SessionExpiredModal;
+

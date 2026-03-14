@@ -75,7 +75,9 @@ const EmployeeSidebar = ({
                 className="sticky top-0 z-40 border-b backdrop-blur-sm md:hidden"
                 style={{
                     borderColor: palette.border,
-                    backgroundColor: `${palette.panelBg}F0`,
+                    backgroundColor: palette.panelBg,
+                    backdropFilter: palette.backdrop,
+                    boxShadow: palette.glassShadow,
                 }}
             >
                 <div className="flex items-center justify-between gap-3 px-4 py-3">
@@ -105,8 +107,9 @@ const EmployeeSidebar = ({
                         onClick={() => setMobileOpen((prev) => !prev)}
                         className="inline-flex items-center rounded-lg p-2 transition-all"
                         style={{
-                            backgroundColor: palette.hover,
-                            color: palette.primary,
+                            backgroundColor: palette.cardBg,
+                            color: palette.text,
+                            border: `1px solid ${palette.border}`,
                         }}
                         aria-label="Toggle menu"
                     >
@@ -132,6 +135,8 @@ const EmployeeSidebar = ({
                     borderColor: palette.border,
                     backgroundColor: palette.panelBg,
                     color: palette.text,
+                    backdropFilter: palette.backdrop,
+                    boxShadow: palette.glassShadow,
                 }}
             >
                 {/* Logo Section */}
@@ -165,8 +170,9 @@ const EmployeeSidebar = ({
                         onClick={toggleSidebar}
                         className="rounded-lg p-2 transition-all"
                         style={{
-                            backgroundColor: palette.hover,
-                            color: palette.primary,
+                            backgroundColor: palette.cardBg,
+                            color: palette.text,
+                            border: `1px solid ${palette.border}`,
                         }}
                         aria-label="Toggle sidebar"
                         title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
@@ -190,9 +196,10 @@ const EmployeeSidebar = ({
                                     } ${isActive ? "nav-active" : ""}`
                                 }
                                 style={({ isActive }) => ({
-                                    backgroundColor: isActive ? palette.primary : palette.panelBg,
-                                    color: isActive ? "#DDE6ED" : palette.text,
-                                    boxShadow: isActive ? `0 4px 12px rgba(82, 109, 130, 0.25)` : "none",
+                                    backgroundColor: isActive ? palette.cardBg : "transparent",
+                                    color: palette.text,
+                                    border: isActive ? `1px solid ${palette.border}` : "1px solid transparent",
+                                    boxShadow: isActive ? palette.glassShadow : "none",
                                 })}
                             >
                                 {({ isActive }) => (
@@ -219,8 +226,9 @@ const EmployeeSidebar = ({
                             onClick={() => setUserMode(resolvedMode === "dark" ? "light" : "dark")}
                             className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all duration-200"
                             style={{
-                                backgroundColor: palette.hover,
-                                color: palette.primary,
+                                backgroundColor: palette.cardBg,
+                                color: palette.text,
+                                border: `1px solid ${palette.border}`,
                             }}
                             title={resolvedMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
                         >
@@ -241,6 +249,7 @@ const EmployeeSidebar = ({
                             className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg"
                             style={{
                                 backgroundColor: palette.primary,
+                                boxShadow: palette.glassShadow,
                             }}
                             title="Logout"
                         >

@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { FiClock, FiCreditCard, FiGlobe, FiHome, FiGrid, FiMinus, FiPlus, FiSearch, FiShoppingCart, FiTrash2 } from "react-icons/fi";
+import { useLocation, useSearchParams } from "react-router-dom";
+import { FiClock, FiCreditCard, FiGlobe, FiHome, FiGrid, FiMinus, FiPlus, FiSearch, FiShoppingCart, FiTrash2, FiZap } from "react-icons/fi";
 import menuService from "../../services/menu_Service";
 import themeService from "../../services/theme_Service";
 import orderService from "../../services/order_Service";
 import authService from "../../services/auth_Service";
 import api from "../../services/api";
 import PublicMenuSections from "../../components/menu/PublicMenuSections";
+import MenuItemQuickViewModal from "../../components/menu/MenuItemQuickViewModal";
 import useResolvedColorMode from "../../hooks/useResolvedColorMode";
+import useOrderTray from "../../hooks/useOrderTray";
 import { useAuth } from "../../context/AuthContext";
 
 const formatAddressForOrder = (address) => {
@@ -33,7 +35,8 @@ const formatAddressLabel = (address) => {
 
 const Customer_Menu = () => {
   const { token, user } = useAuth();
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [theme, setTheme] = useState({
     name: "Feane Restaurant",
     menuHeading: "Order Tray",
@@ -52,6 +55,7 @@ const Customer_Menu = () => {
   const [sortBy, setSortBy] = useState("featured");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [useSelectedAsDefault, setUseSelectedAsDefault] = useState(false);
@@ -65,8 +69,8 @@ const Customer_Menu = () => {
     customerPhone: "",
     notes: "",
   });
-  const [orderMode, setOrderMode] = useState(searchParams.get("qrToken") ? "dine_in" : "online");
-  const [cart, setCart] = useState([]);
+  const [orderMode] = useState(searchParams.get("qrToken") ? "dine_in" : "online");
+  const { cart, setCart, clearCart, itemCount } = useOrderTray();
   const { palette } = useResolvedColorMode(theme);
   const statusMeta = {
     placed: { bg: "bg-slate-100", text: "text-slate-700", label: "Placed" },
@@ -133,6 +137,33 @@ const Customer_Menu = () => {
       customerPhone: prev.customerPhone || fallback.phone || "",
     }));
   }, [orderMode, savedAddresses, selectedAddressId, checkout.deliveryAddress]);
+
+  useEffect(() => {
+    if (location.hash !== "#order-tray") return;
+    const traySection = document.getElementById("order-tray");
+    traySection?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [location.hash]);
+
+  useEffect(() => {
+    const categorySlug = searchParams.get("category");
+    const subCategorySlug = searchParams.get("subCategory");
+    const itemSlug = searchParams.get("item");
+
+    if (categorySlug && menuData.categories.length) {
+      const matchedCategory = menuData.categories.find((category) => category.slug === categorySlug);
+      if (matchedCategory) setCategoryFilter(matchedCategory._id);
+    }
+
+    if (subCategorySlug && menuData.subCategories.length) {
+      const matchedSubCategory = menuData.subCategories.find((subCategory) => subCategory.slug === subCategorySlug);
+      if (matchedSubCategory) setSubCategoryFilter(matchedSubCategory._id);
+    }
+
+    if (itemSlug && menuData.items.length) {
+      const matchedItem = menuData.items.find((item) => item.slug === itemSlug);
+      if (matchedItem) setSelectedItem(matchedItem);
+    }
+  }, [searchParams, menuData.categories, menuData.subCategories, menuData.items]);
 
   const subCategoryOptions = useMemo(() => {
     if (!categoryFilter) return menuData.subCategories;
@@ -222,7 +253,7 @@ const Customer_Menu = () => {
         })),
       });
 
-      setCart([]);
+      clearCart();
       setCheckout((prev) => ({ ...prev, notes: "" }));
       setUseSelectedAsDefault(false);
       setMessage("Order placed successfully. Track status below.");
@@ -248,11 +279,33 @@ const Customer_Menu = () => {
     }));
   };
 
+  const openItemQuickView = (item) => {
+    setSelectedItem(item);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("item", item.slug);
+    setSearchParams(nextParams, { replace: true });
+  };
+
   return (
     <div className="min-h-screen pb-10" style={{ backgroundColor: palette.pageBg, color: palette.text }}>
-      <section className="mx-auto mt-4 w-full max-w-[90rem] px-4 md:px-8">
-        <div className="space-y-2 p-1">
-          <div className="grid gap-2 md:grid-cols-[1.2fr_1fr_1fr_0.9fr_0.9fr]">
+      <section className="mx-auto mt-3 w-full max-w-[112rem] px-3 md:px-5">
+        <div className="card-elevated space-y-3 p-3.5 md:p-4" style={{ backgroundColor: palette.panelBg, boxShadow: palette.glassShadow }}>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.22em]" style={{ color: palette.muted }}>Fast Ordering</p>
+              <h1 className="mt-1.5 text-2xl font-black tracking-tight" style={{ color: palette.text }}>
+                Build your tray with precision
+              </h1>
+              <p className="mt-1.5 max-w-2xl text-xs leading-5" style={{ color: palette.muted }}>
+                Search, compare, review dishes, and place table or online orders from one compact workspace.
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em]" style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}>
+              <FiZap className="h-3.5 w-3.5" />
+              Live Tray Sync
+            </div>
+          </div>
+          <div className="grid gap-2 md:grid-cols-[1.35fr_1fr_1fr_0.85fr_0.85fr]">
             <div className="relative">
               <FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: palette.muted }} />
               <input
@@ -320,21 +373,22 @@ const Customer_Menu = () => {
             sortBy={sortBy}
             palette={palette}
             onAddToCart={addToCart}
+            onItemTap={openItemQuickView}
           />
         </div>
 
-        <aside className="space-y-3">
-          <section className="card-elevated overflow-hidden p-0" style={{ backgroundColor: palette.panelBg }}>
+        <aside id="order-tray" className="space-y-3 scroll-mt-24 xl:sticky xl:top-24 self-start">
+          <section className="card-elevated overflow-hidden p-0" style={{ backgroundColor: palette.panelBg, boxShadow: palette.glassShadow }}>
             <div className="border-b px-4 py-3" style={{ borderColor: palette.border }}>
               <div className="flex items-center justify-between">
                 <h3 className="inline-flex items-center gap-2 text-sm font-extrabold" style={{ color: palette.text }}>
                   <FiShoppingCart className="h-4 w-4" />
                   Order Tray
                 </h3>
-                <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ backgroundColor: palette.pageBg, color: palette.text }}>{cart.length} items</span>
+                <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ backgroundColor: palette.pageBg, color: palette.text }}>{itemCount} items</span>
               </div>
             </div>
-            <div className="max-h-[260px] space-y-2 overflow-auto p-3">
+            <div className="max-h-[300px] space-y-2 overflow-auto p-3">
               {cart.map((item) => (
                 <div key={item.menuItem} className="rounded-xl border p-2.5" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
                   <div className="flex items-start gap-2.5">
@@ -396,7 +450,7 @@ const Customer_Menu = () => {
             </div>
           </section>
 
-          <section className="card-elevated space-y-3 p-4" style={{ backgroundColor: palette.panelBg }}>
+          <section className="card-elevated space-y-3 p-4" style={{ backgroundColor: palette.panelBg, boxShadow: palette.glassShadow }}>
             <h3 className="inline-flex items-center gap-2 text-sm font-extrabold" style={{ color: palette.text }}>
               <FiCreditCard className="h-4 w-4" />
               Quick Checkout
@@ -565,7 +619,7 @@ const Customer_Menu = () => {
             </button>
           </section>
 
-          <section className="card-elevated space-y-3 p-4" style={{ backgroundColor: palette.panelBg }}>
+          <section className="card-elevated space-y-3 p-4" style={{ backgroundColor: palette.panelBg, boxShadow: palette.glassShadow }}>
             <div className="flex items-center justify-between">
               <h3 className="inline-flex items-center gap-2 text-sm font-extrabold" style={{ color: palette.text }}>
                 <FiClock className="h-4 w-4" />
@@ -593,6 +647,20 @@ const Customer_Menu = () => {
           </section>
         </aside>
       </div>
+
+      <MenuItemQuickViewModal
+        item={selectedItem}
+        isOpen={Boolean(selectedItem)}
+        onClose={() => {
+          setSelectedItem(null);
+          const nextParams = new URLSearchParams(searchParams);
+          nextParams.delete("item");
+          setSearchParams(nextParams, { replace: true });
+        }}
+        palette={palette}
+        theme={theme}
+        onAddToCart={addToCart}
+      />
     </div>
   );
 };

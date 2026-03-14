@@ -57,11 +57,22 @@ const parseOrderStatusUpdate = (roles = [], currentStatus, nextStatus) => {
 exports.getOrders = async (req, res) => {
     try {
         const roles = req.user.roles || [];
-        const { status = "" } = req.query;
+        const { status = "", date = "" } = req.query;
         const query = {};
 
         if (status) {
             query.status = status;
+        }
+
+        if (date) {
+            const selectedDate = new Date(date);
+            if (!Number.isNaN(selectedDate.getTime())) {
+                const startOfDay = new Date(selectedDate);
+                startOfDay.setHours(0, 0, 0, 0);
+                const endOfDay = new Date(selectedDate);
+                endOfDay.setHours(23, 59, 59, 999);
+                query.createdAt = { $gte: startOfDay, $lte: endOfDay };
+            }
         }
 
         if (!canViewAllOrders(roles)) {

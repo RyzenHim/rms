@@ -1,5 +1,15 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { FiCalendar, FiCheckCircle, FiClock, FiUsers, FiX } from "react-icons/fi";
 import axios from "axios";
+
+const statusStyles = {
+  pending: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  confirmed: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
+  arrived: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  completed: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
+  cancelled: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+  "no-show": "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+};
 
 const AdminReservationManager = () => {
   const [reservations, setReservations] = useState([]);
@@ -17,19 +27,14 @@ const AdminReservationManager = () => {
   useEffect(() => {
     fetchReservations();
     fetchStats();
-  }, [filters]);
+  }, [filters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchReservations = async () => {
     setLoading(true);
     try {
       const params = { date: filters.date };
       if (filters.status !== "all") params.status = filters.status;
-
-      const response = await axios.get("/api/reservations", {
-        params,
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
+      const response = await axios.get("/api/reservations", { params, headers: { Authorization: `Bearer ${token}` } });
       setReservations(response.data.reservations || []);
       setError("");
     } catch (err) {
@@ -41,29 +46,22 @@ const AdminReservationManager = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get("/api/reservations/stats", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get("/api/reservations/stats", { headers: { Authorization: `Bearer ${token}` } });
       setStats(response.data.stats);
     } catch (err) {
       console.error("Failed to fetch stats:", err);
     }
   };
 
+  const syncReservation = (reservationId, updatedReservation) => {
+    setReservations((prev) => prev.map((reservation) => (reservation._id === reservationId ? updatedReservation : reservation)));
+    fetchStats();
+  };
+
   const handleCheckIn = async (reservationId) => {
     try {
-      const response = await axios.patch(
-        `/api/reservations/${reservationId}/checkin`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setReservations(
-        reservations.map((r) =>
-          r._id === reservationId ? response.data.reservation : r
-        )
-      );
-      fetchStats();
+      const response = await axios.patch(`/api/reservations/${reservationId}/checkin`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      syncReservation(reservationId, response.data.reservation);
     } catch (err) {
       alert(err.response?.data?.message || "Failed to check in");
     }
@@ -71,18 +69,8 @@ const AdminReservationManager = () => {
 
   const handleCheckOut = async (reservationId) => {
     try {
-      const response = await axios.patch(
-        `/api/reservations/${reservationId}/checkout`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setReservations(
-        reservations.map((r) =>
-          r._id === reservationId ? response.data.reservation : r
-        )
-      );
-      fetchStats();
+      const response = await axios.patch(`/api/reservations/${reservationId}/checkout`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      syncReservation(reservationId, response.data.reservation);
     } catch (err) {
       alert(err.response?.data?.message || "Failed to check out");
     }
@@ -90,96 +78,57 @@ const AdminReservationManager = () => {
 
   const handleNoShow = async (reservationId) => {
     if (!window.confirm("Mark this reservation as no-show?")) return;
-
     try {
-      const response = await axios.patch(
-        `/api/reservations/${reservationId}/no-show`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setReservations(
-        reservations.map((r) =>
-          r._id === reservationId ? response.data.reservation : r
-        )
-      );
-      fetchStats();
+      const response = await axios.patch(`/api/reservations/${reservationId}/no-show`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      syncReservation(reservationId, response.data.reservation);
     } catch (err) {
       alert(err.response?.data?.message || "Failed to mark as no-show");
     }
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      pending: "bg-yellow-100 text-yellow-800",
-      confirmed: "bg-blue-100 text-blue-800",
-      arrived: "bg-green-100 text-green-800",
-      completed: "bg-gray-100 text-gray-800",
-      cancelled: "bg-red-100 text-red-800",
-      "no-show": "bg-red-100 text-red-800",
-    };
-    return colors[status] || "bg-gray-100 text-gray-800";
-  };
+  const formatDate = (date) =>
+    new Date(date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    });
-  };
+  const renderActions = (reservation) => (
+    <div className="flex flex-wrap gap-2">
+      {reservation.status === "confirmed" ? (
+        <button onClick={() => handleCheckIn(reservation._id)} className="glass-pill rounded-full px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+          Check-In
+        </button>
+      ) : null}
+      {reservation.status === "arrived" ? (
+        <button onClick={() => handleCheckOut(reservation._id)} className="glass-pill rounded-full px-3 py-1.5 text-xs font-bold text-sky-700 dark:text-sky-300">
+          Check-Out
+        </button>
+      ) : null}
+      {["confirmed", "arrived"].includes(reservation.status) ? (
+        <button onClick={() => handleNoShow(reservation._id)} className="glass-pill rounded-full px-3 py-1.5 text-xs font-bold text-rose-700 dark:text-rose-300">
+          No-Show
+        </button>
+      ) : null}
+      <button onClick={() => setSelectedReservation(reservation)} className="glass-pill rounded-full px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200">
+        Details
+      </button>
+    </div>
+  );
 
   return (
-    <div className="p-3 sm:p-4 md:p-8">
-      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-8">Reservation Management</h1>
-
-      {/* Statistics Cards */}
-      {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-8">
-          <div className="bg-blue-50 border-l-4 border-blue-600 p-2 sm:p-4 rounded">
-            <p className="text-gray-600 text-xs sm:text-sm font-semibold">Today's</p>
-            <p className="text-xl sm:text-2xl font-bold text-blue-600">{stats.todayReservations}</p>
-          </div>
-          <div className="bg-green-50 border-l-4 border-green-600 p-2 sm:p-4 rounded">
-            <p className="text-gray-600 text-xs sm:text-sm font-semibold">Guests</p>
-            <p className="text-xl sm:text-2xl font-bold text-green-600">{stats.totalGuests}</p>
-          </div>
-          <div className="bg-orange-50 border-l-4 border-orange-600 p-2 sm:p-4 rounded">
-            <p className="text-gray-600 text-xs sm:text-sm font-semibold">Arrived</p>
-            <p className="text-xl sm:text-2xl font-bold text-orange-600">{stats.arrivedToday}</p>
-          </div>
-          <div className="bg-purple-50 border-l-4 border-purple-600 p-2 sm:p-4 rounded">
-            <p className="text-gray-600 text-xs sm:text-sm font-semibold">Completed</p>
-            <p className="text-xl sm:text-2xl font-bold text-purple-600">{stats.completedThisMonth}</p>
-          </div>
-        </div>
-      )}
-
-      {error && (
-        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
-          {error}
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-lg p-3 sm:p-6 mb-4 sm:mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+    <div className="space-y-6">
+      <section className="glass-panel animate-rise-in rounded-[2rem] p-6 md:p-8">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">Date</label>
-            <input
-              type="date"
-              value={filters.date}
-              onChange={(e) => setFilters({ ...filters, date: e.target.value })}
-              className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
-            />
+            <span className="glass-pill inline-flex rounded-full px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-700 dark:text-slate-200">
+              Reservation Desk
+            </span>
+            <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50 md:text-4xl">Reservation Management</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">Track arrivals, no-shows, and same-day service flow through a cleaner reservation operations board.</p>
           </div>
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">Status</label>
-            <select
-              value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
-            >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="glass-subtle flex items-center gap-3 rounded-[1.3rem] px-4 py-3 text-sm text-slate-700 dark:text-slate-200">
+              <FiCalendar className="h-4 w-4" />
+              <input type="date" value={filters.date} onChange={(e) => setFilters((prev) => ({ ...prev, date: e.target.value }))} className="w-full bg-transparent outline-none" />
+            </label>
+            <select value={filters.status} onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))} className="input-base text-sm">
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
               <option value="confirmed">Confirmed</option>
@@ -190,292 +139,138 @@ const AdminReservationManager = () => {
             </select>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Reservations Display */}
+      {stats ? (
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            { label: "Today's", value: stats.todayReservations, icon: FiCalendar, tone: "from-sky-500 to-cyan-400" },
+            { label: "Guests", value: stats.totalGuests, icon: FiUsers, tone: "from-emerald-500 to-teal-400" },
+            { label: "Arrived", value: stats.arrivedToday, icon: FiCheckCircle, tone: "from-amber-400 to-orange-500" },
+            { label: "Completed", value: stats.completedThisMonth, icon: FiClock, tone: "from-fuchsia-500 to-violet-500" },
+          ].map((card, index) => {
+            const Icon = card.icon;
+            return (
+              <article key={card.label} className={`card-elevated animate-fade-in-up stagger-${Math.min(index + 1, 4)} smooth-transform p-5`}>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-300">{card.label}</p>
+                    <p className="mt-3 text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50">{card.value}</p>
+                  </div>
+                  <div className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${card.tone} text-white shadow-lg`}>
+                    <Icon className="h-6 w-6" />
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </section>
+      ) : null}
+
+      {error ? <div className="alert-error">{error}</div> : null}
+
       {loading ? (
-        <div className="flex justify-center items-center h-40">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+        <div className="flex justify-center py-20">
+          <div className="glass-panel rounded-full p-4"><div className="h-10 w-10 animate-spin rounded-full border-4 border-sky-500 border-t-transparent" /></div>
         </div>
       ) : reservations.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-lg p-6 text-center">
-          <p className="text-gray-600 text-base">No reservations found for the selected date</p>
-        </div>
+        <div className="card-elevated p-10 text-center text-sm font-semibold text-slate-500 dark:text-slate-400">No reservations found for the selected date.</div>
       ) : (
         <>
-          {/* Desktop Table View */}
-          <div className="hidden lg:block overflow-x-auto bg-white rounded-lg shadow-lg">
-            <table className="w-full">
-              <thead className="bg-gray-100 border-b border-gray-300">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Customer</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Table</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Time</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Guests</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Occasion</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Actions</th>
+          <section className="card-elevated hidden overflow-x-auto p-4 lg:block">
+            <table className="w-full min-w-[72rem] text-sm">
+              <thead>
+                <tr className="border-b border-slate-200/60 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:border-slate-700/60 dark:text-slate-400">
+                  <th className="px-4 py-3">Customer</th>
+                  <th className="px-4 py-3">Table</th>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Time</th>
+                  <th className="px-4 py-3">Guests</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Occasion</th>
+                  <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {reservations.map((reservation) => (
-                  <tr
-                    key={reservation._id}
-                    className="border-b border-gray-200 hover:bg-gray-50 transition"
-                  >
-                    <td className="px-4 py-3">
-                      <div>
-                        <p className="font-medium text-gray-900 text-sm">
-                          {reservation.customerName}
-                        </p>
-                        <p className="text-xs text-gray-600">{reservation.customerEmail}</p>
-                      </div>
+                  <tr key={reservation._id} className="border-b border-slate-200/40 transition-colors hover:bg-white/20 dark:border-slate-700/40 dark:hover:bg-slate-900/10">
+                    <td className="px-4 py-4">
+                      <p className="font-semibold text-slate-900 dark:text-slate-50">{reservation.customerName}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{reservation.customerEmail}</p>
                     </td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900 text-sm">
-                        {reservation.table?.tableNumber}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        Cap: {reservation.table?.capacity}
-                      </p>
+                    <td className="px-4 py-4">
+                      <p className="font-semibold text-slate-900 dark:text-slate-50">{reservation.table?.tableNumber}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Cap: {reservation.table?.capacity}</p>
                     </td>
-                    <td className="px-4 py-3 text-xs">
-                      {formatDate(reservation.reservationDate)}
-                    </td>
-                    <td className="px-4 py-3 text-xs font-medium">
-                      {reservation.reservationTime}
-                    </td>
-                    <td className="px-4 py-3 text-xs font-medium">
-                      {reservation.numberOfGuests}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(
-                          reservation.status
-                        )}`}
-                      >
-                        {reservation.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs capitalize">
-                      {reservation.occasion}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1 flex-wrap">
-                        {reservation.status === "confirmed" && (
-                          <button
-                            onClick={() => handleCheckIn(reservation._id)}
-                            className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1 px-2 rounded transition"
-                          >
-                            Check-In
-                          </button>
-                        )}
-                        {reservation.status === "arrived" && (
-                          <button
-                            onClick={() => handleCheckOut(reservation._id)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1 px-2 rounded transition"
-                          >
-                            Check-Out
-                          </button>
-                        )}
-                        {["confirmed", "arrived"].includes(reservation.status) && (
-                          <button
-                            onClick={() => handleNoShow(reservation._id)}
-                            className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded transition"
-                          >
-                            No-Show
-                          </button>
-                        )}
-                        <button
-                          onClick={() => setSelectedReservation(reservation)}
-                          className="bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold py-1 px-2 rounded transition"
-                        >
-                          Details
-                        </button>
-                      </div>
-                    </td>
+                    <td className="px-4 py-4 text-slate-700 dark:text-slate-200">{formatDate(reservation.reservationDate)}</td>
+                    <td className="px-4 py-4 font-semibold text-slate-900 dark:text-slate-50">{reservation.reservationTime}</td>
+                    <td className="px-4 py-4 font-semibold text-slate-900 dark:text-slate-50">{reservation.numberOfGuests}</td>
+                    <td className="px-4 py-4"><span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${statusStyles[reservation.status] || statusStyles.pending}`}>{reservation.status}</span></td>
+                    <td className="px-4 py-4 capitalize text-slate-600 dark:text-slate-300">{reservation.occasion || "Standard"}</td>
+                    <td className="px-4 py-4">{renderActions(reservation)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </section>
 
-          {/* Mobile Card View */}
-          <div className="lg:hidden grid grid-cols-1 gap-3 sm:gap-4">
-            {reservations.map((reservation) => (
-              <div
-                key={reservation._id}
-                className="bg-white rounded-lg shadow p-3 sm:p-4 border border-gray-200"
-              >
-                <div className="flex justify-between items-start gap-2 mb-3">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 text-sm sm:text-base truncate">
-                      {reservation.customerName}
-                    </h3>
-                    <p className="text-xs text-gray-600 truncate">{reservation.customerEmail}</p>
+          <section className="grid gap-4 lg:hidden">
+            {reservations.map((reservation, index) => (
+              <article key={reservation._id} className={`card-elevated animate-fade-in-up stagger-${(index % 4) + 1} p-4`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-black text-slate-900 dark:text-slate-50">{reservation.customerName}</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{reservation.customerEmail}</p>
                   </div>
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${getStatusColor(
-                      reservation.status
-                    )}`}
-                  >
-                    {reservation.status}
-                  </span>
+                  <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${statusStyles[reservation.status] || statusStyles.pending}`}>{reservation.status}</span>
                 </div>
-
-                <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm mb-3">
-                  <div>
-                    <p className="text-gray-600">Table</p>
-                    <p className="font-semibold text-gray-900">T{reservation.table?.tableNumber}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Date</p>
-                    <p className="font-semibold text-gray-900">{formatDate(reservation.reservationDate)}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Time</p>
-                    <p className="font-semibold text-gray-900">{reservation.reservationTime}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Guests</p>
-                    <p className="font-semibold text-gray-900">{reservation.numberOfGuests}</p>
-                  </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div className="glass-subtle rounded-2xl p-3"><p className="text-xs text-slate-500 dark:text-slate-400">Table</p><p className="font-semibold text-slate-900 dark:text-slate-50">T{reservation.table?.tableNumber}</p></div>
+                  <div className="glass-subtle rounded-2xl p-3"><p className="text-xs text-slate-500 dark:text-slate-400">Date</p><p className="font-semibold text-slate-900 dark:text-slate-50">{formatDate(reservation.reservationDate)}</p></div>
+                  <div className="glass-subtle rounded-2xl p-3"><p className="text-xs text-slate-500 dark:text-slate-400">Time</p><p className="font-semibold text-slate-900 dark:text-slate-50">{reservation.reservationTime}</p></div>
+                  <div className="glass-subtle rounded-2xl p-3"><p className="text-xs text-slate-500 dark:text-slate-400">Guests</p><p className="font-semibold text-slate-900 dark:text-slate-50">{reservation.numberOfGuests}</p></div>
                 </div>
-
-                <div className="flex gap-2 flex-wrap mb-2">
-                  {reservation.status === "confirmed" && (
-                    <button
-                      onClick={() => handleCheckIn(reservation._id)}
-                      className="flex-1 min-w-20 bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1.5 rounded transition"
-                    >
-                      Check-In
-                    </button>
-                  )}
-                  {reservation.status === "arrived" && (
-                    <button
-                      onClick={() => handleCheckOut(reservation._id)}
-                      className="flex-1 min-w-20 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1.5 rounded transition"
-                    >
-                      Check-Out
-                    </button>
-                  )}
-                  {["confirmed", "arrived"].includes(reservation.status) && (
-                    <button
-                      onClick={() => handleNoShow(reservation._id)}
-                      className="flex-1 min-w-20 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1.5 rounded transition"
-                    >
-                      No-Show
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setSelectedReservation(reservation)}
-                    className="flex-1 min-w-20 bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold py-1.5 rounded transition"
-                  >
-                    Details
-                  </button>
-                </div>
-              </div>
+                <div className="mt-4">{renderActions(reservation)}</div>
+              </article>
             ))}
-          </div>
+          </section>
         </>
       )}
 
-      {/* Details Modal */}
-      {selectedReservation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 max-w-md w-full max-h-96 overflow-y-auto">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Reservation Details</h2>
-              <button
-                onClick={() => setSelectedReservation(null)}
-                className="text-gray-400 hover:text-gray-600 text-xl"
-              >
-                
+      {selectedReservation ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="glass-panel max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-[2rem] p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-slate-50">Reservation Details</h2>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{selectedReservation.customerName}</p>
+              </div>
+              <button onClick={() => setSelectedReservation(null)} className="glass-pill rounded-full p-2 text-slate-700 dark:text-slate-200">
+                <FiX className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="space-y-3 sm:space-y-4 text-xs sm:text-sm">
-              <div>
-                <label className="font-semibold text-gray-700">Customer</label>
-                <p className="text-gray-600 truncate">{selectedReservation.customerName}</p>
-                <p className="text-gray-600 truncate">{selectedReservation.customerEmail}</p>
-                <p className="text-gray-600">{selectedReservation.customerPhone}</p>
+            <div className="mt-6 space-y-4 text-sm">
+              <div className="rounded-[1.5rem] bg-white/25 p-4 dark:bg-slate-900/20">
+                <p className="font-semibold text-slate-900 dark:text-slate-50">{selectedReservation.customerEmail}</p>
+                <p className="mt-1 text-slate-600 dark:text-slate-300">{selectedReservation.customerPhone || "No phone"}</p>
               </div>
-
-              <div>
-                <label className="font-semibold text-gray-700">Table</label>
-                <p className="text-gray-600">
-                  Table {selectedReservation.table?.tableNumber} (Capacity:{" "}
-                  {selectedReservation.table?.capacity})
-                </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="glass-subtle rounded-2xl p-4"><p className="text-xs text-slate-500 dark:text-slate-400">Table</p><p className="font-semibold text-slate-900 dark:text-slate-50">Table {selectedReservation.table?.tableNumber} (Cap {selectedReservation.table?.capacity})</p></div>
+                <div className="glass-subtle rounded-2xl p-4"><p className="text-xs text-slate-500 dark:text-slate-400">Status</p><span className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold ${statusStyles[selectedReservation.status] || statusStyles.pending}`}>{selectedReservation.status}</span></div>
+                <div className="glass-subtle rounded-2xl p-4"><p className="text-xs text-slate-500 dark:text-slate-400">Date</p><p className="font-semibold text-slate-900 dark:text-slate-50">{formatDate(selectedReservation.reservationDate)}</p></div>
+                <div className="glass-subtle rounded-2xl p-4"><p className="text-xs text-slate-500 dark:text-slate-400">Time</p><p className="font-semibold text-slate-900 dark:text-slate-50">{selectedReservation.reservationTime}</p></div>
+                <div className="glass-subtle rounded-2xl p-4"><p className="text-xs text-slate-500 dark:text-slate-400">Guests</p><p className="font-semibold text-slate-900 dark:text-slate-50">{selectedReservation.numberOfGuests}</p></div>
+                <div className="glass-subtle rounded-2xl p-4"><p className="text-xs text-slate-500 dark:text-slate-400">Occasion</p><p className="font-semibold capitalize text-slate-900 dark:text-slate-50">{selectedReservation.occasion || "Standard"}</p></div>
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-gray-700">Date</label>
-                  <p className="text-gray-600">
-                    {formatDate(selectedReservation.reservationDate)}
-                  </p>
-                </div>
-                <div>
-                  <label className="font-semibold text-gray-700">Time</label>
-                  <p className="text-gray-600">{selectedReservation.reservationTime}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-gray-700">Guests</label>
-                  <p className="text-gray-600">{selectedReservation.numberOfGuests}</p>
-                </div>
-                <div>
-                  <label className="font-semibold text-gray-700">Status</label>
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-semibold block ${getStatusColor(
-                      selectedReservation.status
-                    )}`}
-                  >
-                    {selectedReservation.status}
-                  </span>
-                </div>
-              </div>
-
-              {selectedReservation.specialRequests && (
-                <div>
-                  <label className="font-semibold text-gray-700">Special Requests</label>
-                  <p className="text-gray-600">{selectedReservation.specialRequests}</p>
-                </div>
-              )}
-
-              {selectedReservation.checkinTime && (
-                <div>
-                  <label className="font-semibold text-gray-700">Check-in Time</label>
-                  <p className="text-gray-600">
-                    {new Date(selectedReservation.checkinTime).toLocaleString()}
-                  </p>
-                </div>
-              )}
-
-              {selectedReservation.checkoutTime && (
-                <div>
-                  <label className="font-semibold text-gray-700">Check-out Time</label>
-                  <p className="text-gray-600">
-                    {new Date(selectedReservation.checkoutTime).toLocaleString()}
-                  </p>
-                </div>
-              )}
+              {selectedReservation.specialRequests ? <div className="glass-subtle rounded-2xl p-4"><p className="text-xs text-slate-500 dark:text-slate-400">Special Requests</p><p className="mt-2 text-slate-700 dark:text-slate-200">{selectedReservation.specialRequests}</p></div> : null}
+              {selectedReservation.checkinTime ? <div className="glass-subtle rounded-2xl p-4"><p className="text-xs text-slate-500 dark:text-slate-400">Check-in Time</p><p className="font-semibold text-slate-900 dark:text-slate-50">{new Date(selectedReservation.checkinTime).toLocaleString()}</p></div> : null}
+              {selectedReservation.checkoutTime ? <div className="glass-subtle rounded-2xl p-4"><p className="text-xs text-slate-500 dark:text-slate-400">Check-out Time</p><p className="font-semibold text-slate-900 dark:text-slate-50">{new Date(selectedReservation.checkoutTime).toLocaleString()}</p></div> : null}
+              <button onClick={() => setSelectedReservation(null)} className="btn-secondary w-full">Close</button>
             </div>
-
-            <button
-              onClick={() => setSelectedReservation(null)}
-              className="w-full mt-4 sm:mt-6 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold rounded-lg transition text-sm"
-            >
-              Close
-            </button>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

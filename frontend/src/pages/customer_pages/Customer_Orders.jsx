@@ -2,17 +2,19 @@ import { useEffect, useState } from "react";
 import { FiClock, FiClipboard, FiGrid, FiInbox, FiMail, FiPhone, FiUser } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 import orderService from "../../services/order_Service";
+import themeService from "../../services/theme_Service";
 import useResolvedColorMode from "../../hooks/useResolvedColorMode";
 
 const Customer_Orders = () => {
   const { token } = useAuth();
   const [orders, setOrders] = useState([]);
   const [message, setMessage] = useState("");
-  const { palette } = useResolvedColorMode({
+  const [theme, setTheme] = useState({
     colorMode: "system",
     allowUserThemeToggle: true,
     surfaceColor: "#f8fafc",
   });
+  const { palette, resolvedMode } = useResolvedColorMode(theme);
 
   const loadOrders = async () => {
     try {
@@ -24,6 +26,13 @@ const Customer_Orders = () => {
   };
 
   useEffect(() => {
+    themeService
+      .getActiveTheme()
+      .then((data) => {
+        if (data?.theme) setTheme((prev) => ({ ...prev, ...data.theme }));
+      })
+      .catch(() => {});
+
     loadOrders();
     const timer = setInterval(loadOrders, 12000);
     return () => clearInterval(timer);
@@ -31,12 +40,12 @@ const Customer_Orders = () => {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      placed: { color: "bg-slate-100 text-slate-700", label: "Placed" },
-      received: { color: "bg-blue-100 text-blue-800", label: "Received" },
-      preparing: { color: "bg-orange-100 text-orange-800", label: "Preparing" },
-      done_preparing: { color: "bg-green-100 text-green-800", label: "Ready To Serve" },
-      served: { color: "bg-emerald-100 text-emerald-800", label: "Served" },
-      cancelled: { color: "bg-red-100 text-red-700", label: "Cancelled" },
+      placed: { bg: resolvedMode === "dark" ? "#1e293b" : "#e2e8f0", text: resolvedMode === "dark" ? "#cbd5e1" : "#334155", label: "Placed" },
+      received: { bg: resolvedMode === "dark" ? "#172554" : "#dbeafe", text: resolvedMode === "dark" ? "#93c5fd" : "#1d4ed8", label: "Received" },
+      preparing: { bg: resolvedMode === "dark" ? "#431407" : "#ffedd5", text: resolvedMode === "dark" ? "#fdba74" : "#c2410c", label: "Preparing" },
+      done_preparing: { bg: resolvedMode === "dark" ? "#052e16" : "#dcfce7", text: resolvedMode === "dark" ? "#86efac" : "#15803d", label: "Ready To Serve" },
+      served: { bg: resolvedMode === "dark" ? "#022c22" : "#d1fae5", text: resolvedMode === "dark" ? "#6ee7b7" : "#047857", label: "Served" },
+      cancelled: { bg: resolvedMode === "dark" ? "#450a0a" : "#fee2e2", text: resolvedMode === "dark" ? "#fca5a5" : "#b91c1c", label: "Cancelled" },
     };
     return statusConfig[status] || statusConfig.placed;
   };
@@ -64,7 +73,22 @@ const Customer_Orders = () => {
           </p>
         </div>
 
-        {message && <div className="alert-error mb-4 text-sm">{message}</div>}
+        {message ? (
+          <div
+            className="mb-4 rounded-xl border px-4 py-3 text-sm"
+            style={{
+              borderColor: message.includes("successfully") ? "#16a34a" : "#dc2626",
+              backgroundColor: message.includes("successfully")
+                ? (resolvedMode === "dark" ? "#052e16" : "#dcfce7")
+                : (resolvedMode === "dark" ? "#450a0a" : "#fee2e2"),
+              color: message.includes("successfully")
+                ? (resolvedMode === "dark" ? "#86efac" : "#166534")
+                : (resolvedMode === "dark" ? "#fca5a5" : "#991b1b"),
+            }}
+          >
+            {message}
+          </div>
+        ) : null}
 
         <div className="space-y-3">
           {orders.length ? (
@@ -79,14 +103,25 @@ const Customer_Orders = () => {
               });
 
               return (
-                <article key={order._id} className="card-elevated space-y-3 p-4 md:p-5">
+                <article
+                  key={order._id}
+                  className="card-elevated space-y-3 p-4 md:p-5"
+                  style={{
+                    backgroundColor: palette.panelBg,
+                    border: `1px solid ${palette.border}`,
+                    boxShadow: resolvedMode === "dark" ? "0 16px 40px rgba(0, 0, 0, 0.28)" : "0 16px 32px rgba(15, 23, 42, 0.07)",
+                  }}
+                >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex-1">
                       <div className="mb-1.5 flex items-center gap-2">
                         <h2 className="text-base font-semibold md:text-lg" style={{ color: palette.text }}>
                           {order.orderNumber}
                         </h2>
-                        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${statusBadge.color}`}>
+                        <span
+                          className="rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+                          style={{ backgroundColor: statusBadge.bg, color: statusBadge.text }}
+                        >
                           {statusBadge.label || order.status}
                         </span>
                       </div>
@@ -114,8 +149,8 @@ const Customer_Orders = () => {
                       {order.items?.map((item, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center justify-between rounded-lg px-3 py-2"
-                          style={{ backgroundColor: palette.cardBg }}
+                          className="flex items-center justify-between rounded-lg border px-3 py-2"
+                          style={{ backgroundColor: palette.cardBg, borderColor: palette.border }}
                         >
                           <div>
                             <p className="text-sm font-semibold" style={{ color: palette.text }}>
@@ -134,7 +169,7 @@ const Customer_Orders = () => {
                   </div>
 
                   <div className="grid grid-cols-1 gap-2 text-xs md:grid-cols-2 md:text-sm">
-                    <div className="rounded-lg px-3 py-2.5" style={{ backgroundColor: palette.cardBg }}>
+                    <div className="rounded-lg border px-3 py-2.5" style={{ backgroundColor: palette.cardBg, borderColor: palette.border }}>
                       <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: palette.muted }}>
                         Customer
                       </p>
@@ -147,7 +182,7 @@ const Customer_Orders = () => {
                         {order.customerPhone || "N/A"}
                       </p>
                     </div>
-                    <div className="rounded-lg px-3 py-2.5" style={{ backgroundColor: palette.cardBg }}>
+                    <div className="rounded-lg border px-3 py-2.5" style={{ backgroundColor: palette.cardBg, borderColor: palette.border }}>
                       <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: palette.muted }}>
                         Contact
                       </p>
@@ -200,7 +235,10 @@ const Customer_Orders = () => {
               );
             })
           ) : (
-            <div className="card-elevated space-y-3 p-8 text-center text-sm" style={{ backgroundColor: palette.panelBg }}>
+            <div
+              className="card-elevated space-y-3 p-8 text-center text-sm"
+              style={{ backgroundColor: palette.panelBg, border: `1px solid ${palette.border}` }}
+            >
               <FiInbox className="mx-auto h-8 w-8" style={{ color: palette.muted }} />
               <p className="text-lg font-semibold" style={{ color: palette.text }}>
                 No Orders Yet

@@ -8,27 +8,53 @@
   :root {
     font-family: "Manrope", "Plus Jakarta Sans", sans-serif;
     color-scheme: light dark;
+    --glass-white: rgba(255, 255, 255, 0.54);
+    --glass-white-soft: rgba(255, 255, 255, 0.34);
+    --glass-border: rgba(255, 255, 255, 0.6);
+    --glass-shadow: 0 28px 60px rgba(115, 146, 178, 0.18);
+    --page-gradient:
+      radial-gradient(circle at top left, rgba(130, 197, 240, 0.42), transparent 28%),
+      radial-gradient(circle at top right, rgba(255, 255, 255, 0.86), transparent 22%),
+      linear-gradient(180deg, #f6fbff 0%, #edf4fb 52%, #e4eef8 100%);
   }
 
   /* Light mode */
   :root {
     color: #27374D;
-    background-color: #DDE6ED;
+    background: var(--page-gradient);
   }
 
   /* Dark mode */
   :root.dark {
+    --glass-white: rgba(18, 28, 42, 0.72);
+    --glass-white-soft: rgba(33, 47, 68, 0.56);
+    --glass-border: rgba(173, 192, 212, 0.18);
+    --glass-shadow: 0 30px 70px rgba(2, 6, 23, 0.36);
+    --page-gradient:
+      radial-gradient(circle at top left, rgba(30, 72, 110, 0.55), transparent 24%),
+      radial-gradient(circle at top right, rgba(73, 108, 142, 0.24), transparent 26%),
+      linear-gradient(180deg, #0c1420 0%, #0f1724 52%, #111c2a 100%);
     color: #DDE6ED;
-    background-color: #1a2332;
+    background: var(--page-gradient);
   }
 
   html {
     scroll-behavior: smooth;
+    font-size: 15px;
+  }
+
+  @media (max-width: 768px) {
+    html {
+      font-size: 14px;
+    }
   }
 
   body {
     margin: 0;
     min-height: 100vh;
+    background: var(--page-gradient);
+    background-attachment: fixed;
+    line-height: 1.45;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 
@@ -64,28 +90,30 @@
 
   /* Professional button styles */
   .btn-primary {
-    @apply px-4 py-2.5 rounded-lg font-semibold text-white transition-all duration-200;
-    background-color: #526D82;
+    @apply px-4 py-2.5 rounded-2xl font-semibold text-white transition-all duration-200;
+    background: linear-gradient(135deg, #2b7ebb 0%, #0f4f7d 100%);
+    box-shadow: 0 18px 35px rgba(36, 113, 170, 0.22);
   }
 
   .btn-primary:hover {
-    background-color: #3f5468;
-    box-shadow: 0 4px 12px rgba(82, 109, 130, 0.3);
+    box-shadow: 0 22px 42px rgba(36, 113, 170, 0.28);
+    transform: translateY(-1px);
   }
 
   .btn-secondary {
-    @apply px-4 py-2.5 rounded-lg font-semibold transition-all duration-200;
-    color: #27374D;
-    background-color: #9DB2BF;
+    @apply px-4 py-2.5 rounded-2xl font-semibold transition-all duration-200;
+    color: #14304a;
+    background: var(--glass-white);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(18px) saturate(160%);
   }
 
   .btn-secondary:hover {
-    background-color: #8896b0;
+    transform: translateY(-1px);
   }
 
   .dark .btn-secondary {
     color: #DDE6ED;
-    background-color: #526D82;
   }
 
   .dark .btn-secondary:hover {
@@ -243,12 +271,12 @@
 
   /* Light mode gradients */
   .gradient-primary {
-    background: linear-gradient(135deg, #526D82 0%, #9DB2BF 100%);
+    background: linear-gradient(135deg, rgba(65, 152, 214, 0.92) 0%, rgba(22, 73, 111, 0.94) 100%);
   }
 
   /* Dark mode gradients */
   .dark .gradient-primary {
-    background: linear-gradient(135deg, #526D82 0%, #27374D 100%);
+    background: linear-gradient(135deg, rgba(57, 136, 194, 0.9) 0%, rgba(15, 38, 63, 0.96) 100%);
   }
 
   /* Smooth transitions for all elements */

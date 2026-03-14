@@ -8,7 +8,14 @@ const STORAGE_TOKEN = "rms_token";
 const STORAGE_USER = "rms_user";
 
 const getPrimaryRole = (roles = []) => {
-  const priority = ["admin", "manager", "kitchen", "cashier", "waiter", "customer"];
+  const priority = [
+    "admin",
+    "manager",
+    "kitchen",
+    "cashier",
+    "waiter",
+    "customer",
+  ];
   return priority.find((role) => roles.includes(role)) || "customer";
 };
 
@@ -104,9 +111,8 @@ export const AuthProvider = ({ children }) => {
     if (token && !user) {
       refreshMe();
     }
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [token]);
 
-  // Listen for session expiration from API
   useEffect(() => {
     const handleSessionExpired = () => {
       setSessionExpired(true);
@@ -114,8 +120,9 @@ export const AuthProvider = ({ children }) => {
     };
 
     window.addEventListener("sessionExpired", handleSessionExpired);
-    return () => window.removeEventListener("sessionExpired", handleSessionExpired);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    return () =>
+      window.removeEventListener("sessionExpired", handleSessionExpired);
+  }, []);
 
   const value = useMemo(
     () => ({

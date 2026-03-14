@@ -1,488 +1,384 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  FiArrowRight,
+  FiDroplet,
+  FiEdit3,
+  FiGlobe,
+  FiImage,
+  FiMapPin,
+} from "react-icons/fi";
+import AppModal from "../../components/modals/AppModal";
 import { useAuth } from "../../context/AuthContext";
 import themeService from "../../services/theme_Service";
 
+const colorFields = [
+  { name: "primaryColor", label: "Primary Color", fallback: "#ff8c3a" },
+  { name: "secondaryColor", label: "Secondary Color", fallback: "#ffd700" },
+  { name: "accentColor", label: "Accent Color", fallback: "#292524" },
+  { name: "surfaceColor", label: "Surface Color", fallback: "#fafaf9" },
+];
+
+const sectionDefinitions = [
+  {
+    id: "branding",
+    title: "Branding",
+    description: "Restaurant identity, logo text, and hero visuals.",
+    icon: FiEdit3,
+    tone: "from-sky-500 to-cyan-400",
+    fields: [
+      { name: "name", label: "Restaurant Name", placeholder: "e.g., Emerald Bistro" },
+      { name: "logoText", label: "Logo Text", placeholder: "e.g., DelishDrop" },
+      { name: "logoImage", label: "Logo Image URL", placeholder: "https://...", full: true },
+      { name: "heroTagline", label: "Hero Tagline", placeholder: "e.g., Dynamic Restaurant Website" },
+      { name: "heroTitle", label: "Hero Title", placeholder: "Main homepage headline" },
+      { name: "heroSubtitle", label: "Hero Subtitle", type: "textarea", placeholder: "Secondary message for the hero section", full: true },
+      { name: "heroImage", label: "Hero Image URL", placeholder: "https://images.unsplash.com/...", full: true },
+      { name: "ctaText", label: "CTA Button Text", placeholder: "e.g., Get Started" },
+    ],
+  },
+  {
+    id: "menu",
+    title: "Menu Experience",
+    description: "Headings and section copy used on the menu page.",
+    icon: FiImage,
+    tone: "from-amber-500 to-orange-400",
+    fields: [
+      { name: "menuHeading", label: "Menu Heading", placeholder: "e.g., Browse Our Menu" },
+      { name: "menuSubHeading", label: "Menu Subheading", placeholder: "Supporting text for the menu page", full: true },
+      { name: "footerNote", label: "Footer Message", type: "textarea", placeholder: "Special footer note or closing message", full: true },
+    ],
+  },
+  {
+    id: "colors",
+    title: "Colors and Theme",
+    description: "Palette, default color mode, and user theme access.",
+    icon: FiDroplet,
+    tone: "from-fuchsia-500 to-violet-500",
+    fields: [
+      ...colorFields.map((field) => ({ ...field, type: "color-pair" })),
+      { name: "colorMode", label: "Default Color Mode", type: "select", options: [
+        { value: "system", label: "System (User Device)" },
+        { value: "light", label: "Always Light" },
+        { value: "dark", label: "Always Dark" },
+      ] },
+      { name: "allowUserThemeToggle", label: "Allow Theme Toggle", type: "boolean-select" },
+    ],
+  },
+  {
+    id: "contact",
+    title: "Contact and Address",
+    description: "Storefront address, phone, email, and opening hours.",
+    icon: FiMapPin,
+    tone: "from-emerald-500 to-teal-400",
+    fields: [
+      { name: "addressLine", label: "Address", placeholder: "Street address", full: true },
+      { name: "city", label: "City", placeholder: "City" },
+      { name: "state", label: "State", placeholder: "State" },
+      { name: "country", label: "Country", placeholder: "Country" },
+      { name: "postalCode", label: "Postal Code", placeholder: "Postal Code" },
+      { name: "contactPhone", label: "Phone", placeholder: "Phone number" },
+      { name: "contactEmail", label: "Email", placeholder: "Email address", type: "email" },
+      { name: "openingHours", label: "Opening Hours", placeholder: "e.g., Mon-Sun: 11 AM - 11 PM", full: true },
+    ],
+  },
+  {
+    id: "social",
+    title: "Social Links",
+    description: "External channels displayed across the site.",
+    icon: FiGlobe,
+    tone: "from-rose-500 to-pink-400",
+    fields: [
+      { name: "facebookUrl", label: "Facebook URL", placeholder: "https://facebook.com/..." },
+      { name: "instagramUrl", label: "Instagram URL", placeholder: "https://instagram.com/..." },
+      { name: "youtubeUrl", label: "YouTube URL", placeholder: "https://youtube.com/..." },
+      { name: "twitterUrl", label: "Twitter URL", placeholder: "https://twitter.com/..." },
+    ],
+  },
+];
+
+const initialForm = {
+  name: "",
+  logoText: "",
+  logoImage: "",
+  heroTitle: "",
+  heroSubtitle: "",
+  heroTagline: "",
+  menuHeading: "",
+  menuSubHeading: "",
+  ctaText: "",
+  primaryColor: "#ff8c3a",
+  secondaryColor: "#ffd700",
+  accentColor: "#292524",
+  surfaceColor: "#fafaf9",
+  heroImage: "",
+  addressLine: "",
+  city: "",
+  state: "",
+  country: "",
+  postalCode: "",
+  contactPhone: "",
+  contactEmail: "",
+  openingHours: "",
+  facebookUrl: "",
+  instagramUrl: "",
+  youtubeUrl: "",
+  twitterUrl: "",
+  footerNote: "",
+  colorMode: "system",
+  allowUserThemeToggle: true,
+};
+
 const AdminSettings = () => {
   const { token } = useAuth();
-  const [message, setMessage] = useState("");
-  const [form, setForm] = useState({
-    name: "",
-    logoText: "",
-    logoImage: "",
-    heroTitle: "",
-    heroSubtitle: "",
-    heroTagline: "",
-    menuHeading: "",
-    menuSubHeading: "",
-    ctaText: "",
-    primaryColor: "#ff8c3a",
-    secondaryColor: "#ffd700",
-    accentColor: "#292524",
-    surfaceColor: "#fafaf9",
-    heroImage: "",
-    addressLine: "",
-    city: "",
-    state: "",
-    country: "",
-    postalCode: "",
-    contactPhone: "",
-    contactEmail: "",
-    openingHours: "",
-    facebookUrl: "",
-    instagramUrl: "",
-    youtubeUrl: "",
-    twitterUrl: "",
-    footerNote: "",
-    colorMode: "system",
-    allowUserThemeToggle: true,
-  });
+  const [message, setMessage] = useState({ type: "", text: "" });
+  const [form, setForm] = useState(initialForm);
+  const [activeSection, setActiveSection] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     themeService
       .getActiveTheme()
       .then((res) => {
-        setForm((prev) => ({ ...prev, ...res.theme }));
+        setForm((prev) => ({ ...prev, ...(res?.theme || {}) }));
       })
       .catch(() => {
-        setMessage("Unable to fetch settings");
+        setMessage({ type: "error", text: "Unable to fetch settings" });
       });
   }, []);
 
-  const onChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  const activeConfig = useMemo(
+    () => sectionDefinitions.find((section) => section.id === activeSection) || null,
+    [activeSection],
+  );
+
+  const setFieldValue = (name, value) => {
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    setMessage("");
+  const saveSettings = async () => {
+    setSaving(true);
+    setMessage({ type: "", text: "" });
     try {
       await themeService.updateTheme(token, form);
-      setMessage("Restaurant website settings updated.");
+      setMessage({ type: "success", text: "Restaurant website settings updated." });
+      setActiveSection(null);
     } catch (err) {
-      setMessage(err?.response?.data?.message || "Settings update failed");
+      setMessage({ type: "error", text: err?.response?.data?.message || "Settings update failed" });
+    } finally {
+      setSaving(false);
     }
   };
 
-  return (
-    <div className="space-y-8">
-      <div className="space-y-3">
-        <h2 className="heading-1"> Website Customization</h2>
-        <p className="text-lg text-slate-600">
-          Manage your restaurant branding, colors, contact info, and landing page content. All changes apply instantly across the site.
-        </p>
-      </div>
+  const renderField = (field) => {
+    if (field.type === "textarea") {
+      return (
+        <textarea
+          name={field.name}
+          value={form[field.name] || ""}
+          onChange={(event) => setFieldValue(field.name, event.target.value)}
+          className="input-base min-h-[7rem]"
+          rows={4}
+          placeholder={field.placeholder}
+        />
+      );
+    }
 
-      {message && (
-        <div className={message.includes('updated') || message.includes('Settings') ? 'alert-success' : 'alert-error'}>
-          {message}
+    if (field.type === "select") {
+      return (
+        <select
+          name={field.name}
+          value={form[field.name] || ""}
+          onChange={(event) => setFieldValue(field.name, event.target.value)}
+          className="input-base"
+        >
+          {field.options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    if (field.type === "boolean-select") {
+      return (
+        <select
+          name={field.name}
+          value={String(form[field.name])}
+          onChange={(event) => setFieldValue(field.name, event.target.value === "true")}
+          className="input-base"
+        >
+          <option value="true">Enabled</option>
+          <option value="false">Disabled</option>
+        </select>
+      );
+    }
+
+    if (field.type === "color-pair") {
+      return (
+        <div className="flex items-center gap-3 rounded-[1.1rem] border border-white/30 bg-white/45 p-3 dark:border-white/10 dark:bg-white/5">
+          <input
+            type="color"
+            value={form[field.name] || field.fallback}
+            onChange={(event) => setFieldValue(field.name, event.target.value)}
+            className="h-12 w-12 cursor-pointer rounded-2xl border border-white/30 bg-transparent"
+          />
+          <input
+            type="text"
+            value={form[field.name] || field.fallback}
+            onChange={(event) => setFieldValue(field.name, event.target.value)}
+            className="input-base font-mono text-xs font-bold"
+          />
         </div>
-      )}
+      );
+    }
 
-      <form onSubmit={onSubmit} className="space-y-8">
-        <section className="card-elevated p-8">
-          <h3 className="heading-3 mb-6"> Restaurant Branding</h3>
-          <div className="grid gap-5 md:grid-cols-2">
-            <div className="form-group">
-              <label className="form-label">Restaurant Name</label>
-              <input
-                type="text"
-                name="name"
-                value={form.name || ""}
-                onChange={onChange}
-                className="input-base"
-                placeholder="e.g., Emerald Bistro"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Logo Text</label>
-              <input
-                type="text"
-                name="logoText"
-                value={form.logoText || ""}
-                onChange={onChange}
-                className="input-base"
-                placeholder="e.g., DelishDrop"
-              />
-            </div>
-            <div className="form-group md:col-span-2">
-              <label className="form-label">Logo Image URL</label>
-              <input
-                type="text"
-                name="logoImage"
-                value={form.logoImage || ""}
-                onChange={onChange}
-                className="input-base"
-                placeholder="https://..."
-              />
-              <p className="form-hint">120×120 PNG recommended</p>
-            </div>
+    return (
+      <input
+        type={field.type || "text"}
+        name={field.name}
+        value={form[field.name] || ""}
+        onChange={(event) => setFieldValue(field.name, event.target.value)}
+        className="input-base"
+        placeholder={field.placeholder}
+      />
+    );
+  };
+
+  const sectionPreview = (sectionId) => {
+    if (sectionId === "branding") {
+      return form.name || form.logoText || "Restaurant identity not configured";
+    }
+    if (sectionId === "menu") {
+      return form.menuHeading || "Menu page text not configured";
+    }
+    if (sectionId === "colors") {
+      return `${form.colorMode || "system"} mode with ${form.allowUserThemeToggle ? "toggle enabled" : "toggle disabled"}`;
+    }
+    if (sectionId === "contact") {
+      return form.contactEmail || form.contactPhone || "No contact details configured";
+    }
+    if (sectionId === "social") {
+      return form.instagramUrl || form.facebookUrl || "Social links not configured";
+    }
+    return "";
+  };
+
+  return (
+    <div className="space-y-5">
+      <section className="glass-panel animate-rise-in rounded-[1.8rem] p-5 md:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <span className="glass-pill inline-flex rounded-full px-3.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-700 dark:text-slate-200">
+              Brand Studio
+            </span>
+            <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-900 dark:text-slate-50 md:text-3xl">
+              Website Customization
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Settings are grouped into focused categories. Open a section, update it in a modal, and publish changes without scrolling through one long form.
+            </p>
           </div>
-        </section>
+          <div className="glass-subtle rounded-[1.25rem] px-4 py-3 text-xs font-semibold text-slate-600 dark:text-slate-300">
+            Changes apply across the site after save.
+          </div>
+        </div>
+        {message.text ? <div className={`mt-4 ${message.type === "error" ? "alert-error" : "alert-success"}`}>{message.text}</div> : null}
+      </section>
 
-        <section className="card-elevated p-8">
-          <h3 className="heading-3 mb-6"> Brand Colors</h3>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="form-group">
-              <label className="form-label">Primary Color</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  name="primaryColor"
-                  value={form.primaryColor || "#0b6b49"}
-                  onChange={onChange}
-                  className="h-12 w-12 rounded-lg border border-slate-300 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={form.primaryColor || "#0b6b49"}
-                  onChange={onChange}
-                  name="primaryColor"
-                  className="input-base flex-1 text-xs font-bold font-mono"
-                />
+      <section className="grid gap-4 xl:grid-cols-2">
+        {sectionDefinitions.map((section, index) => {
+          const Icon = section.icon;
+          return (
+            <article key={section.id} className={`card-elevated animate-fade-in-up stagger-${(index % 4) + 1} smooth-transform p-5`}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex gap-4">
+                  <div className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${section.tone} text-white shadow-lg`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-slate-50">{section.title}</h3>
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{section.description}</p>
+                    <p className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                      {sectionPreview(section.id)}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Secondary Color</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  name="secondaryColor"
-                  value={form.secondaryColor || "#ffd54f"}
-                  onChange={onChange}
-                  className="h-12 w-12 rounded-lg border border-slate-300 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={form.secondaryColor || "#ffd54f"}
-                  onChange={onChange}
-                  name="secondaryColor"
-                  className="input-base flex-1 text-xs font-bold font-mono"
-                />
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setActiveSection(section.id)}
+                  className="glass-pill inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200"
+                >
+                  Manage
+                  <FiArrowRight className="h-3.5 w-3.5" />
+                </button>
               </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Accent Color</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  name="accentColor"
-                  value={form.accentColor || "#1f2937"}
-                  onChange={onChange}
-                  className="h-12 w-12 rounded-lg border border-slate-300 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={form.accentColor || "#1f2937"}
-                  onChange={onChange}
-                  name="accentColor"
-                  className="input-base flex-1 text-xs font-bold font-mono"
-                />
-              </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Surface Color</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  name="surfaceColor"
-                  value={form.surfaceColor || "#f8faf8"}
-                  onChange={onChange}
-                  className="h-12 w-12 rounded-lg border border-slate-300 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={form.surfaceColor || "#f8faf8"}
-                  onChange={onChange}
-                  name="surfaceColor"
-                  className="input-base flex-1 text-xs font-bold font-mono"
-                />
-              </div>
-            </div>
-          </div>
-        </section>
+            </article>
+          );
+        })}
+      </section>
 
-        <section className="card-elevated p-8">
-          <h3 className="heading-3 mb-6"> Homepage Content</h3>
-          <div className="space-y-5">
-            <div className="form-group">
-              <label className="form-label">Hero Tagline</label>
-              <input
-                type="text"
-                name="heroTagline"
-                value={form.heroTagline || ""}
-                onChange={onChange}
-                className="input-base"
-                placeholder="e.g., Dynamic Restaurant Website"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Hero Title</label>
-              <input
-                type="text"
-                name="heroTitle"
-                value={form.heroTitle || ""}
-                onChange={onChange}
-                className="input-base"
-                placeholder="Main headline for homepage"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Hero Subtitle</label>
-              <textarea
-                name="heroSubtitle"
-                value={form.heroSubtitle || ""}
-                onChange={onChange}
-                className="input-base"
-                rows={3}
-                placeholder="Secondary text for home hero section"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Hero Image URL</label>
-              <input
-                type="text"
-                name="heroImage"
-                value={form.heroImage || ""}
-                onChange={onChange}
-                className="input-base"
-                placeholder="https://images.unsplash.com/..."
-              />
-              <p className="form-hint">1600×900 recommended</p>
-            </div>
-            <div className="form-group">
-              <label className="form-label">CTA Button Text</label>
-              <input
-                type="text"
-                name="ctaText"
-                value={form.ctaText || ""}
-                onChange={onChange}
-                className="input-base"
-                placeholder="e.g., Get Started"
-              />
-            </div>
+      <section className="card-elevated animate-fade-in-up p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-black text-slate-900 dark:text-slate-50">Quick Overview</h3>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Current public-facing contact, menu, and theme status.</p>
           </div>
-        </section>
-
-        <section className="card-elevated p-8">
-          <h3 className="heading-3 mb-6"> Menu Page</h3>
-          <div className="space-y-5">
-            <div className="form-group">
-              <label className="form-label">Menu Heading</label>
-              <input
-                type="text"
-                name="menuHeading"
-                value={form.menuHeading || ""}
-                onChange={onChange}
-                className="input-base"
-                placeholder="e.g., Browse Our Menu"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Menu Subheading</label>
-              <input
-                type="text"
-                name="menuSubHeading"
-                value={form.menuSubHeading || ""}
-                onChange={onChange}
-                className="input-base"
-                placeholder="Supporting text for menu page"
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className="card-elevated p-8">
-          <h3 className="heading-3 mb-6"> Contact & Address</h3>
-          <div className="grid gap-5 md:grid-cols-2">
-            <div className="form-group">
-              <label className="form-label">Address</label>
-              <input
-                type="text"
-                name="addressLine"
-                value={form.addressLine || ""}
-                onChange={onChange}
-                className="input-base"
-                placeholder="Street address"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">City</label>
-              <input
-                type="text"
-                name="city"
-                value={form.city || ""}
-                onChange={onChange}
-                className="input-base"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">State</label>
-              <input
-                type="text"
-                name="state"
-                value={form.state || ""}
-                onChange={onChange}
-                className="input-base"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Country</label>
-              <input
-                type="text"
-                name="country"
-                value={form.country || ""}
-                onChange={onChange}
-                className="input-base"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Postal Code</label>
-              <input
-                type="text"
-                name="postalCode"
-                value={form.postalCode || ""}
-                onChange={onChange}
-                className="input-base"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Opening Hours</label>
-              <input
-                type="text"
-                name="openingHours"
-                value={form.openingHours || ""}
-                onChange={onChange}
-                className="input-base"
-                placeholder="e.g., Mon-Sun: 11 AM - 11 PM"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Phone</label>
-              <input
-                type="tel"
-                name="contactPhone"
-                value={form.contactPhone || ""}
-                onChange={onChange}
-                className="input-base"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Email</label>
-              <input
-                type="email"
-                name="contactEmail"
-                value={form.contactEmail || ""}
-                onChange={onChange}
-                className="input-base"
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className="card-elevated p-8">
-          <h3 className="heading-3 mb-6"> Social Media</h3>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div className="form-group">
-              <label className="form-label">Facebook URL</label>
-              <input
-                type="text"
-                name="facebookUrl"
-                value={form.facebookUrl || ""}
-                onChange={onChange}
-                className="input-base"
-                placeholder="https://facebook.com/..."
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Instagram URL</label>
-              <input
-                type="text"
-                name="instagramUrl"
-                value={form.instagramUrl || ""}
-                onChange={onChange}
-                className="input-base"
-                placeholder="https://instagram.com/..."
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">YouTube URL</label>
-              <input
-                type="text"
-                name="youtubeUrl"
-                value={form.youtubeUrl || ""}
-                onChange={onChange}
-                className="input-base"
-                placeholder="https://youtube.com/..."
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Twitter URL</label>
-              <input
-                type="text"
-                name="twitterUrl"
-                value={form.twitterUrl || ""}
-                onChange={onChange}
-                className="input-base"
-                placeholder="https://twitter.com/..."
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className="card-elevated p-8">
-          <h3 className="heading-3 mb-6"> Theme Settings</h3>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div className="form-group">
-              <label className="form-label">Default Color Mode</label>
-              <select
-                name="colorMode"
-                value={form.colorMode || "system"}
-                onChange={onChange}
-                className="input-base"
-              >
-                <option value="system">System (User Device)</option>
-                <option value="light">Always Light</option>
-                <option value="dark">Always Dark</option>
-              </select>
-              <p className="form-hint">Choose the default theme for visitors</p>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Allow Theme Toggle</label>
-              <select
-                name="allowUserThemeToggle"
-                value={String(form.allowUserThemeToggle)}
-                onChange={(e) => setForm((prev) => ({ ...prev, allowUserThemeToggle: e.target.value === "true" }))}
-                className="input-base"
-              >
-                <option value="true"> Enabled</option>
-                <option value="false"> Disabled</option>
-              </select>
-              <p className="form-hint">Let users switch between light/dark mode</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="card-elevated p-8">
-          <h3 className="heading-3 mb-6"> Footer</h3>
-          <div className="form-group">
-            <label className="form-label">Footer Note</label>
-            <textarea
-              name="footerNote"
-              value={form.footerNote || ""}
-              onChange={onChange}
-              className="input-base"
-              rows={3}
-              placeholder="Special message or tagline for footer"
-            />
-          </div>
-        </section>
-
-        <div className="flex gap-4">
-          <button type="submit" className="btn-primary">
-             Save All Settings
+          <button type="button" onClick={saveSettings} disabled={saving} className="btn-primary px-5 py-2.5 text-sm">
+            {saving ? "Saving..." : "Save All Settings"}
           </button>
         </div>
-      </form>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="glass-subtle rounded-[1.2rem] p-4">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Contact</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-50">{form.contactEmail || "No email set"}</p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{form.contactPhone || "No phone set"}</p>
+          </div>
+          <div className="glass-subtle rounded-[1.2rem] p-4">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Homepage</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-50">{form.heroTitle || "No hero title set"}</p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{form.ctaText || "No CTA set"}</p>
+          </div>
+          <div className="glass-subtle rounded-[1.2rem] p-4">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Theme</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-50">{form.colorMode || "system"}</p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{form.allowUserThemeToggle ? "User theme toggle enabled" : "User theme toggle disabled"}</p>
+          </div>
+        </div>
+      </section>
+
+      <AppModal
+        isOpen={Boolean(activeConfig)}
+        title={activeConfig ? `${activeConfig.title} Settings` : ""}
+        onClose={() => setActiveSection(null)}
+        maxWidth="max-w-4xl"
+      >
+        {activeConfig ? (
+          <div className="space-y-5">
+            <div className="rounded-[1.25rem] border border-white/30 bg-white/40 p-4 dark:border-white/10 dark:bg-white/5">
+              <p className="text-sm text-slate-600 dark:text-slate-300">{activeConfig.description}</p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {activeConfig.fields.map((field) => (
+                <div key={field.name} className={field.full ? "md:col-span-2" : ""}>
+                  <label className="form-label">{field.label}</label>
+                  {renderField(field)}
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-3">
+              <button type="button" onClick={() => setActiveSection(null)} className="btn-outline px-5 py-2.5 text-sm">
+                Cancel
+              </button>
+              <button type="button" onClick={saveSettings} disabled={saving} className="btn-primary px-5 py-2.5 text-sm">
+                {saving ? "Saving..." : "Save Section"}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </AppModal>
     </div>
   );
 };

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import themeService from "../../services/theme_Service";
 import useResolvedColorMode from "../../hooks/useResolvedColorMode";
+import useOrderTray from "../../hooks/useOrderTray";
 import AppNavbar from "../../components/navigation/AppNavbar";
 
 const Customer_Main_Layout = () => {
@@ -14,6 +15,7 @@ const Customer_Main_Layout = () => {
     surfaceColor: "#f1f5f9",
   });
   const { resolvedMode, setUserMode, palette, allowUserThemeToggle } = useResolvedColorMode(theme);
+  const { cart, itemCount } = useOrderTray();
 
   useEffect(() => {
     themeService
@@ -27,7 +29,6 @@ const Customer_Main_Layout = () => {
   const links = [
     { to: "/", label: "Home", end: true },
     { to: "/menu", label: "Menu" },
-    { to: "/customer/menu", label: "Order Tray" },
     { to: "/customer/orders", label: "Orders" },
     { to: "/customer/my-reservations", label: "Reservations" },
     { to: "/customer/profile", label: "Profile" },
@@ -45,6 +46,8 @@ const Customer_Main_Layout = () => {
         setUserMode={setUserMode}
         allowUserThemeToggle={allowUserThemeToggle}
         showGuestAuth={false}
+        trayItems={cart}
+        trayItemCount={itemCount}
       />
       <Outlet />
     </div>

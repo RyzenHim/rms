@@ -154,6 +154,8 @@ const router = createBrowserRouter([
           { index: true, element: withLazy(<ManagerDashboard />) },
           { path: "orders", element: withLazy(<RoleOrders roleLabel="Manager" />) },
           { path: "table-status", element: withLazy(<AdminTableStatus />) },
+          { path: "employees", element: withLazy(<AdminEmployees />) },
+          { path: "customers", element: withLazy(<AdminCustomers />) },
           { path: "settings", element: withLazy(<RoleSettings roleLabel="Manager" />) },
           { path: "profile", element: withLazy(<ProfilePage />) },
         ],

@@ -9,6 +9,8 @@ const Manager_Main_Layout = () => {
         { to: "/manager", label: "Dashboard", end: true },
         { to: "/manager/orders", label: "Orders" },
         { to: "/manager/table-status", label: "Table Status" },
+        { to: "/manager/employees", label: "Employees" },
+        { to: "/manager/customers", label: "Customers" },
         { to: "/manager/settings", label: "Settings" },
       ]}
     />

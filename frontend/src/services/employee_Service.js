@@ -1,8 +1,11 @@
 import api, { withAuth } from "./api";
 
 const employeeService = {
-  async getEmployees(token) {
-    const { data } = await api.get("/employees", withAuth(token));
+  async getEmployees(token, params = {}) {
+    const { data } = await api.get("/employees", {
+      ...withAuth(token),
+      params,
+    });
     return data;
   },
 
@@ -18,6 +21,16 @@ const employeeService = {
 
   async deleteEmployee(token, id) {
     const { data } = await api.delete(`/employees/${id}`, withAuth(token));
+    return data;
+  },
+
+  async updateEmployeeStatus(token, id, isActive) {
+    const { data } = await api.patch(`/employees/${id}/status`, { isActive }, withAuth(token));
+    return data;
+  },
+
+  async restoreEmployee(token, id) {
+    const { data } = await api.patch(`/employees/${id}/restore`, {}, withAuth(token));
     return data;
   },
 };

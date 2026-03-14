@@ -52,13 +52,15 @@ const RoleShell = ({ links = [] }) => {
       {/* Main Content */}
       <main className="flex-1 overflow-hidden">
         <div className="h-screen overflow-y-auto" style={{ backgroundColor: palette.pageBg }}>
-          <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-[112rem] px-3 py-4 sm:px-4 lg:px-6">
             <div
-              className="rounded-2xl p-4 shadow-md sm:p-6 md:p-8 transition-all duration-300"
+              className="rounded-[1.5rem] border p-3 shadow-md transition-all duration-300 sm:p-4 md:p-5"
               style={{
                 backgroundColor: palette.panelBg,
+                borderColor: palette.border,
                 color: palette.text,
-                boxShadow: `0 10px 40px ${resolvedMode === "dark" ? "rgba(0, 0, 0, 0.3)" : "rgba(39, 55, 77, 0.08)"}`,
+                boxShadow: palette.glassShadow,
+                backdropFilter: palette.backdrop,
               }}
             >
               <Outlet />

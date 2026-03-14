@@ -1,39 +1,33 @@
 import { useEffect, useMemo, useState } from "react";
+import { FiChevronDown, FiChevronUp, FiFileText, FiFolder, FiLayers, FiPackage, FiSearch } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 import menuService from "../../services/menu_Service";
 
 const emptyCategoryForm = { name: "", description: "", image: "", sortOrder: 0, isActive: true };
-const emptySubCategoryForm = {
-  name: "",
-  category: "",
-  heading: "",
-  subHeading: "",
-  description: "",
-  image: "",
-  sortOrder: 0,
-  isActive: true,
-};
+const emptySubCategoryForm = { name: "", category: "", heading: "", subHeading: "", description: "", image: "", sortOrder: 0, isActive: true };
 const emptyItemForm = {
-  name: "",
-  heading: "",
-  subHeading: "",
-  description: "",
-  shortDescription: "",
-  category: "",
-  subCategory: "",
-  foodType: "non_veg",
-  image: "",
-  price: "",
-  compareAtPrice: "",
-  discountLabel: "",
-  prepTimeMinutes: 20,
-  spiceLevel: "none",
-  stockStatus: "in_stock",
-  isFeatured: false,
-  isActive: true,
-  portions: [{ label: "", quantityText: "", price: "" }],
+  name: "", heading: "", subHeading: "", description: "", shortDescription: "", category: "", subCategory: "", foodType: "non_veg",
+  image: "", price: "", compareAtPrice: "", discountLabel: "", prepTimeMinutes: 20, spiceLevel: "none", stockStatus: "in_stock",
+  isFeatured: false, isActive: true, portions: [{ label: "", quantityText: "", price: "" }],
 };
 
+const Section = ({ title, description, icon: Icon, open, onToggle, children }) => (
+  <section className="card-elevated overflow-hidden p-0">
+    <button onClick={onToggle} className="flex w-full items-center justify-between gap-4 p-5 text-left">
+      <div className="flex items-start gap-4">
+        <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-400 text-white shadow-lg">
+          <Icon className="h-5 w-5" />
+        </div>
+        <div>
+          <h3 className="text-xl font-black text-slate-900 dark:text-slate-50">{title}</h3>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{description}</p>
+        </div>
+      </div>
+      <span className="glass-pill inline-flex rounded-full p-2 text-slate-700 dark:text-slate-200">{open ? <FiChevronUp className="h-4 w-4" /> : <FiChevronDown className="h-4 w-4" />}</span>
+    </button>
+    {open ? <div className="border-t border-slate-200/60 px-5 pb-5 pt-4 dark:border-slate-700/60">{children}</div> : null}
+  </section>
+);
 
 const AdminMenuManager = () => {
   const { token } = useAuth();
@@ -54,12 +48,14 @@ const AdminMenuManager = () => {
   const [editingSubCategoryId, setEditingSubCategoryId] = useState(null);
   const [editingItemId, setEditingItemId] = useState(null);
   const [itemSearch, setItemSearch] = useState("");
+  const [open, setOpen] = useState({ pdf: false, categoryForm: false, categoryList: false, subForm: false, subList: false, itemForm: true, itemList: true });
 
   const activeCategories = useMemo(() => categories.filter((c) => c.isActive), [categories]);
-  const filteredSubCategories = useMemo(() => {
-    if (!itemForm.category) return subCategories;
-    return subCategories.filter((subCategory) => subCategory.category?._id === itemForm.category);
-  }, [subCategories, itemForm.category]);
+  const filteredSubCategories = useMemo(() => (!itemForm.category ? subCategories : subCategories.filter((s) => s.category?._id === itemForm.category)), [subCategories, itemForm.category]);
+  const filteredItems = useMemo(() => {
+    const search = itemSearch.toLowerCase();
+    return items.filter((item) => `${item.name || ""} ${item.category?.name || ""} ${item.subCategory?.name || ""} ${item.foodType || ""}`.toLowerCase().includes(search));
+  }, [itemSearch, items]);
 
   const loadData = async () => {
     setLoading(true);
@@ -80,13 +76,12 @@ const AdminMenuManager = () => {
     loadData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fileToBase64 = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
+  const fileToBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 
   const onPdfChange = async (event) => {
     const file = event.target.files?.[0];
@@ -108,21 +103,12 @@ const AdminMenuManager = () => {
     }
   };
 
-  const resetCategoryForm = () => {
-    setCategoryForm(emptyCategoryForm);
-    setEditingCategoryId(null);
-  };
-  const resetSubCategoryForm = () => {
-    setSubCategoryForm(emptySubCategoryForm);
-    setEditingSubCategoryId(null);
-  };
-  const resetItemForm = () => {
-    setItemForm(emptyItemForm);
-    setEditingItemId(null);
-  };
+  const resetCategoryForm = () => { setCategoryForm(emptyCategoryForm); setEditingCategoryId(null); };
+  const resetSubCategoryForm = () => { setSubCategoryForm(emptySubCategoryForm); setEditingSubCategoryId(null); };
+  const resetItemForm = () => { setItemForm(emptyItemForm); setEditingItemId(null); };
 
-  const handleCategorySubmit = async (e) => {
-    e.preventDefault();
+  const handleCategorySubmit = async (event) => {
+    event.preventDefault();
     if (categorySaving) return;
     setCategorySaving(true);
     try {
@@ -138,8 +124,8 @@ const AdminMenuManager = () => {
     }
   };
 
-  const handleSubCategorySubmit = async (e) => {
-    e.preventDefault();
+  const handleSubCategorySubmit = async (event) => {
+    event.preventDefault();
     if (subCategorySaving) return;
     setSubCategorySaving(true);
     try {
@@ -155,8 +141,8 @@ const AdminMenuManager = () => {
     }
   };
 
-  const handleItemSubmit = async (e) => {
-    e.preventDefault();
+  const handleItemSubmit = async (event) => {
+    event.preventDefault();
     if (itemSaving) return;
     setItemSaving(true);
     try {
@@ -179,289 +165,123 @@ const AdminMenuManager = () => {
     }
   };
 
-  const onDeleteCategory = async (id) => {
-    try {
-      await menuService.deleteCategory(token, id);
-      setMessage({ type: "success", text: "Category deleted" });
-      await loadData();
-    } catch (err) {
-      setMessage({ type: "error", text: err?.response?.data?.message || "Category delete failed" });
-    }
-  };
-  const onDeleteSubCategory = async (id) => {
-    try {
-      await menuService.deleteSubCategory(token, id);
-      setMessage({ type: "success", text: "Sub-category deleted" });
-      await loadData();
-    } catch (err) {
-      setMessage({ type: "error", text: err?.response?.data?.message || "Sub-category delete failed" });
-    }
-  };
-  const onDeleteItem = async (id) => {
-    try {
-      await menuService.deleteMenuItem(token, id);
-      setMessage({ type: "success", text: "Menu item deleted" });
-      await loadData();
-    } catch (err) {
-      setMessage({ type: "error", text: err?.response?.data?.message || "Menu item delete failed" });
-    }
-  };
-
   const onCategoryEdit = (category) => {
     setEditingCategoryId(category._id);
-    setCategoryForm({
-      name: category.name || "",
-      description: category.description || "",
-      image: category.image || "",
-      sortOrder: category.sortOrder || 0,
-      isActive: Boolean(category.isActive),
-    });
+    setCategoryForm({ name: category.name || "", description: category.description || "", image: category.image || "", sortOrder: category.sortOrder || 0, isActive: Boolean(category.isActive) });
+    setOpen((prev) => ({ ...prev, categoryForm: true }));
   };
   const onSubCategoryEdit = (subCategory) => {
     setEditingSubCategoryId(subCategory._id);
-    setSubCategoryForm({
-      name: subCategory.name || "",
-      category: subCategory.category?._id || "",
-      heading: subCategory.heading || "",
-      subHeading: subCategory.subHeading || "",
-      description: subCategory.description || "",
-      image: subCategory.image || "",
-      sortOrder: subCategory.sortOrder || 0,
-      isActive: Boolean(subCategory.isActive),
-    });
+    setSubCategoryForm({ name: subCategory.name || "", category: subCategory.category?._id || "", heading: subCategory.heading || "", subHeading: subCategory.subHeading || "", description: subCategory.description || "", image: subCategory.image || "", sortOrder: subCategory.sortOrder || 0, isActive: Boolean(subCategory.isActive) });
+    setOpen((prev) => ({ ...prev, subForm: true }));
   };
   const onItemEdit = (item) => {
     setEditingItemId(item._id);
     setItemForm({
-      name: item.name || "",
-      heading: item.heading || "",
-      subHeading: item.subHeading || "",
-      description: item.description || "",
-      shortDescription: item.shortDescription || "",
-      category: item.category?._id || "",
-      subCategory: item.subCategory?._id || "",
-      foodType: item.foodType || "non_veg",
-      image: item.image || "",
-      price: item.price ?? "",
-      compareAtPrice: item.compareAtPrice ?? "",
-      discountLabel: item.discountLabel || "",
-      prepTimeMinutes: item.prepTimeMinutes ?? 20,
-      spiceLevel: item.spiceLevel || "none",
-      stockStatus: item.stockStatus || "in_stock",
-      isFeatured: Boolean(item.isFeatured),
-      isActive: Boolean(item.isActive),
-      portions:
-        item.portions?.length > 0
-          ? item.portions.map((p) => ({ label: p.label || "", quantityText: p.quantityText || "", price: p.price ?? "" }))
-          : [{ label: "", quantityText: "", price: "" }],
+      name: item.name || "", heading: item.heading || "", subHeading: item.subHeading || "", description: item.description || "", shortDescription: item.shortDescription || "",
+      category: item.category?._id || "", subCategory: item.subCategory?._id || "", foodType: item.foodType || "non_veg", image: item.image || "", price: item.price ?? "",
+      compareAtPrice: item.compareAtPrice ?? "", discountLabel: item.discountLabel || "", prepTimeMinutes: item.prepTimeMinutes ?? 20, spiceLevel: item.spiceLevel || "none",
+      stockStatus: item.stockStatus || "in_stock", isFeatured: Boolean(item.isFeatured), isActive: Boolean(item.isActive),
+      portions: item.portions?.length ? item.portions.map((p) => ({ label: p.label || "", quantityText: p.quantityText || "", price: p.price ?? "" })) : [{ label: "", quantityText: "", price: "" }],
     });
+    setOpen((prev) => ({ ...prev, itemForm: true }));
   };
 
-  const updatePortion = (index, key, value) => {
-    setItemForm((prev) => ({
-      ...prev,
-      portions: prev.portions.map((portion, i) => (i === index ? { ...portion, [key]: value } : portion)),
-    }));
-  };
+  const onDeleteCategory = async (id) => { try { await menuService.deleteCategory(token, id); setMessage({ type: "success", text: "Category deleted" }); await loadData(); } catch (err) { setMessage({ type: "error", text: err?.response?.data?.message || "Category delete failed" }); } };
+  const onDeleteSubCategory = async (id) => { try { await menuService.deleteSubCategory(token, id); setMessage({ type: "success", text: "Sub-category deleted" }); await loadData(); } catch (err) { setMessage({ type: "error", text: err?.response?.data?.message || "Sub-category delete failed" }); } };
+  const onDeleteItem = async (id) => { try { await menuService.deleteMenuItem(token, id); setMessage({ type: "success", text: "Menu item deleted" }); await loadData(); } catch (err) { setMessage({ type: "error", text: err?.response?.data?.message || "Menu item delete failed" }); } };
+  const updatePortion = (index, key, value) => setItemForm((prev) => ({ ...prev, portions: prev.portions.map((p, i) => (i === index ? { ...p, [key]: value } : p)) }));
   const addPortion = () => setItemForm((prev) => ({ ...prev, portions: [...prev.portions, { label: "", quantityText: "", price: "" }] }));
   const removePortion = (index) => setItemForm((prev) => ({ ...prev, portions: prev.portions.filter((_, i) => i !== index) }));
 
-
-  const filteredItems = items.filter((item) => {
-    const haystack = `${item.name || ""} ${item.category?.name || ""} ${item.subCategory?.name || ""} ${item.foodType || ""}`.toLowerCase();
-    return haystack.includes(itemSearch.toLowerCase());
-  });
-
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-3xl font-black text-slate-900">Menu Studio</h2>
-        <p className="mt-1 text-sm text-slate-600">Full CRUD for category, sub-category, veg/non-veg items, portions and PDF menu.</p>
-        {message.text ? (
-          <p className={`mt-2 rounded-xl px-3 py-2 text-sm font-medium ${message.type === "error" ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
-            {message.text}
-          </p>
-        ) : null}
+    <div className="space-y-6">
+      <section className="glass-panel rounded-[2rem] p-6 md:p-8">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <span className="glass-pill inline-flex rounded-full px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-700 dark:text-slate-200">Menu Studio</span>
+            <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50 md:text-4xl">Admin Menu Manager</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">Collapsed sections, cleaner spacing, and theme-matched lists instead of one long expanded admin page.</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              { label: "Categories", value: categories.length, icon: FiFolder },
+              { label: "Sections", value: subCategories.length, icon: FiLayers },
+              { label: "Items", value: items.length, icon: FiPackage },
+            ].map((card) => {
+              const Icon = card.icon;
+              return <div key={card.label} className="glass-subtle rounded-[1.4rem] p-4"><Icon className="h-5 w-5 text-sky-500" /><p className="mt-3 text-2xl font-black text-slate-900 dark:text-slate-50">{card.value}</p><p className="text-sm text-slate-600 dark:text-slate-300">{card.label}</p></div>;
+            })}
+          </div>
+        </div>
+        {message.text ? <div className={`mt-5 ${message.type === "error" ? "alert-error" : "alert-success"}`}>{message.text}</div> : null}
+      </section>
+
+      <Section title="Menu PDF" description="Hidden until needed." icon={FiFileText} open={open.pdf} onToggle={() => setOpen((prev) => ({ ...prev, pdf: !prev.pdf }))}>
+        {pdfMeta ? <a href={pdfMeta.url} target="_blank" rel="noreferrer" className="inline-flex rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">Open current PDF: {pdfMeta.name}</a> : <p className="text-sm text-slate-600 dark:text-slate-300">No PDF found yet.</p>}
+        <div className="mt-4"><label className="form-label">Replace PDF</label><input type="file" accept="application/pdf" onChange={onPdfChange} className="input-base cursor-pointer py-3" />{uploadingPdf ? <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Uploading...</p> : null}</div>
+      </Section>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Section title={editingCategoryId ? "Edit Category" : "Create Category"} description="Opens only when you need to edit." icon={FiFolder} open={open.categoryForm} onToggle={() => setOpen((prev) => ({ ...prev, categoryForm: !prev.categoryForm }))}>
+          <form onSubmit={handleCategorySubmit} className="grid gap-3">
+            <input type="text" placeholder="Category Name" value={categoryForm.name} onChange={(e) => setCategoryForm((prev) => ({ ...prev, name: e.target.value }))} className="input-base" required />
+            <input type="text" placeholder="Image URL" value={categoryForm.image} onChange={(e) => setCategoryForm((prev) => ({ ...prev, image: e.target.value }))} className="input-base" />
+            <textarea placeholder="Description" value={categoryForm.description} onChange={(e) => setCategoryForm((prev) => ({ ...prev, description: e.target.value }))} className="input-base min-h-[5rem]" rows={2} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <input type="number" placeholder="Sort Order" value={categoryForm.sortOrder} onChange={(e) => setCategoryForm((prev) => ({ ...prev, sortOrder: e.target.value }))} className="input-base" />
+              <label className="glass-subtle flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200"><input type="checkbox" checked={categoryForm.isActive} onChange={(e) => setCategoryForm((prev) => ({ ...prev, isActive: e.target.checked }))} />Active category</label>
+            </div>
+            <div className="flex gap-3">{editingCategoryId ? <button type="button" onClick={resetCategoryForm} className="btn-outline">Cancel</button> : null}<button disabled={categorySaving} className="btn-primary">{categorySaving ? "Saving..." : editingCategoryId ? "Update Category" : "Create Category"}</button></div>
+          </form>
+        </Section>
+
+        <Section title="Category List" description="Expandable list." icon={FiSearch} open={open.categoryList} onToggle={() => setOpen((prev) => ({ ...prev, categoryList: !prev.categoryList }))}>
+          <div className="space-y-3">{categories.map((category) => <article key={category._id} className="glass-subtle rounded-[1.3rem] p-4"><p className="text-base font-black text-slate-900 dark:text-slate-50">{category.name}</p><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{category.description || "No description"}</p><div className="mt-3 flex gap-2"><button onClick={() => onCategoryEdit(category)} className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold text-sky-700 dark:text-sky-300">Edit</button><button onClick={() => onDeleteCategory(category._id)} className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold text-rose-700 dark:text-rose-300">Delete</button></div></article>)}{!categories.length && !loading ? <p className="text-sm text-slate-500 dark:text-slate-400">No categories yet.</p> : null}</div>
+        </Section>
       </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <h3 className="text-lg font-bold text-slate-900">Menu PDF</h3>
-        {pdfMeta ? (
-          <a href={pdfMeta.url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-sm font-semibold text-emerald-700 underline">
-            Open current PDF: {pdfMeta.name}
-          </a>
-        ) : (
-          <p className="text-sm text-slate-600">No PDF found yet.</p>
-        )}
-        <div className="mt-3">
-          <label className="block text-sm font-medium text-slate-700">Replace PDF (Admin)</label>
-          <input type="file" accept="application/pdf" onChange={onPdfChange} className="mt-1 block w-full text-sm" />
-          {uploadingPdf ? <p className="mt-1 text-xs text-slate-500">Uploading...</p> : null}
-        </div>
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-2">
-        <article className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
-          <h3 className="text-xl font-bold text-slate-900">{editingCategoryId ? "Edit Category" : "Create Category"}</h3>
-          <form onSubmit={handleCategorySubmit} className="mt-4 grid gap-3">
-            <input type="text" placeholder="Category Name" value={categoryForm.name} onChange={(e) => setCategoryForm((p) => ({ ...p, name: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" required />
-            <input type="text" placeholder="Image URL" value={categoryForm.image} onChange={(e) => setCategoryForm((p) => ({ ...p, image: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" />
-            <textarea placeholder="Description" value={categoryForm.description} onChange={(e) => setCategoryForm((p) => ({ ...p, description: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" rows={2} />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input type="number" placeholder="Sort Order" value={categoryForm.sortOrder} onChange={(e) => setCategoryForm((p) => ({ ...p, sortOrder: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" />
-              <label className="flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm"><input type="checkbox" checked={categoryForm.isActive} onChange={(e) => setCategoryForm((p) => ({ ...p, isActive: e.target.checked }))} />Active category</label>
-            </div>
-            <div className="flex gap-2">
-              <button disabled={categorySaving} className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{categorySaving ? "Saving..." : editingCategoryId ? "Update Category" : "Create Category"}</button>
-              {editingCategoryId ? <button type="button" onClick={resetCategoryForm} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold">Cancel</button> : null}
-            </div>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Section title={editingSubCategoryId ? "Edit Sub-Category" : "Create Sub-Category"} description="Consistent theme and spacing." icon={FiLayers} open={open.subForm} onToggle={() => setOpen((prev) => ({ ...prev, subForm: !prev.subForm }))}>
+          <form onSubmit={handleSubCategorySubmit} className="grid gap-3">
+            <input type="text" placeholder="Sub-Category Name" value={subCategoryForm.name} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, name: e.target.value }))} className="input-base" required />
+            <select value={subCategoryForm.category} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, category: e.target.value }))} className="input-base" required><option value="">Select Parent Category</option>{activeCategories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select>
+            <div className="grid gap-3 sm:grid-cols-2"><input type="text" placeholder="Heading" value={subCategoryForm.heading} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, heading: e.target.value }))} className="input-base" /><input type="text" placeholder="Sub Heading" value={subCategoryForm.subHeading} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, subHeading: e.target.value }))} className="input-base" /></div>
+            <textarea placeholder="Description" value={subCategoryForm.description} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, description: e.target.value }))} className="input-base min-h-[5rem]" rows={2} />
+            <div className="grid gap-3 sm:grid-cols-2"><input type="text" placeholder="Image URL" value={subCategoryForm.image} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, image: e.target.value }))} className="input-base" /><input type="number" placeholder="Sort Order" value={subCategoryForm.sortOrder} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, sortOrder: e.target.value }))} className="input-base" /></div>
+            <label className="glass-subtle flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200"><input type="checkbox" checked={subCategoryForm.isActive} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, isActive: e.target.checked }))} />Active sub-category</label>
+            <div className="flex gap-3">{editingSubCategoryId ? <button type="button" onClick={resetSubCategoryForm} className="btn-outline">Cancel</button> : null}<button disabled={subCategorySaving} className="btn-primary">{subCategorySaving ? "Saving..." : editingSubCategoryId ? "Update Sub-Category" : "Create Sub-Category"}</button></div>
           </form>
-        </article>
-        <article className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h3 className="text-xl font-bold text-slate-900">Category List</h3>
-          <div className="mt-3 max-h-[23rem] space-y-2 overflow-auto pr-1">
-            {categories.map((category) => (
-              <div key={category._id} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
-                <p className="font-bold text-slate-900">{category.name}</p><p className="text-xs text-slate-500">{category.description || "No description"}</p>
-                <div className="mt-2 flex gap-2">
-                  <button onClick={() => onCategoryEdit(category)} className="rounded-lg bg-slate-800 px-3 py-1 text-xs font-semibold text-white">Edit</button>
-                  <button onClick={() => onDeleteCategory(category._id)} className="rounded-lg bg-red-600 px-3 py-1 text-xs font-semibold text-white">Delete</button>
-                </div>
-              </div>
-            ))}
-            {!categories.length && !loading ? <p className="text-sm text-slate-500">No categories yet.</p> : null}
-          </div>
-        </article>
-      </section>
+        </Section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <article className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
-          <h3 className="text-xl font-bold text-slate-900">{editingSubCategoryId ? "Edit Sub-Category" : "Create Sub-Category"}</h3>
-          <form onSubmit={handleSubCategorySubmit} className="mt-4 grid gap-3">
-            <input type="text" placeholder="Sub-Category Name" value={subCategoryForm.name} onChange={(e) => setSubCategoryForm((p) => ({ ...p, name: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" required />
-            <select value={subCategoryForm.category} onChange={(e) => setSubCategoryForm((p) => ({ ...p, category: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" required>
-              <option value="">Select Parent Category</option>{activeCategories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}
-            </select>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input type="text" placeholder="Heading" value={subCategoryForm.heading} onChange={(e) => setSubCategoryForm((p) => ({ ...p, heading: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" />
-              <input type="text" placeholder="Sub Heading" value={subCategoryForm.subHeading} onChange={(e) => setSubCategoryForm((p) => ({ ...p, subHeading: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" />
-            </div>
-            <textarea placeholder="Description" value={subCategoryForm.description} onChange={(e) => setSubCategoryForm((p) => ({ ...p, description: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" rows={2} />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input type="text" placeholder="Image URL" value={subCategoryForm.image} onChange={(e) => setSubCategoryForm((p) => ({ ...p, image: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" />
-              <input type="number" placeholder="Sort Order" value={subCategoryForm.sortOrder} onChange={(e) => setSubCategoryForm((p) => ({ ...p, sortOrder: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" />
-            </div>
-            <label className="flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm"><input type="checkbox" checked={subCategoryForm.isActive} onChange={(e) => setSubCategoryForm((p) => ({ ...p, isActive: e.target.checked }))} />Active sub-category</label>
-            <div className="flex gap-2">
-              <button disabled={subCategorySaving} className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{subCategorySaving ? "Saving..." : editingSubCategoryId ? "Update Sub-Category" : "Create Sub-Category"}</button>
-              {editingSubCategoryId ? <button type="button" onClick={resetSubCategoryForm} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold">Cancel</button> : null}
-            </div>
-          </form>
-        </article>
-        <article className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h3 className="text-xl font-bold text-slate-900">Sub-Category List</h3>
-          <div className="mt-3 max-h-[23rem] space-y-2 overflow-auto pr-1">
-            {subCategories.map((subCategory) => (
-              <div key={subCategory._id} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
-                <p className="font-bold text-slate-900">{subCategory.name}</p><p className="text-xs text-slate-500">{subCategory.category?.name}</p>
-                <div className="mt-2 flex gap-2">
-                  <button onClick={() => onSubCategoryEdit(subCategory)} className="rounded-lg bg-slate-800 px-3 py-1 text-xs font-semibold text-white">Edit</button>
-                  <button onClick={() => onDeleteSubCategory(subCategory._id)} className="rounded-lg bg-red-600 px-3 py-1 text-xs font-semibold text-white">Delete</button>
-                </div>
-              </div>
-            ))}
-            {!subCategories.length && !loading ? <p className="text-sm text-slate-500">No sub-categories yet.</p> : null}
-          </div>
-        </article>
-      </section>
+        <Section title="Sub-Category List" description="Expandable list." icon={FiSearch} open={open.subList} onToggle={() => setOpen((prev) => ({ ...prev, subList: !prev.subList }))}>
+          <div className="space-y-3">{subCategories.map((subCategory) => <article key={subCategory._id} className="glass-subtle rounded-[1.3rem] p-4"><p className="text-base font-black text-slate-900 dark:text-slate-50">{subCategory.name}</p><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{subCategory.category?.name}</p><div className="mt-3 flex gap-2"><button onClick={() => onSubCategoryEdit(subCategory)} className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold text-sky-700 dark:text-sky-300">Edit</button><button onClick={() => onDeleteSubCategory(subCategory._id)} className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold text-rose-700 dark:text-rose-300">Delete</button></div></article>)}{!subCategories.length && !loading ? <p className="text-sm text-slate-500 dark:text-slate-400">No sub-categories yet.</p> : null}</div>
+        </Section>
+      </div>
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <article className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
-          <h3 className="text-xl font-bold text-slate-900">{editingItemId ? "Edit Menu Item" : "Create Menu Item"}</h3>
-          <form onSubmit={handleItemSubmit} className="mt-4 grid gap-3">
-            <input type="text" placeholder="Item Name" value={itemForm.name} onChange={(e) => setItemForm((p) => ({ ...p, name: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" required />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input type="text" placeholder="Heading" value={itemForm.heading} onChange={(e) => setItemForm((p) => ({ ...p, heading: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" />
-              <input type="text" placeholder="Sub Heading" value={itemForm.subHeading} onChange={(e) => setItemForm((p) => ({ ...p, subHeading: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" />
-            </div>
-            <textarea placeholder="Description" value={itemForm.description} onChange={(e) => setItemForm((p) => ({ ...p, description: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" rows={2} required />
-            <input type="text" placeholder="Short Description" value={itemForm.shortDescription} onChange={(e) => setItemForm((p) => ({ ...p, shortDescription: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" />
-            <div className="grid gap-3 sm:grid-cols-3">
-              <select value={itemForm.category} onChange={(e) => setItemForm((p) => ({ ...p, category: e.target.value, subCategory: "" }))} className="rounded-xl border border-slate-300 px-3 py-2" required>
-                <option value="">Select Category</option>{activeCategories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}
-              </select>
-              <select value={itemForm.subCategory} onChange={(e) => setItemForm((p) => ({ ...p, subCategory: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2">
-                <option value="">Sub-Category (optional)</option>{filteredSubCategories.map((subCategory) => <option key={subCategory._id} value={subCategory._id}>{subCategory.name}</option>)}
-              </select>
-              <select value={itemForm.foodType} onChange={(e) => setItemForm((p) => ({ ...p, foodType: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2">
-                <option value="veg">Veg</option><option value="non_veg">Non-Veg</option>
-              </select>
-            </div>
-            <input type="text" placeholder="Image URL" value={itemForm.image} onChange={(e) => setItemForm((p) => ({ ...p, image: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input type="number" step="0.01" min="0" placeholder="Base Price" value={itemForm.price} onChange={(e) => setItemForm((p) => ({ ...p, price: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" required />
-              <input type="number" step="0.01" min="0" placeholder="Compare At Price" value={itemForm.compareAtPrice} onChange={(e) => setItemForm((p) => ({ ...p, compareAtPrice: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" />
-            </div>
-            <input type="text" placeholder="Discount Label" value={itemForm.discountLabel} onChange={(e) => setItemForm((p) => ({ ...p, discountLabel: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" />
-            <div className="rounded-2xl border border-slate-200 p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-sm font-bold text-slate-800">Portion-wise Pricing</p>
-                <button type="button" onClick={addPortion} className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold">Add Portion</button>
-              </div>
-              <div className="space-y-2">
-                {itemForm.portions.map((portion, index) => (
-                  <div key={`${portion.label}-${index}`} className="grid gap-2 sm:grid-cols-[1fr_1fr_100px_70px]">
-                    <input type="text" placeholder="Label" value={portion.label} onChange={(e) => updatePortion(index, "label", e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
-                    <input type="text" placeholder="Qty text" value={portion.quantityText} onChange={(e) => updatePortion(index, "quantityText", e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
-                    <input type="number" step="0.01" min="0" placeholder="Price" value={portion.price} onChange={(e) => updatePortion(index, "price", e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
-                    <button type="button" onClick={() => removePortion(index)} className="rounded-lg bg-red-600 px-2 py-1.5 text-xs font-semibold text-white">Remove</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <input type="number" min="1" placeholder="Prep Time (mins)" value={itemForm.prepTimeMinutes} onChange={(e) => setItemForm((p) => ({ ...p, prepTimeMinutes: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2" />
-              <select value={itemForm.spiceLevel} onChange={(e) => setItemForm((p) => ({ ...p, spiceLevel: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2">{["none", "mild", "medium", "hot", "extra_hot"].map((level) => <option key={level} value={level}>{level}</option>)}</select>
-              <select value={itemForm.stockStatus} onChange={(e) => setItemForm((p) => ({ ...p, stockStatus: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2">{["in_stock", "low_stock", "out_of_stock"].map((status) => <option key={status} value={status}>{status}</option>)}</select>
-            </div>
-            <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={itemForm.isFeatured} onChange={(e) => setItemForm((p) => ({ ...p, isFeatured: e.target.checked }))} />Featured</label>
-              <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={itemForm.isActive} onChange={(e) => setItemForm((p) => ({ ...p, isActive: e.target.checked }))} />Active</label>
-            </div>
-            <div className="flex gap-2">
-              <button disabled={itemSaving} className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{itemSaving ? "Saving..." : editingItemId ? "Update Item" : "Create Item"}</button>
-              {editingItemId ? <button type="button" onClick={resetItemForm} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold">Cancel</button> : null}
-            </div>
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <Section title={editingItemId ? "Edit Menu Item" : "Create Menu Item"} description="Main item editor." icon={FiPackage} open={open.itemForm} onToggle={() => setOpen((prev) => ({ ...prev, itemForm: !prev.itemForm }))}>
+          <form onSubmit={handleItemSubmit} className="grid gap-3">
+            <input type="text" placeholder="Item Name" value={itemForm.name} onChange={(e) => setItemForm((prev) => ({ ...prev, name: e.target.value }))} className="input-base" required />
+            <div className="grid gap-3 sm:grid-cols-2"><input type="text" placeholder="Heading" value={itemForm.heading} onChange={(e) => setItemForm((prev) => ({ ...prev, heading: e.target.value }))} className="input-base" /><input type="text" placeholder="Sub Heading" value={itemForm.subHeading} onChange={(e) => setItemForm((prev) => ({ ...prev, subHeading: e.target.value }))} className="input-base" /></div>
+            <textarea placeholder="Description" value={itemForm.description} onChange={(e) => setItemForm((prev) => ({ ...prev, description: e.target.value }))} className="input-base min-h-[5rem]" rows={2} required />
+            <input type="text" placeholder="Short Description" value={itemForm.shortDescription} onChange={(e) => setItemForm((prev) => ({ ...prev, shortDescription: e.target.value }))} className="input-base" />
+            <div className="grid gap-3 sm:grid-cols-3"><select value={itemForm.category} onChange={(e) => setItemForm((prev) => ({ ...prev, category: e.target.value, subCategory: "" }))} className="input-base" required><option value="">Select Category</option>{activeCategories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select><select value={itemForm.subCategory} onChange={(e) => setItemForm((prev) => ({ ...prev, subCategory: e.target.value }))} className="input-base"><option value="">Sub-Category (optional)</option>{filteredSubCategories.map((subCategory) => <option key={subCategory._id} value={subCategory._id}>{subCategory.name}</option>)}</select><select value={itemForm.foodType} onChange={(e) => setItemForm((prev) => ({ ...prev, foodType: e.target.value }))} className="input-base"><option value="veg">Veg</option><option value="non_veg">Non-Veg</option></select></div>
+            <input type="text" placeholder="Image URL" value={itemForm.image} onChange={(e) => setItemForm((prev) => ({ ...prev, image: e.target.value }))} className="input-base" />
+            <div className="grid gap-3 sm:grid-cols-2"><input type="number" step="0.01" min="0" placeholder="Base Price" value={itemForm.price} onChange={(e) => setItemForm((prev) => ({ ...prev, price: e.target.value }))} className="input-base" required /><input type="number" step="0.01" min="0" placeholder="Compare At Price" value={itemForm.compareAtPrice} onChange={(e) => setItemForm((prev) => ({ ...prev, compareAtPrice: e.target.value }))} className="input-base" /></div>
+            <input type="text" placeholder="Discount Label" value={itemForm.discountLabel} onChange={(e) => setItemForm((prev) => ({ ...prev, discountLabel: e.target.value }))} className="input-base" />
+            <div className="glass-subtle rounded-[1.4rem] p-4"><div className="mb-3 flex items-center justify-between"><p className="text-sm font-black text-slate-900 dark:text-slate-50">Portions</p><button type="button" onClick={addPortion} className="glass-pill rounded-full px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200">Add Portion</button></div><div className="space-y-2">{itemForm.portions.map((portion, index) => <div key={`${portion.label}-${index}`} className="grid gap-2 lg:grid-cols-[1fr_1fr_120px_86px]"><input type="text" placeholder="Label" value={portion.label} onChange={(e) => updatePortion(index, "label", e.target.value)} className="input-base text-sm" /><input type="text" placeholder="Qty text" value={portion.quantityText} onChange={(e) => updatePortion(index, "quantityText", e.target.value)} className="input-base text-sm" /><input type="number" step="0.01" min="0" placeholder="Price" value={portion.price} onChange={(e) => updatePortion(index, "price", e.target.value)} className="input-base text-sm" /><button type="button" onClick={() => removePortion(index)} className="btn-danger text-xs">Remove</button></div>)}</div></div>
+            <div className="grid gap-3 sm:grid-cols-3"><input type="number" min="1" placeholder="Prep Time (mins)" value={itemForm.prepTimeMinutes} onChange={(e) => setItemForm((prev) => ({ ...prev, prepTimeMinutes: e.target.value }))} className="input-base" /><select value={itemForm.spiceLevel} onChange={(e) => setItemForm((prev) => ({ ...prev, spiceLevel: e.target.value }))} className="input-base">{["none", "mild", "medium", "hot", "extra_hot"].map((level) => <option key={level} value={level}>{level}</option>)}</select><select value={itemForm.stockStatus} onChange={(e) => setItemForm((prev) => ({ ...prev, stockStatus: e.target.value }))} className="input-base">{["in_stock", "low_stock", "out_of_stock"].map((status) => <option key={status} value={status}>{status}</option>)}</select></div>
+            <div className="flex flex-wrap gap-4"><label className="glass-subtle flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200"><input type="checkbox" checked={itemForm.isFeatured} onChange={(e) => setItemForm((prev) => ({ ...prev, isFeatured: e.target.checked }))} />Featured</label><label className="glass-subtle flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200"><input type="checkbox" checked={itemForm.isActive} onChange={(e) => setItemForm((prev) => ({ ...prev, isActive: e.target.checked }))} />Active</label></div>
+            <div className="flex gap-3">{editingItemId ? <button type="button" onClick={resetItemForm} className="btn-outline">Cancel</button> : null}<button disabled={itemSaving} className="btn-primary">{itemSaving ? "Saving..." : editingItemId ? "Update Item" : "Create Item"}</button></div>
           </form>
-        </article>
-        <article className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-xl font-bold text-slate-900">Menu Item List</h3>
-            <input
-              type="text"
-              value={itemSearch}
-              onChange={(e) => setItemSearch(e.target.value)}
-              placeholder="Search items..."
-              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm sm:w-64"
-            />
-          </div>
-          <div className="mt-3 max-h-[48rem] space-y-2 overflow-auto pr-1">
-            {filteredItems.map((item) => (
-              <div key={item._id} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
-                <p className="font-bold text-slate-900">{item.name}</p>
-                <p className="text-xs text-slate-500">{item.category?.name} {item.subCategory?.name ? `> ${item.subCategory?.name}` : ""} | {(item.foodType || "non_veg").replace("_", "-")}</p>
-                <p className="text-xs text-slate-600">{item.shortDescription || item.description}</p>
-                <p className="mt-1 text-xs text-slate-500">Base: Rs {Number(item.price || 0).toFixed(2)} | Portions: {item.portions?.length || 0}</p>
-                <div className="mt-2 flex gap-2">
-                  <button onClick={() => onItemEdit(item)} className="rounded-lg bg-slate-800 px-3 py-1 text-xs font-semibold text-white">Edit</button>
-                  <button onClick={() => onDeleteItem(item._id)} className="rounded-lg bg-red-600 px-3 py-1 text-xs font-semibold text-white">Delete</button>
-                </div>
-              </div>
-            ))}
-            {!filteredItems.length && !loading ? <p className="text-sm text-slate-500">No menu items yet.</p> : null}
-          </div>
-        </article>
-      </section>
+        </Section>
+
+        <Section title="Menu Item List" description="Searchable and collapsible." icon={FiSearch} open={open.itemList} onToggle={() => setOpen((prev) => ({ ...prev, itemList: !prev.itemList }))}>
+          <div className="relative"><FiSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input type="text" value={itemSearch} onChange={(e) => setItemSearch(e.target.value)} placeholder="Search items..." className="input-base pl-11" /></div>
+          <div className="mt-4 space-y-3">{filteredItems.map((item) => <article key={item._id} className="glass-subtle rounded-[1.3rem] p-4"><p className="text-base font-black text-slate-900 dark:text-slate-50">{item.name}</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{item.category?.name} {item.subCategory?.name ? `> ${item.subCategory?.name}` : ""} | {(item.foodType || "non_veg").replace("_", "-")}</p><p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{item.shortDescription || item.description}</p><p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">Base: Rs {Number(item.price || 0).toFixed(2)} • Portions: {item.portions?.length || 0}</p><div className="mt-3 flex gap-2"><button onClick={() => onItemEdit(item)} className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold text-sky-700 dark:text-sky-300">Edit</button><button onClick={() => onDeleteItem(item._id)} className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold text-rose-700 dark:text-rose-300">Delete</button></div></article>)}{!filteredItems.length && !loading ? <p className="text-sm text-slate-500 dark:text-slate-400">No menu items yet.</p> : null}</div>
+        </Section>
+      </div>
     </div>
   );
 };

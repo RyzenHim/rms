@@ -3,6 +3,7 @@ const path = require("path");
 const FoodCategory = require("../models/foodCategory.model");
 const MenuSubCategory = require("../models/menuSubCategory.model");
 const MenuItem = require("../models/menuItem.model");
+const Review = require("../models/review.model");
 
 const MENU_PDF_NAME = "eaf70e15-12ba-4f67-bee9-93384bd96a64.pdf";
 const MENU_PDF_PATH = path.join(__dirname, "..", "assets", MENU_PDF_NAME);
@@ -283,6 +284,47 @@ const validateCategoryAndSubCategory = async (categoryId, subCategoryId) => {
     return { ok: true };
 };
 
+const attachReviewStats = async (items) => {
+    const itemIds = items.map((item) => item._id);
+    if (!itemIds.length) return items;
+
+    const reviewStats = await Review.aggregate([
+        {
+            $match: {
+                menuItem: { $in: itemIds },
+                status: "approved",
+            },
+        },
+        {
+            $group: {
+                _id: "$menuItem",
+                averageRating: { $avg: "$rating" },
+                reviewCount: { $sum: 1 },
+            },
+        },
+    ]);
+
+    const statsMap = new Map(
+        reviewStats.map((entry) => [
+            String(entry._id),
+            {
+                averageRating: Number(entry.averageRating || 0),
+                reviewCount: Number(entry.reviewCount || 0),
+            },
+        ]),
+    );
+
+    return items.map((item) => {
+        const stats = statsMap.get(String(item._id));
+        const objectItem = item.toObject ? item.toObject() : item;
+        return {
+            ...objectItem,
+            averageRating: stats ? Number(stats.averageRating.toFixed(1)) : Number(objectItem.rating || 0),
+            reviewCount: stats ? stats.reviewCount : 0,
+        };
+    });
+};
+
 exports.getPublicMenu = async (req, res) => {
     try {
         await seedDefaults();
@@ -295,11 +337,12 @@ exports.getPublicMenu = async (req, res) => {
             .populate("category", "name slug")
             .populate("subCategory", "name slug heading subHeading")
             .sort({ isFeatured: -1, createdAt: -1 });
+        const itemsWithStats = await attachReviewStats(items);
 
         return res.status(200).json({
             categories,
             subCategories,
-            items,
+            items: itemsWithStats,
             menuPdf: getMenuPdfMeta(req),
         });
     } catch (error) {

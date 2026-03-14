@@ -1,7 +1,7 @@
 const AuthInput = ({ label, name, type, value, onChange, placeholder }) => {
   return (
     <div className="mb-5">
-      <label htmlFor={name} className="mb-2.5 block text-sm font-bold text-slate-800">
+      <label htmlFor={name} className="mb-2.5 block text-sm font-bold" style={{ color: "inherit" }}>
         {label}
       </label>
       <div className="relative">
@@ -12,7 +12,7 @@ const AuthInput = ({ label, name, type, value, onChange, placeholder }) => {
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          className="w-full rounded-2xl border-2 border-slate-200 bg-white/50 px-5 py-3.5 text-slate-900 placeholder-slate-400 backdrop-blur-sm transition duration-200 hover:border-slate-300 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-0 focus:shadow-lg focus:shadow-emerald-100"
+          className="input-base w-full pr-12"
         />
         <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2">
           {type === "email" && (

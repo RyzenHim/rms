@@ -2,284 +2,292 @@ const Customer = require("../models/customer.model");
 const User = require("../models/user.model");
 const Order = require("../models/order.model");
 
-// Get all customers (admin only)
+const formatCustomer = (customer, orderData = { count: 0, totalSpent: 0 }) => ({
+    id: customer._id,
+    userId: customer.user?._id,
+    name: customer.user?.name || "Unknown",
+    email: customer.user?.email || "",
+    phone: customer.phone || "",
+    isActive: customer.user?.isActive ?? true,
+    isBlocked: Boolean(customer.isBlocked),
+    isDeleted: Boolean(customer.isDeleted),
+    totalOrders: customer.totalOrders || orderData.count || 0,
+    totalSpent: orderData.totalSpent || 0,
+    loyaltyPoints: customer.loyaltyPoints || 0,
+    lastOrderDate: customer.lastOrderDate || null,
+    createdAt: customer.user?.createdAt || customer.createdAt,
+    addresses: customer.addresses || [],
+});
+
+const getCustomerOrderStats = async (phones = []) => {
+    const validPhones = phones.filter(Boolean);
+    if (!validPhones.length) {
+        return new Map();
+    }
+
+    const orderCounts = await Order.aggregate([
+        { $match: { customerPhone: { $in: validPhones }, status: { $nin: ["cancelled"] } } },
+        { $group: { _id: "$customerPhone", count: { $sum: 1 }, totalSpent: { $sum: "$grandTotal" } } },
+    ]);
+
+    return new Map(orderCounts.map((order) => [order._id, { count: order.count, totalSpent: order.totalSpent }]));
+};
+
 exports.getAllCustomers = async (req, res) => {
     try {
-        const { search = "", isActive = "", page = 1, limit = 50 } = req.query;
+        const { search = "", status = "all", page = 1, limit = 50 } = req.query;
+        const query = {};
 
-        const query = { isDeleted: false };
+        if (status === "active") {
+            query.isDeleted = { $ne: true };
+            query.isBlocked = false;
+        } else if (status === "inactive") {
+            query.isDeleted = { $ne: true };
+            query.isBlocked = true;
+        } else if (status === "deleted") {
+            query.isDeleted = true;
+        }
 
-        // Search by name, email, or phone
         if (search) {
             const searchRegex = new RegExp(search, "i");
             const users = await User.find({
-                $or: [
-                    { name: searchRegex },
-                    { email: searchRegex }
-                ],
-                roles: "customer"
+                $or: [{ name: searchRegex }, { email: searchRegex }],
+                roles: "customer",
             }).select("_id");
 
-            const userIds = users.map(u => u._id);
-            query.$or = [
-                { user: { $in: userIds } },
-                { phone: searchRegex }
-            ];
+            const userIds = users.map((entry) => entry._id);
+            query.$or = [{ user: { $in: userIds } }, { phone: searchRegex }];
         }
 
-        // Filter by isActive
-        if (isActive !== "") {
-            query.isBlocked = isActive === "active";
-        }
-
-        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
         const [customers, total] = await Promise.all([
             Customer.find(query)
-                .populate("user", "name email isActive profileImage createdAt")
+                .populate("user", "name email isActive isDeleted profileImage createdAt")
                 .sort({ createdAt: -1 })
                 .skip(skip)
-                .limit(parseInt(limit)),
-            Customer.countDocuments(query)
+                .limit(parseInt(limit, 10)),
+            Customer.countDocuments(query),
         ]);
 
-        // Get order counts for each customer by phone
-        const phones = customers.map(c => c.phone).filter(p => p);
-        const orderCounts = await Order.aggregate([
-            { $match: { customerPhone: { $in: phones }, status: { $nin: ["cancelled"] } } },
-            { $group: { _id: "$customerPhone", count: { $sum: 1 }, totalSpent: { $sum: "$grandTotal" } } }
-        ]);
+        const orderMap = await getCustomerOrderStats(customers.map((customer) => customer.phone));
+        const formattedCustomers = customers.map((customer) =>
+            formatCustomer(customer, orderMap.get(customer.phone)),
+        );
 
-        const orderCountMap = new Map(orderCounts.map(o => [o._id, { count: o.count, totalSpent: o.totalSpent }]));
-
-        const formattedCustomers = customers.map(customer => {
-            const orderData = orderCountMap.get(customer.phone) || { count: 0, totalSpent: 0 };
-            return {
-                id: customer._id,
-                userId: customer.user?._id,
-                name: customer.user?.name || "Unknown",
-                email: customer.user?.email || "",
-                phone: customer.phone || "",
-                isActive: customer.user?.isActive ?? true,
-                isBlocked: customer.isBlocked,
-                totalOrders: customer.totalOrders || orderData.count,
-                totalSpent: orderData.totalSpent || 0,
-                loyaltyPoints: customer.loyaltyPoints || 0,
-                lastOrderDate: customer.lastOrderDate,
-                createdAt: customer.user?.createdAt || customer.createdAt,
-                addresses: customer.addresses || []
-            };
-        });
-
-        res.status(200).json({
+        return res.status(200).json({
             customers: formattedCustomers,
             pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
+                page: parseInt(page, 10),
+                limit: parseInt(limit, 10),
                 total,
-                pages: Math.ceil(total / parseInt(limit))
-            }
+                pages: Math.ceil(total / parseInt(limit, 10)),
+            },
         });
     } catch (error) {
         console.error("GET ALL CUSTOMERS ERROR:", error);
-        res.status(500).json({ message: "Internal server error" });
+        return res.status(500).json({ message: "Internal server error" });
     }
 };
 
-// Get single customer by ID (admin only)
 exports.getCustomerById = async (req, res) => {
     try {
         const { id } = req.params;
-
-        const customer = await Customer.findById(id).populate("user", "name email isActive profileImage createdAt");
+        const customer = await Customer.findById(id).populate("user", "name email isActive isDeleted profileImage createdAt");
 
         if (!customer) {
             return res.status(404).json({ message: "Customer not found" });
         }
 
-        // Get customer's orders by phone
         const orders = await Order.find({ customerPhone: customer.phone })
             .populate("items.menuItem", "name")
             .sort({ createdAt: -1 })
             .limit(50);
 
-        res.status(200).json({
-            customer: {
-                id: customer._id,
-                userId: customer.user?._id,
-                name: customer.user?.name || "Unknown",
-                email: customer.user?.email || "",
-                phone: customer.phone || "",
-                isActive: customer.user?.isActive ?? true,
-                isBlocked: customer.isBlocked,
-                totalOrders: customer.totalOrders || 0,
-                loyaltyPoints: customer.loyaltyPoints || 0,
-                lastOrderDate: customer.lastOrderDate,
-                createdAt: customer.user?.createdAt || customer.createdAt,
-                addresses: customer.addresses || []
-            },
-            orders
+        const orderMap = await getCustomerOrderStats([customer.phone]);
+
+        return res.status(200).json({
+            customer: formatCustomer(customer, orderMap.get(customer.phone)),
+            orders,
         });
     } catch (error) {
         console.error("GET CUSTOMER BY ID ERROR:", error);
-        res.status(500).json({ message: "Internal server error" });
+        return res.status(500).json({ message: "Internal server error" });
     }
 };
 
-// Update customer (admin only)
 exports.updateCustomer = async (req, res) => {
     try {
         const { id } = req.params;
         const { name, phone, isActive, isBlocked, loyaltyPoints } = req.body;
+        const customer = await Customer.findById(id).populate("user");
 
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+        if (customer.isDeleted) {
+            return res.status(400).json({ message: "Restore the customer before editing the record" });
+        }
+
+        if (name && customer.user) {
+            customer.user.name = String(name).trim();
+        }
+        if (phone !== undefined) customer.phone = String(phone || "").trim();
+        if (loyaltyPoints !== undefined) customer.loyaltyPoints = Number(loyaltyPoints || 0);
+        if (isBlocked !== undefined) customer.isBlocked = Boolean(isBlocked);
+
+        if (isActive !== undefined && customer.user) {
+            customer.user.isActive = Boolean(isActive);
+            customer.isBlocked = !Boolean(isActive);
+            customer.user.isDeleted = false;
+        }
+
+        await customer.save();
+        if (customer.user) {
+            await customer.user.save();
+        }
+
+        const updatedCustomer = await Customer.findById(id).populate("user", "name email isActive isDeleted createdAt");
+        const orderMap = await getCustomerOrderStats([updatedCustomer.phone]);
+
+        return res.status(200).json({
+            message: "Customer updated successfully",
+            customer: formatCustomer(updatedCustomer, orderMap.get(updatedCustomer.phone)),
+        });
+    } catch (error) {
+        console.error("UPDATE CUSTOMER ERROR:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+exports.deleteCustomer = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const customer = await Customer.findById(id).populate("user");
+
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+        if (customer.isDeleted) {
+            return res.status(400).json({ message: "Customer is already in deleted records" });
+        }
+
+        customer.isDeleted = true;
+        customer.isBlocked = true;
+        await customer.save();
+
+        if (customer.user) {
+            customer.user.isActive = false;
+            customer.user.isDeleted = true;
+            await customer.user.save();
+        }
+
+        return res.status(200).json({ message: "Customer moved to deleted records" });
+    } catch (error) {
+        console.error("DELETE CUSTOMER ERROR:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+exports.restoreCustomer = async (req, res) => {
+    try {
+        const { id } = req.params;
         const customer = await Customer.findById(id).populate("user");
 
         if (!customer) {
             return res.status(404).json({ message: "Customer not found" });
         }
 
-        // Update user name if provided
-        if (name && customer.user) {
-            customer.user.name = name;
-            await customer.user.save();
-        }
-
-        // Update customer fields
-        if (phone !== undefined) customer.phone = phone;
-        if (loyaltyPoints !== undefined) customer.loyaltyPoints = loyaltyPoints;
-        if (isBlocked !== undefined) customer.isBlocked = isBlocked;
-
+        customer.isDeleted = false;
+        customer.isBlocked = false;
         await customer.save();
 
-        // Update user isActive if provided
-        if (isActive !== undefined && customer.user) {
-            customer.user.isActive = isActive;
-            await customer.user.save();
-        }
-
-        const updatedCustomer = await Customer.findById(id).populate("user", "name email isActive");
-
-        res.status(200).json({
-            message: "Customer updated successfully",
-            customer: {
-                id: updatedCustomer._id,
-                userId: updatedCustomer.user?._id,
-                name: updatedCustomer.user?.name || "Unknown",
-                email: updatedCustomer.user?.email || "",
-                phone: updatedCustomer.phone || "",
-                isActive: updatedCustomer.user?.isActive ?? true,
-                isBlocked: updatedCustomer.isBlocked,
-                totalOrders: updatedCustomer.totalOrders || 0,
-                loyaltyPoints: updatedCustomer.loyaltyPoints || 0,
-                createdAt: updatedCustomer.user?.createdAt || updatedCustomer.createdAt
-            }
-        });
-    } catch (error) {
-        console.error("UPDATE CUSTOMER ERROR:", error);
-        res.status(500).json({ message: "Internal server error" });
-    }
-};
-
-// Soft delete customer (admin only)
-exports.deleteCustomer = async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const customer = await Customer.findById(id);
-
-        if (!customer) {
-            return res.status(404).json({ message: "Customer not found" });
-        }
-
-        // Soft delete - mark isDeleted as true
-        customer.isDeleted = true;
-        await customer.save();
-
-        // Also deactivate the user account
         if (customer.user) {
-            await User.findByIdAndUpdate(customer.user, { isActive: false });
+            customer.user.isActive = true;
+            customer.user.isDeleted = false;
+            await customer.user.save();
         }
 
-        res.status(200).json({ message: "Customer deleted successfully" });
+        return res.status(200).json({ message: "Customer restored successfully" });
     } catch (error) {
-        console.error("DELETE CUSTOMER ERROR:", error);
-        res.status(500).json({ message: "Internal server error" });
+        console.error("RESTORE CUSTOMER ERROR:", error);
+        return res.status(500).json({ message: "Internal server error" });
     }
 };
 
-// Toggle customer active status (admin only)
 exports.toggleCustomerStatus = async (req, res) => {
     try {
         const { id } = req.params;
         const { isActive } = req.body;
-
         const customer = await Customer.findById(id).populate("user");
 
         if (!customer) {
             return res.status(404).json({ message: "Customer not found" });
         }
+        if (customer.isDeleted) {
+            return res.status(400).json({ message: "Restore the customer before changing active status" });
+        }
 
-        // Update both customer blocked status and user isActive
-        customer.isBlocked = !isActive;
+        customer.isBlocked = !Boolean(isActive);
         await customer.save();
 
         if (customer.user) {
-            customer.user.isActive = isActive;
+            customer.user.isActive = Boolean(isActive);
+            customer.user.isDeleted = false;
             await customer.user.save();
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             message: isActive ? "Customer activated successfully" : "Customer deactivated successfully",
-            isActive
+            isActive: Boolean(isActive),
         });
     } catch (error) {
         console.error("TOGGLE CUSTOMER STATUS ERROR:", error);
-        res.status(500).json({ message: "Internal server error" });
+        return res.status(500).json({ message: "Internal server error" });
     }
 };
 
-// Get customer statistics (admin only)
 exports.getCustomerStats = async (req, res) => {
     try {
-        const totalCustomers = await Customer.countDocuments({ isDeleted: false });
-        const activeCustomers = await User.countDocuments({ roles: "customer", isActive: true });
-        const blockedCustomers = await Customer.countDocuments({ isBlocked: true, isDeleted: false });
+        const totalCustomers = await Customer.countDocuments({ isDeleted: { $ne: true } });
+        const activeCustomers = await Customer.countDocuments({ isDeleted: { $ne: true }, isBlocked: false });
+        const inactiveCustomers = await Customer.countDocuments({ isDeleted: { $ne: true }, isBlocked: true });
+        const deletedCustomers = await Customer.countDocuments({ isDeleted: true });
 
-        // Get new customers this month
         const startOfMonth = new Date();
         startOfMonth.setDate(1);
         startOfMonth.setHours(0, 0, 0, 0);
 
         const newThisMonth = await User.countDocuments({
             roles: "customer",
-            createdAt: { $gte: startOfMonth }
+            createdAt: { $gte: startOfMonth },
+            isDeleted: { $ne: true },
         });
 
-        // Get total order count and revenue
         const orderStats = await Order.aggregate([
             { $match: { status: { $nin: ["cancelled"] } } },
             {
                 $group: {
                     _id: null,
                     totalOrders: { $sum: 1 },
-                    totalRevenue: { $sum: "$grandTotal" }
-                }
-            }
+                    totalRevenue: { $sum: "$grandTotal" },
+                },
+            },
         ]);
 
-        res.status(200).json({
+        return res.status(200).json({
             stats: {
                 totalCustomers,
                 activeCustomers,
-                blockedCustomers,
+                inactiveCustomers,
+                deletedCustomers,
                 newThisMonth,
                 totalOrders: orderStats[0]?.totalOrders || 0,
-                totalRevenue: orderStats[0]?.totalRevenue || 0
-            }
+                totalRevenue: orderStats[0]?.totalRevenue || 0,
+            },
         });
     } catch (error) {
         console.error("GET CUSTOMER STATS ERROR:", error);
-        res.status(500).json({ message: "Internal server error" });
+        return res.status(500).json({ message: "Internal server error" });
     }
 };
-

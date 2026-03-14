@@ -1,9 +1,15 @@
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import api, { withAuth } from "../../services/api";
+import useResolvedColorMode from "../../hooks/useResolvedColorMode";
 
 const ReviewForm = ({ menuItemId, onReviewSubmitted, theme }) => {
   const { token } = useAuth();
+  const { palette, resolvedMode } = useResolvedColorMode(theme || {
+    colorMode: "system",
+    allowUserThemeToggle: true,
+    surfaceColor: "#f8fafc",
+  });
   const [rating, setRating] = useState(5);
   const [title, setTitle] = useState("");
   const [comment, setComment] = useState("");
@@ -54,11 +60,21 @@ const ReviewForm = ({ menuItemId, onReviewSubmitted, theme }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="card-elevated p-6 space-y-4">
+    <form onSubmit={handleSubmit} className="card-elevated space-y-4 p-6" style={{ backgroundColor: palette.panelBg, color: palette.text }}>
       <h3 className="heading-4">Share Your Review</h3>
 
       {message && (
-        <div className={`p-3 rounded-lg text-sm ${message.includes("successfully") ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+        <div
+          className="rounded-lg p-3 text-sm"
+          style={{
+            backgroundColor: message.includes("successfully")
+              ? (resolvedMode === "dark" ? "#052e16" : "#dcfce7")
+              : (resolvedMode === "dark" ? "#450a0a" : "#fee2e2"),
+            color: message.includes("successfully")
+              ? (resolvedMode === "dark" ? "#86efac" : "#166534")
+              : (resolvedMode === "dark" ? "#fca5a5" : "#991b1b"),
+          }}
+        >
           {message}
         </div>
       )}
@@ -71,7 +87,8 @@ const ReviewForm = ({ menuItemId, onReviewSubmitted, theme }) => {
               key={num}
               type="button"
               onClick={() => setRating(num)}
-              className={`text-3xl transition-transform hover:scale-110 ${rating >= num ? "text-yellow-400" : "text-gray-300"}`}
+              className="text-3xl transition-transform hover:scale-110"
+              style={{ color: rating >= num ? "#facc15" : (resolvedMode === "dark" ? "#475569" : "#d1d5db") }}
             >
               ⭐
             </button>
@@ -102,7 +119,7 @@ const ReviewForm = ({ menuItemId, onReviewSubmitted, theme }) => {
           maxLength="500"
           required
         />
-        <p className="text-xs text-slate-500 mt-1">{comment.length}/500</p>
+        <p className="mt-1 text-xs" style={{ color: palette.muted }}>{comment.length}/500</p>
       </div>
 
       <div>
@@ -113,11 +130,12 @@ const ReviewForm = ({ menuItemId, onReviewSubmitted, theme }) => {
               key={highlight}
               type="button"
               onClick={() => handleHighlightToggle(highlight)}
-              className={`px-3 py-1 rounded-full text-sm transition-all ${
-                highlights.includes(highlight)
-                  ? "bg-orange-500 text-white"
-                  : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+              className={`rounded-full px-3 py-1 text-sm transition-all ${
+                highlights.includes(highlight) ? "text-white" : ""
               }`}
+              style={highlights.includes(highlight)
+                ? { backgroundColor: theme?.primaryColor || "#ff8c3a", color: "#fff" }
+                : { backgroundColor: palette.cardBg, color: palette.text, border: `1px solid ${palette.border}` }}
             >
               {highlight}
             </button>

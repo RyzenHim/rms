@@ -1,12 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
 import api from "../../services/api";
+import useResolvedColorMode from "../../hooks/useResolvedColorMode";
+import { useAuth } from "../../context/AuthContext";
+import { withAuth } from "../../services/api";
 
 const ReviewsList = ({ menuItemId, theme, refreshTrigger }) => {
+  const { token } = useAuth();
+  const { palette, resolvedMode } = useResolvedColorMode(theme || {
+    colorMode: "system",
+    allowUserThemeToggle: true,
+    surfaceColor: "#f8fafc",
+  });
   const [reviews, setReviews] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pendingHelpfulId, setPendingHelpfulId] = useState("");
 
   const loadReviews = useCallback(async () => {
     try {
@@ -33,14 +43,26 @@ const ReviewsList = ({ menuItemId, theme, refreshTrigger }) => {
     return "text-red-600";
   };
 
+  const markHelpful = async (reviewId) => {
+    try {
+      setPendingHelpfulId(reviewId);
+      await api.post(`/reviews/${reviewId}/helpful`, {}, token ? withAuth(token) : {});
+      await loadReviews();
+    } catch (err) {
+      console.error("Failed to mark review helpful:", err);
+    } finally {
+      setPendingHelpfulId("");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Rating Summary */}
       {stats && (
-        <div className="card-elevated p-6 space-y-4">
+        <div className="card-elevated space-y-4 p-6" style={{ backgroundColor: palette.panelBg, color: palette.text }}>
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-slate-600 uppercase tracking-widest font-bold mb-2">Overall Rating</p>
+              <p className="mb-2 text-sm font-bold uppercase tracking-widest" style={{ color: palette.muted }}>Overall Rating</p>
               <div className="flex items-center gap-4">
                 <div className="flex items-baseline gap-2">
                   <span className="text-4xl font-bold" style={{ color: theme?.primaryColor }}>
@@ -48,7 +70,7 @@ const ReviewsList = ({ menuItemId, theme, refreshTrigger }) => {
                   </span>
                   <span className="text-lg text-yellow-400"></span>
                 </div>
-                <div className="text-sm text-slate-600">
+                <div className="text-sm" style={{ color: palette.muted }}>
                   <p className="font-semibold">{stats.totalReviews} reviews</p>
                 </div>
               </div>
@@ -60,7 +82,7 @@ const ReviewsList = ({ menuItemId, theme, refreshTrigger }) => {
             {[5, 4, 3, 2, 1].map((rating) => (
               <div key={rating} className="flex items-center gap-2">
                 <span className="text-sm font-medium w-8">{rating}</span>
-                <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ backgroundColor: resolvedMode === "dark" ? "#334155" : "#e2e8f0" }}>
                   <div
                     className="h-full transition-all"
                     style={{
@@ -69,7 +91,7 @@ const ReviewsList = ({ menuItemId, theme, refreshTrigger }) => {
                     }}
                   />
                 </div>
-                <span className="text-sm text-slate-600 w-12 text-right">{stats.distribution[rating]}</span>
+                <span className="w-12 text-right text-sm" style={{ color: palette.muted }}>{stats.distribution[rating]}</span>
               </div>
             ))}
           </div>
@@ -97,35 +119,35 @@ const ReviewsList = ({ menuItemId, theme, refreshTrigger }) => {
       {/* Reviews List */}
       {loading ? (
         <div className="text-center py-8">
-          <p className="text-slate-600">Loading reviews...</p>
+          <p style={{ color: palette.muted }}>Loading reviews...</p>
         </div>
       ) : reviews.length > 0 ? (
         <div className="space-y-4">
           {reviews.map((review) => (
-            <div key={review._id} className="card-elevated p-5 space-y-3">
+            <div key={review._id} className="card-elevated space-y-3 p-5" style={{ backgroundColor: palette.panelBg, color: palette.text }}>
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold text-slate-900">{review.customer.name}</span>
-                    {review.isVerifiedPurchase && <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full"> Verified Purchase</span>}
+                    <span className="font-semibold" style={{ color: palette.text }}>{review.customer.name}</span>
+                    {review.isVerifiedPurchase && <span className="rounded-full px-2 py-0.5 text-xs" style={{ backgroundColor: resolvedMode === "dark" ? "#052e16" : "#dcfce7", color: resolvedMode === "dark" ? "#86efac" : "#166534" }}> Verified Purchase</span>}
                   </div>
                   <div className={`flex items-center gap-1 ${getRatingColor(review.rating)}`}>
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <span key={i}>{i < review.rating ? "" : ""}</span>
+                      <span key={i}>{i < review.rating ? "★" : "☆"}</span>
                     ))}
-                    <span className="text-sm text-slate-600 ml-2 font-medium">{review.rating} out of 5</span>
+                    <span className="ml-2 text-sm font-medium" style={{ color: palette.muted }}>{review.rating} out of 5</span>
                   </div>
                 </div>
-                <span className="text-xs text-slate-500">{new Date(review.createdAt).toLocaleDateString()}</span>
+                <span className="text-xs" style={{ color: palette.muted }}>{new Date(review.createdAt).toLocaleDateString()}</span>
               </div>
 
-              {review.title && <p className="font-semibold text-slate-900">{review.title}</p>}
-              <p className="text-slate-700">{review.comment}</p>
+              {review.title && <p className="font-semibold" style={{ color: palette.text }}>{review.title}</p>}
+              <p style={{ color: palette.text }}>{review.comment}</p>
 
               {review.highlights.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {review.highlights.map((highlight) => (
-                    <span key={highlight} className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded">
+                    <span key={highlight} className="rounded px-2 py-1 text-xs" style={{ backgroundColor: palette.cardBg, color: palette.text, border: `1px solid ${palette.border}` }}>
                       {highlight}
                     </span>
                   ))}
@@ -133,8 +155,13 @@ const ReviewsList = ({ menuItemId, theme, refreshTrigger }) => {
               )}
 
               <div className="flex items-center gap-4 pt-2 text-sm">
-                <button className="text-slate-600 hover:text-slate-900 flex items-center gap-1">
-                   Helpful ({review.helpful})
+                <button
+                  onClick={() => markHelpful(review._id)}
+                  disabled={pendingHelpfulId === review._id}
+                  className="flex items-center gap-1 disabled:opacity-60"
+                  style={{ color: palette.muted }}
+                >
+                  {pendingHelpfulId === review._id ? "Updating..." : `Helpful (${review.helpful})`}
                 </button>
               </div>
             </div>
@@ -142,7 +169,7 @@ const ReviewsList = ({ menuItemId, theme, refreshTrigger }) => {
         </div>
       ) : (
         <div className="card-elevated p-8 text-center">
-          <p className="text-slate-600">No reviews yet. Be the first to share your experience!</p>
+          <p style={{ color: palette.muted }}>No reviews yet. Be the first to share your experience!</p>
         </div>
       )}
 
@@ -152,15 +179,17 @@ const ReviewsList = ({ menuItemId, theme, refreshTrigger }) => {
           <button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
-            className="px-4 py-2 border border-slate-300 rounded-lg disabled:opacity-50 hover:bg-slate-50"
+            className="rounded-lg border px-4 py-2 disabled:opacity-50"
+            style={{ borderColor: palette.border, color: palette.text, backgroundColor: palette.cardBg }}
           >
             Previous
           </button>
-          <span className="px-4 py-2 text-slate-600">Page {currentPage}</span>
+          <span className="px-4 py-2" style={{ color: palette.muted }}>Page {currentPage}</span>
           <button
             onClick={() => setCurrentPage((p) => p + 1)}
             disabled={currentPage * 5 >= stats.totalReviews}
-            className="px-4 py-2 border border-slate-300 rounded-lg disabled:opacity-50 hover:bg-slate-50"
+            className="rounded-lg border px-4 py-2 disabled:opacity-50"
+            style={{ borderColor: palette.border, color: palette.text, backgroundColor: palette.cardBg }}
           >
             Next
           </button>

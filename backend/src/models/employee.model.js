@@ -1,4 +1,3 @@
-// models/employee.model.js
 
 const mongoose = require("mongoose");
 
@@ -93,12 +92,20 @@ const employeeSchema = new mongoose.Schema(
 
         branch: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Branch", // optional if multi-branch system
+            ref: "Branch", 
         },
 
         isActive: {
             type: Boolean,
             default: true,
+        },
+        isDeleted: {
+            type: Boolean,
+            default: false,
+        },
+        deletedAt: {
+            type: Date,
+            default: null,
         },
     },
     {

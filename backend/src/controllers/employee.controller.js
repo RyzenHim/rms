@@ -24,14 +24,54 @@ const sanitize = (employeeDoc) => ({
     salary: employeeDoc.salary ?? null,
     shift: employeeDoc.shift || "",
     joiningDate: employeeDoc.joiningDate,
-    isActive: employeeDoc.isActive,
+    isActive: Boolean(employeeDoc.isActive),
+    isDeleted: Boolean(employeeDoc.isDeleted),
+    deletedAt: employeeDoc.deletedAt || null,
 });
+
+const getActorRole = (req) => req.user?.roles?.[0] || "";
+const isManagerActor = (req) => getActorRole(req) === "manager";
+
+const ensureRoleAllowedForActor = (req, role) => {
+    if (!allowedRoles.includes(role)) {
+        return "Invalid employee role";
+    }
+    if (isManagerActor(req) && role === "admin") {
+        return "Managers cannot create or manage admin employees";
+    }
+    return null;
+};
+
+const ensureTargetAllowedForActor = (req, employee) => {
+    if (isManagerActor(req) && employee.roles === "admin") {
+        return "Managers cannot manage admin employees";
+    }
+    return null;
+};
+
+const populateEmployees = (query = Employee.find()) =>
+    query.populate("user", "name email isActive roles isDeleted").sort({ createdAt: -1 });
 
 exports.getEmployees = async (req, res) => {
     try {
-        const employees = await Employee.find()
-            .populate("user", "name email isActive roles")
-            .sort({ createdAt: -1 });
+        const { status = "all", role = "all" } = req.query;
+        const query = {};
+
+        if (role !== "all" && allowedRoles.includes(role)) {
+            query.roles = role;
+        }
+
+        if (status === "active") {
+            query.isDeleted = { $ne: true };
+            query.isActive = true;
+        } else if (status === "inactive") {
+            query.isDeleted = { $ne: true };
+            query.isActive = false;
+        } else if (status === "deleted") {
+            query.isDeleted = true;
+        }
+
+        const employees = await populateEmployees(Employee.find(query));
 
         return res.status(200).json({
             employees: employees.map(sanitize),
@@ -71,8 +111,9 @@ exports.createEmployee = async (req, res) => {
             return res.status(400).json({ message: "Name, email, password and role are required" });
         }
 
-        if (!allowedRoles.includes(role)) {
-            return res.status(400).json({ message: "Invalid employee role" });
+        const roleError = ensureRoleAllowedForActor(req, role);
+        if (roleError) {
+            return res.status(400).json({ message: roleError });
         }
 
         const normalizedEmail = String(email).toLowerCase().trim();
@@ -87,6 +128,7 @@ exports.createEmployee = async (req, res) => {
             password,
             roles: [role],
             isActive: Boolean(isActive),
+            isDeleted: false,
         });
 
         const employee = await Employee.create({
@@ -111,9 +153,11 @@ exports.createEmployee = async (req, res) => {
             shift: shift || undefined,
             joiningDate: joiningDate || undefined,
             isActive: Boolean(isActive),
+            isDeleted: false,
+            deletedAt: null,
         });
 
-        const populated = await Employee.findById(employee._id).populate("user", "name email isActive roles");
+        const populated = await Employee.findById(employee._id).populate("user", "name email isActive roles isDeleted");
         return res.status(201).json({ message: "Employee created", employee: sanitize(populated) });
     } catch (error) {
         console.error("CREATE EMPLOYEE ERROR:", error);
@@ -124,9 +168,17 @@ exports.createEmployee = async (req, res) => {
 exports.updateEmployee = async (req, res) => {
     try {
         const { id } = req.params;
-        const employee = await Employee.findById(id).populate("user", "name email isActive roles");
+        const employee = await Employee.findById(id).populate("user", "name email isActive roles isDeleted");
         if (!employee) {
             return res.status(404).json({ message: "Employee not found" });
+        }
+
+        const targetError = ensureTargetAllowedForActor(req, employee);
+        if (targetError) {
+            return res.status(403).json({ message: targetError });
+        }
+        if (employee.isDeleted) {
+            return res.status(400).json({ message: "Restore the employee before editing the record" });
         }
 
         const {
@@ -150,8 +202,12 @@ exports.updateEmployee = async (req, res) => {
             idProofNumber,
             isActive,
         } = req.body;
-        if (role && !allowedRoles.includes(role)) {
-            return res.status(400).json({ message: "Invalid employee role" });
+
+        if (role !== undefined) {
+            const roleError = ensureRoleAllowedForActor(req, role);
+            if (roleError) {
+                return res.status(400).json({ message: roleError });
+            }
         }
 
         if (name !== undefined) employee.user.name = String(name).trim();
@@ -190,14 +246,20 @@ exports.updateEmployee = async (req, res) => {
         if (shift !== undefined) employee.shift = shift || undefined;
         if (joiningDate !== undefined) employee.joiningDate = joiningDate || employee.joiningDate;
         if (isActive !== undefined) {
-            employee.isActive = Boolean(isActive);
-            employee.user.isActive = Boolean(isActive);
+            const nextActive = Boolean(isActive);
+            employee.isActive = nextActive;
+            employee.user.isActive = nextActive;
+            if (nextActive) {
+                employee.isDeleted = false;
+                employee.deletedAt = null;
+                employee.user.isDeleted = false;
+            }
         }
 
         await employee.user.save();
         await employee.save();
 
-        const updated = await Employee.findById(id).populate("user", "name email isActive roles");
+        const updated = await Employee.findById(id).populate("user", "name email isActive roles isDeleted");
         return res.status(200).json({ message: "Employee updated", employee: sanitize(updated) });
     } catch (error) {
         console.error("UPDATE EMPLOYEE ERROR:", error);
@@ -205,22 +267,100 @@ exports.updateEmployee = async (req, res) => {
     }
 };
 
-exports.deleteEmployee = async (req, res) => {
+exports.updateEmployeeStatus = async (req, res) => {
     try {
         const { id } = req.params;
-        const employee = await Employee.findById(id);
+        const { isActive } = req.body;
+        const employee = await Employee.findById(id).populate("user", "name email isActive roles isDeleted");
+
         if (!employee) {
             return res.status(404).json({ message: "Employee not found" });
         }
 
-        await User.findByIdAndUpdate(employee.user, {
-            isDeleted: true,
-            isActive: false,
-            email: `deleted_${Date.now()}_${Math.random().toString(36).slice(2, 8)}@deleted.local`,
-        });
-        await employee.deleteOne();
+        const targetError = ensureTargetAllowedForActor(req, employee);
+        if (targetError) {
+            return res.status(403).json({ message: targetError });
+        }
 
-        return res.status(200).json({ message: "Employee deleted" });
+        if (employee.isDeleted) {
+            return res.status(400).json({ message: "Restore the employee before changing active status" });
+        }
+
+        const nextActive = Boolean(isActive);
+        employee.isActive = nextActive;
+        employee.user.isActive = nextActive;
+
+        await employee.user.save();
+        await employee.save();
+
+        const updated = await Employee.findById(id).populate("user", "name email isActive roles isDeleted");
+        return res.status(200).json({
+            message: nextActive ? "Employee activated" : "Employee deactivated",
+            employee: sanitize(updated),
+        });
+    } catch (error) {
+        console.error("UPDATE EMPLOYEE STATUS ERROR:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+exports.restoreEmployee = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const employee = await Employee.findById(id).populate("user", "name email isActive roles isDeleted");
+
+        if (!employee) {
+            return res.status(404).json({ message: "Employee not found" });
+        }
+
+        const targetError = ensureTargetAllowedForActor(req, employee);
+        if (targetError) {
+            return res.status(403).json({ message: targetError });
+        }
+
+        employee.isDeleted = false;
+        employee.deletedAt = null;
+        employee.isActive = true;
+        employee.user.isDeleted = false;
+        employee.user.isActive = true;
+
+        await employee.user.save();
+        await employee.save();
+
+        const updated = await Employee.findById(id).populate("user", "name email isActive roles isDeleted");
+        return res.status(200).json({ message: "Employee restored", employee: sanitize(updated) });
+    } catch (error) {
+        console.error("RESTORE EMPLOYEE ERROR:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+exports.deleteEmployee = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const employee = await Employee.findById(id).populate("user", "name email isActive roles isDeleted");
+        if (!employee) {
+            return res.status(404).json({ message: "Employee not found" });
+        }
+
+        const targetError = ensureTargetAllowedForActor(req, employee);
+        if (targetError) {
+            return res.status(403).json({ message: targetError });
+        }
+        if (employee.isDeleted) {
+            return res.status(400).json({ message: "Employee is already in deleted records" });
+        }
+
+        employee.isDeleted = true;
+        employee.deletedAt = new Date();
+        employee.isActive = false;
+        employee.user.isDeleted = true;
+        employee.user.isActive = false;
+
+        await employee.user.save();
+        await employee.save();
+
+        return res.status(200).json({ message: "Employee moved to deleted records" });
     } catch (error) {
         console.error("DELETE EMPLOYEE ERROR:", error);
         return res.status(500).json({ message: "Internal server error" });

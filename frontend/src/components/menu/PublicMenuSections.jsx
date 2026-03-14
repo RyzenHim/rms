@@ -158,10 +158,10 @@ const PublicMenuSections = ({
                           <article
                             key={item._id}
                             onClick={() => {
-                              if (!isCustomerView) onItemTap?.(item);
+                              onItemTap?.(item);
                             }}
                             className={`group flex h-full flex-col overflow-hidden rounded-3xl shadow-[0_16px_32px_rgba(15,23,42,0.07)] transition-transform duration-300 hover:-translate-y-1 ${
-                              !isCustomerView ? "cursor-pointer" : ""
+                              onItemTap ? "cursor-pointer" : ""
                             }`}
                             style={{ border: `1px solid ${palette.border}`, backgroundColor: palette.cardBg }}
                           >
@@ -276,10 +276,10 @@ const PublicMenuSections = ({
                       <article
                         key={item._id}
                         onClick={() => {
-                          if (!isCustomerView) onItemTap?.(item);
+                          onItemTap?.(item);
                         }}
                         className={`flex h-full flex-col overflow-hidden rounded-3xl p-4 shadow-[0_16px_32px_rgba(15,23,42,0.07)] ${
-                          !isCustomerView ? "cursor-pointer" : ""
+                          onItemTap ? "cursor-pointer" : ""
                         }`}
                         style={{ border: `1px solid ${palette.border}`, backgroundColor: palette.cardBg }}
                       >
