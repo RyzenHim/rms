@@ -35,7 +35,12 @@ const PublicMenuSections = ({
   sortBy = "featured",
   palette = {},
   onAddToCart,
+  onIncrementItem,
+  onDecrementItem,
+  onRemoveItem,
   onItemTap,
+  cartItems = [],
+  showTrayActions = false,
 }) => {
   const sortedCategories = useMemo(
     () => [...categories].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)),
@@ -112,6 +117,65 @@ const PublicMenuSections = ({
   const getSafeImageSrc = (url) => {
     const normalized = String(url || "").trim();
     return normalized || FALLBACK_IMAGE;
+  };
+
+  const getCartQuantity = (itemId) =>
+    Number(cartItems.find((cartItem) => cartItem.menuItem === itemId)?.quantity || 0);
+
+  const renderTrayButton = (item) => {
+    const quantity = getCartQuantity(item._id);
+
+    if (!showTrayActions) return null;
+
+    if (quantity > 0) {
+      return (
+        <div className="mt-auto flex items-center gap-2">
+          <button
+            onClick={(event) => {
+              event.stopPropagation();
+              onDecrementItem?.(item);
+            }}
+            className="rounded-xl px-3 py-2 text-sm font-bold text-white"
+            style={{ backgroundColor: primaryColor }}
+          >
+            -
+          </button>
+          <button
+            onClick={(event) => {
+              event.stopPropagation();
+              onIncrementItem?.(item);
+            }}
+            className="flex-1 rounded-xl py-2 text-sm font-bold text-white"
+            style={{ backgroundColor: primaryColor }}
+          >
+            In Tray: {quantity} • Add More
+          </button>
+          <button
+            onClick={(event) => {
+              event.stopPropagation();
+              onRemoveItem?.(item._id);
+            }}
+            className="rounded-xl border px-3 py-2 text-sm font-bold"
+            style={{ borderColor: palette.border, backgroundColor: palette.panelBg, color: palette.text }}
+          >
+            Remove
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <button
+        onClick={(event) => {
+          event.stopPropagation();
+          onAddToCart?.(item);
+        }}
+        className="mt-auto w-full rounded-xl py-2 text-sm font-bold text-white"
+        style={{ backgroundColor: primaryColor }}
+      >
+        Add To Order Tray
+      </button>
+    );
   };
 
   return (
@@ -251,18 +315,7 @@ const PublicMenuSections = ({
                                   ))}
                                 </div>
                               ) : null}
-                              {isCustomerView ? (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onAddToCart?.(item);
-                                  }}
-                                  className="mt-auto w-full rounded-xl py-2 text-sm font-bold text-white"
-                                  style={{ backgroundColor: primaryColor }}
-                                >
-                                  Add To Order Tray
-                                </button>
-                              ) : null}
+                              {isCustomerView ? renderTrayButton(item) : null}
                             </div>
                           </article>
                         ))}
@@ -364,18 +417,7 @@ const PublicMenuSections = ({
                             ))}
                           </div>
                         ) : null}
-                        {isCustomerView ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onAddToCart?.(item);
-                            }}
-                            className="mt-auto w-full rounded-xl py-2 text-sm font-bold text-white"
-                            style={{ backgroundColor: primaryColor }}
-                          >
-                            Add To Order Tray
-                          </button>
-                        ) : null}
+                        {isCustomerView ? renderTrayButton(item) : null}
                       </article>
                     ))}
                   </div>

@@ -2,6 +2,7 @@ const Review = require("../models/review.model");
 const MenuItem = require("../models/menuItem.model");
 const Customer = require("../models/customer.model");
 const Order = require("../models/order.model");
+const mongoose = require("mongoose");
 
 const getCustomerFromRequest = async (req) =>
   Customer.findOne({ user: req.user._id });
@@ -82,6 +83,10 @@ exports.getMenuItemReviews = async (req, res) => {
     const { menuItemId } = req.params;
     const { page = 1, limit = 10, sortBy = "newest" } = req.query;
 
+    if (!mongoose.Types.ObjectId.isValid(menuItemId)) {
+      return res.status(400).json({ message: "Invalid menu item id" });
+    }
+
     const skip = (page - 1) * limit;
     let sortOption = { createdAt: -1 };
 
@@ -132,7 +137,7 @@ exports.getMenuItemReviews = async (req, res) => {
     const ratingData = await Review.aggregate([
       {
         $match: {
-          menuItem: require("mongoose").Types.ObjectId(menuItemId),
+          menuItem: new mongoose.Types.ObjectId(menuItemId),
           status: "approved",
         },
       },

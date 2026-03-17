@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import api, { withAuth } from "../services/api";
 
 const STORAGE_KEY = "customer-order-tray";
 const EVENT_NAME = "order-tray-updated";
@@ -24,10 +26,17 @@ const writeTray = (nextCart) => {
 };
 
 const useOrderTray = () => {
+  const { token, user } = useAuth();
   const [cart, setCartState] = useState(readTray);
+  const cartRef = useRef(cart);
+  const isCustomer = Boolean(token && user?.roles?.includes("customer"));
 
   useEffect(() => {
-    if (typeof window === "undefined") return undefined;
+    cartRef.current = cart;
+  }, [cart]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || isCustomer) return undefined;
     setCartState(readTray());
 
     const syncFromStorage = () => setCartState(readTray());
@@ -39,14 +48,70 @@ const useOrderTray = () => {
       window.removeEventListener("storage", syncFromStorage);
       window.removeEventListener(EVENT_NAME, syncFromCustomEvent);
     };
-  }, []);
+  }, [isCustomer]);
+
+  useEffect(() => {
+    if (!isCustomer) {
+      setCartState(readTray());
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadTray = async () => {
+      try {
+        const { data } = await api.get("/tray", withAuth(token));
+        const nextItems = Array.isArray(data?.tray?.items) ? data.tray.items : [];
+        if (!isMounted) return;
+        setCartState(nextItems);
+      } catch {
+        if (!isMounted) return;
+        setCartState([]);
+      }
+    };
+
+    loadTray();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isCustomer, token]);
+
+  const persistCustomerTray = useCallback(async (nextCart, fallbackCart) => {
+    try {
+      const { data } = await api.put(
+        "/tray",
+        {
+          items: nextCart.map((item) => ({
+            menuItem: item.menuItem,
+            quantity: Number(item.quantity || 0),
+            notes: item.notes || "",
+          })),
+        },
+        withAuth(token)
+      );
+      const savedItems = Array.isArray(data?.tray?.items) ? data.tray.items : nextCart;
+      setCartState(savedItems);
+      cartRef.current = savedItems;
+    } catch {
+      setCartState(fallbackCart);
+      cartRef.current = fallbackCart;
+    }
+  }, [token]);
 
   const setCart = useCallback((updater) => {
-    const currentCart = readTray();
+    const currentCart = isCustomer ? cartRef.current : readTray();
     const nextCart = typeof updater === "function" ? updater(currentCart) : updater;
-    writeTray(nextCart);
     setCartState(nextCart);
-  }, []);
+    cartRef.current = nextCart;
+
+    if (isCustomer) {
+      void persistCustomerTray(nextCart, currentCart);
+      return;
+    }
+
+    writeTray(nextCart);
+  }, [isCustomer, persistCustomerTray]);
 
   const clearCart = useCallback(() => {
     setCart([]);

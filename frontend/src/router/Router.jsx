@@ -9,16 +9,17 @@ import Manager_Main_Layout from "../layouts/manager_layout/Manager_Main_Layout";
 import KitchenStaff_Layout from "../layouts/kitchenStaff_layout/KitchenStaff_Layout";
 import Cashier_Main_Layout from "../layouts/cashier_layout/Cashier_Main_Layout";
 import Waiter_Main_Layout from "../layouts/waiter_layout/Waiter_Main_Layout";
+import Visitor_Home from "../pages/visitor_pages/Visitor_Home";
+import Visitor_Menu from "../pages/visitor_pages/Visitor_Menu";
+import Customer_Menu from "../pages/customer_pages/Customer_Menu";
+import Customer_Orders from "../pages/customer_pages/Customer_Orders";
+import CustomerReservations from "../pages/Customer/CustomerReservations";
+import ProfilePage from "../pages/profile_pages/ProfilePage";
 
-const Visitor_Home = lazy(() => import("../pages/visitor_pages/Visitor_Home"));
-const Visitor_Menu = lazy(() => import("../pages/visitor_pages/Visitor_Menu"));
 const Login = lazy(() => import("../pages/auth_pages/Login"));
 const Signup = lazy(() => import("../pages/auth_pages/Signup"));
 const ForgotPassword = lazy(() => import("../pages/auth_pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("../pages/auth_pages/ResetPassword"));
-const Customer_Home = lazy(() => import("../pages/customer_pages/Customer_Home"));
-const Customer_Menu = lazy(() => import("../pages/customer_pages/Customer_Menu"));
-const Customer_Orders = lazy(() => import("../pages/customer_pages/Customer_Orders"));
 const RoleDashboard = lazy(() => import("../pages/role_pages/RoleDashboard"));
 const RoleSettings = lazy(() => import("../pages/role_pages/RoleSettings"));
 const RoleOrders = lazy(() => import("../pages/role_pages/RoleOrders"));
@@ -35,10 +36,8 @@ const AdminAnalytics = lazy(() => import("../pages/admin_pages/AdminAnalytics"))
 const AdminInventory = lazy(() => import("../pages/admin_pages/AdminInventory"));
 const AdminReservationManager = lazy(() => import("../pages/Admin/AdminReservationManager"));
 const AdminTableManager = lazy(() => import("../pages/Admin/AdminTableManager"));
-const CustomerReservations = lazy(() => import("../pages/Customer/CustomerReservations"));
 const WaiterOrders = lazy(() => import("../pages/waiter_pages/Waiter_Orders"));
 const KitchenOrders = lazy(() => import("../pages/kitchen_pages/Kitchen_Orders"));
-const ProfilePage = lazy(() => import("../pages/profile_pages/ProfilePage"));
 
 const withLazy = (element) => (
   <Suspense fallback={<div className="p-6 text-sm text-slate-600">Loading...</div>}>{element}</Suspense>

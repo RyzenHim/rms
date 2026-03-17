@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { FiClock, FiMessageSquare, FiShoppingCart, FiStar, FiTag } from "react-icons/fi";
+import { useEffect, useMemo, useState } from "react";
+import { FiClock, FiMessageSquare, FiMinus, FiPlus, FiShoppingCart, FiStar, FiTag, FiTrash2 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import AppModal from "../modals/AppModal";
 import ReviewForm from "../reviews/ReviewForm";
 import ReviewsList from "../reviews/ReviewsList";
 import { useAuth } from "../../context/AuthContext";
+import api, { withAuth } from "../../services/api";
 
 const MenuItemQuickViewModal = ({
   item,
@@ -13,14 +14,69 @@ const MenuItemQuickViewModal = ({
   palette,
   theme,
   onAddToCart,
+  onIncrementItem,
+  onDecrementItem,
+  onRemoveItem,
+  cartItems = [],
 }) => {
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, token } = useAuth();
   const [refreshToken, setRefreshToken] = useState(0);
+  const [customerReview, setCustomerReview] = useState(null);
+
+  const canReview = isAuthenticated && user?.roles?.includes("customer");
+  const trayEntry = useMemo(
+    () => cartItems.find((cartItem) => cartItem.menuItem === item?._id) || null,
+    [cartItems, item?._id]
+  );
+
+  useEffect(() => {
+    if (!canReview || !isOpen || !item?._id) {
+      setCustomerReview(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadCustomerReview = async () => {
+      try {
+        const { data } = await api.get("/reviews/my-reviews", withAuth(token));
+        if (!isMounted) return;
+        const matchedReview = (data?.reviews || []).find((review) => {
+          const reviewMenuItemId = review.menuItem?._id || review.menuItem;
+          return reviewMenuItemId === item._id;
+        });
+        setCustomerReview(matchedReview || null);
+      } catch {
+        if (!isMounted) return;
+        setCustomerReview(null);
+      }
+    };
+
+    loadCustomerReview();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [canReview, isOpen, item?._id, refreshToken, token]);
 
   if (!item) return null;
 
-  const canReview = isAuthenticated && user?.roles?.includes("customer");
+  const handleReviewRefresh = () => {
+    setRefreshToken((prev) => prev + 1);
+  };
+
+  const handleReviewDelete = async (review) => {
+    if (!review?._id || !window.confirm("Delete your review for this food item?")) return;
+
+    try {
+      await api.delete(`/reviews/${review._id}`, withAuth(token));
+      setCustomerReview(null);
+      handleReviewRefresh();
+    } catch (error) {
+      console.error("Failed to delete review:", error);
+    }
+  };
 
   return (
     <AppModal
@@ -63,7 +119,15 @@ const MenuItemQuickViewModal = ({
             </div>
           </div>
 
-          <ReviewsList menuItemId={item._id} theme={theme} refreshTrigger={`${item._id}-${refreshToken}`} />
+          <ReviewsList
+            menuItemId={item._id}
+            theme={theme}
+            refreshTrigger={`${item._id}-${refreshToken}`}
+            canManageReviews={canReview}
+            currentUserReviewId={customerReview?._id || ""}
+            onEditReview={(review) => setCustomerReview(review)}
+            onDeleteReview={handleReviewDelete}
+          />
         </section>
 
         <aside className="space-y-4">
@@ -139,14 +203,40 @@ const MenuItemQuickViewModal = ({
               </div>
             ) : null}
 
-            <button
-              onClick={() => onAddToCart?.(item)}
-              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-white"
-              style={{ backgroundColor: theme?.primaryColor || palette.primary }}
-            >
-              <FiShoppingCart className="h-4 w-4" />
-              Add To Order Tray
-            </button>
+            {trayEntry ? (
+              <div className="mt-5 flex items-center gap-2 rounded-2xl border p-2" style={{ borderColor: palette.border, backgroundColor: palette.panelBg }}>
+                <button
+                  onClick={() => onDecrementItem?.(item)}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-white"
+                  style={{ backgroundColor: theme?.primaryColor || palette.primary }}
+                >
+                  <FiMinus className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => onIncrementItem?.(item)}
+                  className="flex-1 rounded-xl px-4 py-3 text-sm font-bold text-white"
+                  style={{ backgroundColor: theme?.primaryColor || palette.primary }}
+                >
+                  In Tray: {trayEntry.quantity} • Add More
+                </button>
+                <button
+                  onClick={() => onRemoveItem?.(item._id)}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-xl border"
+                  style={{ borderColor: palette.border, color: palette.text, backgroundColor: palette.cardBg }}
+                >
+                  <FiTrash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => onAddToCart?.(item)}
+                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-white"
+                style={{ backgroundColor: theme?.primaryColor || palette.primary }}
+              >
+                <FiShoppingCart className="h-4 w-4" />
+                Add To Order Tray
+              </button>
+            )}
           </section>
 
           <section className="rounded-[1.9rem] border p-5" style={{ borderColor: palette.border, backgroundColor: palette.cardBg, boxShadow: palette.glassShadow }}>
@@ -158,7 +248,12 @@ const MenuItemQuickViewModal = ({
               <ReviewForm
                 menuItemId={item._id}
                 theme={theme}
-                onReviewSubmitted={() => setRefreshToken((prev) => prev + 1)}
+                existingReview={customerReview}
+                onReviewSubmitted={handleReviewRefresh}
+                onReviewDeleted={() => {
+                  setCustomerReview(null);
+                  handleReviewRefresh();
+                }}
               />
             ) : (
               <div className="rounded-2xl border p-4 text-sm" style={{ borderColor: palette.border, backgroundColor: palette.panelBg, color: palette.muted }}>

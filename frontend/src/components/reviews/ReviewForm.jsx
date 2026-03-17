@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import api, { withAuth } from "../../services/api";
 import useResolvedColorMode from "../../hooks/useResolvedColorMode";
 
-const ReviewForm = ({ menuItemId, onReviewSubmitted, theme }) => {
+const ReviewForm = ({ menuItemId, existingReview, onReviewSubmitted, onReviewDeleted, theme }) => {
   const { token } = useAuth();
   const { palette, resolvedMode } = useResolvedColorMode(theme || {
     colorMode: "system",
@@ -18,15 +18,31 @@ const ReviewForm = ({ menuItemId, onReviewSubmitted, theme }) => {
   const [message, setMessage] = useState("");
 
   const highlightOptions = ["Fresh", "Tasty", "Good Value", "Quick Service", "Authentic", "Unique Flavor"];
+  const isEditing = Boolean(existingReview?._id);
+
+  useEffect(() => {
+    if (!existingReview) {
+      setRating(5);
+      setTitle("");
+      setComment("");
+      setHighlights([]);
+      return;
+    }
+
+    setRating(Number(existingReview.rating || 5));
+    setTitle(existingReview.title || "");
+    setComment(existingReview.comment || "");
+    setHighlights(Array.isArray(existingReview.highlights) ? existingReview.highlights : []);
+  }, [existingReview]);
 
   const handleHighlightToggle = (highlight) => {
     setHighlights((prev) =>
-      prev.includes(highlight) ? prev.filter((h) => h !== highlight) : [...prev, highlight]
+      prev.includes(highlight) ? prev.filter((item) => item !== highlight) : [...prev, highlight]
     );
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     if (!rating || !comment.trim()) {
       setMessage("Please provide a rating and comment");
       return;
@@ -34,26 +50,37 @@ const ReviewForm = ({ menuItemId, onReviewSubmitted, theme }) => {
 
     setLoading(true);
     try {
-      const { data } = await api.post(
-        "/reviews",
-        {
-          menuItemId,
-          rating: parseInt(rating),
-          title,
-          comment,
-          highlights,
-        },
-        withAuth(token)
-      );
+      const payload = {
+        menuItemId,
+        rating: parseInt(rating, 10),
+        title,
+        comment,
+        highlights,
+      };
 
-      setMessage(data?.message || "Review submitted successfully!");
-      setRating(5);
-      setTitle("");
-      setComment("");
-      setHighlights([]);
-      if (onReviewSubmitted) onReviewSubmitted();
+      const { data } = isEditing
+        ? await api.put(`/reviews/${existingReview._id}`, payload, withAuth(token))
+        : await api.post("/reviews", payload, withAuth(token));
+
+      setMessage(data?.message || (isEditing ? "Review updated successfully" : "Review submitted successfully"));
+      onReviewSubmitted?.();
     } catch (err) {
-      setMessage(err?.response?.data?.message || "Failed to submit review");
+      setMessage(err?.response?.data?.message || "Failed to save review");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!existingReview?._id || !window.confirm("Delete your review for this food item?")) return;
+
+    setLoading(true);
+    try {
+      const { data } = await api.delete(`/reviews/${existingReview._id}`, withAuth(token));
+      setMessage(data?.message || "Review deleted successfully");
+      onReviewDeleted?.();
+    } catch (err) {
+      setMessage(err?.response?.data?.message || "Failed to delete review");
     } finally {
       setLoading(false);
     }
@@ -61,23 +88,23 @@ const ReviewForm = ({ menuItemId, onReviewSubmitted, theme }) => {
 
   return (
     <form onSubmit={handleSubmit} className="card-elevated space-y-4 p-6" style={{ backgroundColor: palette.panelBg, color: palette.text }}>
-      <h3 className="heading-4">Share Your Review</h3>
+      <h3 className="heading-4">{isEditing ? "Update Your Review" : "Share Your Review"}</h3>
 
-      {message && (
+      {message ? (
         <div
           className="rounded-lg p-3 text-sm"
           style={{
-            backgroundColor: message.includes("successfully")
+            backgroundColor: message.toLowerCase().includes("success")
               ? (resolvedMode === "dark" ? "#052e16" : "#dcfce7")
               : (resolvedMode === "dark" ? "#450a0a" : "#fee2e2"),
-            color: message.includes("successfully")
+            color: message.toLowerCase().includes("success")
               ? (resolvedMode === "dark" ? "#86efac" : "#166534")
               : (resolvedMode === "dark" ? "#fca5a5" : "#991b1b"),
           }}
         >
           {message}
         </div>
-      )}
+      ) : null}
 
       <div>
         <label className="form-label">Rating</label>
@@ -90,7 +117,7 @@ const ReviewForm = ({ menuItemId, onReviewSubmitted, theme }) => {
               className="text-3xl transition-transform hover:scale-110"
               style={{ color: rating >= num ? "#facc15" : (resolvedMode === "dark" ? "#475569" : "#d1d5db") }}
             >
-              ⭐
+              ★
             </button>
           ))}
         </div>
@@ -101,7 +128,7 @@ const ReviewForm = ({ menuItemId, onReviewSubmitted, theme }) => {
         <input
           type="text"
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(event) => setTitle(event.target.value)}
           placeholder="e.g., Amazing taste!"
           className="input-base w-full"
           maxLength="100"
@@ -112,7 +139,7 @@ const ReviewForm = ({ menuItemId, onReviewSubmitted, theme }) => {
         <label className="form-label">Your Review</label>
         <textarea
           value={comment}
-          onChange={(e) => setComment(e.target.value)}
+          onChange={(event) => setComment(event.target.value)}
           placeholder="Share your experience with this dish..."
           className="input-base w-full"
           rows="4"
@@ -130,9 +157,7 @@ const ReviewForm = ({ menuItemId, onReviewSubmitted, theme }) => {
               key={highlight}
               type="button"
               onClick={() => handleHighlightToggle(highlight)}
-              className={`rounded-full px-3 py-1 text-sm transition-all ${
-                highlights.includes(highlight) ? "text-white" : ""
-              }`}
+              className={`rounded-full px-3 py-1 text-sm transition-all ${highlights.includes(highlight) ? "text-white" : ""}`}
               style={highlights.includes(highlight)
                 ? { backgroundColor: theme?.primaryColor || "#ff8c3a", color: "#fff" }
                 : { backgroundColor: palette.cardBg, color: palette.text, border: `1px solid ${palette.border}` }}
@@ -143,14 +168,27 @@ const ReviewForm = ({ menuItemId, onReviewSubmitted, theme }) => {
         </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="btn-primary w-full"
-        style={{ background: theme?.primaryColor || "#ff8c3a" }}
-      >
-        {loading ? "Submitting..." : "Submit Review"}
-      </button>
+      <div className="flex gap-3">
+        <button
+          type="submit"
+          disabled={loading}
+          className="btn-primary flex-1"
+          style={{ background: theme?.primaryColor || "#ff8c3a" }}
+        >
+          {loading ? "Saving..." : isEditing ? "Update Review" : "Submit Review"}
+        </button>
+        {isEditing ? (
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={loading}
+            className="rounded-xl border px-4 py-2 font-semibold"
+            style={{ borderColor: palette.border, color: palette.text, backgroundColor: palette.cardBg }}
+          >
+            Delete
+          </button>
+        ) : null}
+      </div>
     </form>
   );
 };

@@ -1,8 +1,44 @@
 import api, { withAuth } from "./api";
 
+const MENU_CACHE_KEY = "rms_public_menu_cache";
+let publicMenuCache = null;
+
+const readPublicMenuCache = () => {
+  if (publicMenuCache) return publicMenuCache;
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(MENU_CACHE_KEY);
+    publicMenuCache = raw ? JSON.parse(raw) : null;
+    return publicMenuCache;
+  } catch {
+    return null;
+  }
+};
+
+const writePublicMenuCache = (data) => {
+  publicMenuCache = data || null;
+  if (typeof window === "undefined") return;
+
+  try {
+    if (data) {
+      window.localStorage.setItem(MENU_CACHE_KEY, JSON.stringify(data));
+    } else {
+      window.localStorage.removeItem(MENU_CACHE_KEY);
+    }
+  } catch {
+    // Ignore storage write failures.
+  }
+};
+
 const menuService = {
+  getCachedPublicMenu() {
+    return readPublicMenuCache();
+  },
+
   async getPublicMenu() {
     const { data } = await api.get("/menu/public");
+    writePublicMenuCache(data);
     return data;
   },
 

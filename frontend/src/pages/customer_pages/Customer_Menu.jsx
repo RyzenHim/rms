@@ -202,6 +202,18 @@ const Customer_Menu = () => {
     });
   };
 
+  const incrementCartItem = (item) => {
+    addToCart(item);
+  };
+
+  const decrementCartItem = (item) => {
+    setCart((prev) =>
+      prev
+        .map((entry) => (entry.menuItem === item._id ? { ...entry, quantity: entry.quantity - 1 } : entry))
+        .filter((entry) => Number(entry.quantity || 0) > 0)
+    );
+  };
+
   const updateCartItem = (menuItem, patch) => {
     setCart((prev) => prev.map((item) => (item.menuItem === menuItem ? { ...item, ...patch } : item)));
   };
@@ -373,7 +385,12 @@ const Customer_Menu = () => {
             sortBy={sortBy}
             palette={palette}
             onAddToCart={addToCart}
+            onIncrementItem={incrementCartItem}
+            onDecrementItem={decrementCartItem}
+            onRemoveItem={removeCartItem}
             onItemTap={openItemQuickView}
+            cartItems={cart}
+            showTrayActions
           />
         </div>
 
@@ -660,6 +677,10 @@ const Customer_Menu = () => {
         palette={palette}
         theme={theme}
         onAddToCart={addToCart}
+        onIncrementItem={incrementCartItem}
+        onDecrementItem={decrementCartItem}
+        onRemoveItem={removeCartItem}
+        cartItems={cart}
       />
     </div>
   );
