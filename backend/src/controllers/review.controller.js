@@ -1,9 +1,28 @@
 const Review = require("../models/review.model");
 const MenuItem = require("../models/menuItem.model");
 const Customer = require("../models/customer.model");
+const Order = require("../models/order.model");
 
 const getCustomerFromRequest = async (req) =>
   Customer.findOne({ user: req.user._id });
+
+const hasCustomerPurchasedItem = async (customer, menuItemId) => {
+  if (!customer) return false;
+
+  const linkedOrders = await Order.exists({
+    createdBy: customer.user,
+    status: { $nin: ["cancelled"] },
+    "items.menuItem": menuItemId,
+  });
+
+  if (linkedOrders) return true;
+
+  return Order.exists({
+    customerPhone: customer.phone,
+    status: { $nin: ["cancelled"] },
+    "items.menuItem": menuItemId,
+  });
+};
 
 // Create review
 exports.createReview = async (req, res) => {
@@ -34,6 +53,8 @@ exports.createReview = async (req, res) => {
       return res.status(400).json({ message: "You have already reviewed this item" });
     }
 
+    const verifiedPurchase = await hasCustomerPurchasedItem(customer, menuItemId);
+
     const review = await Review.create({
       menuItem: menuItemId,
       customer: customer._id,
@@ -42,9 +63,13 @@ exports.createReview = async (req, res) => {
       comment: comment || "",
       highlights: highlights || [],
       images: images || [],
+      isVerifiedPurchase: Boolean(verifiedPurchase),
     });
 
-    const populatedReview = await review.populate("customer", "name");
+    const populatedReview = await review.populate({
+      path: "customer",
+      populate: { path: "user", select: "_id name" },
+    });
     res.status(201).json({ message: "Review created successfully", review: populatedReview });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -68,10 +93,35 @@ exports.getMenuItemReviews = async (req, res) => {
       menuItem: menuItemId,
       status: "approved",
     })
-      .populate("customer", "name")
+      .populate({
+        path: "customer",
+        populate: { path: "user", select: "_id name" },
+      })
       .sort(sortOption)
       .skip(skip)
       .limit(parseInt(limit));
+
+    const requesterCustomer = req.user ? await getCustomerFromRequest(req) : null;
+    const requesterCustomerId = requesterCustomer?._id ? String(requesterCustomer._id) : "";
+
+    const normalizedReviews = reviews.map((review) => {
+      const reviewObject = review.toObject();
+      const displayName =
+        reviewObject.customer?.user?.name ||
+        reviewObject.customer?.name ||
+        "Customer";
+
+      return {
+        ...reviewObject,
+        customer: {
+          ...reviewObject.customer,
+          name: displayName,
+        },
+        isOwner: requesterCustomerId
+          ? String(reviewObject.customer?._id || "") === requesterCustomerId
+          : false,
+      };
+    });
 
     const total = await Review.countDocuments({
       menuItem: menuItemId,
@@ -112,7 +162,7 @@ exports.getMenuItemReviews = async (req, res) => {
       });
     }
 
-    res.status(200).json({ reviews, pagination: { total, page: parseInt(page), limit: parseInt(limit) }, stats });
+    res.status(200).json({ reviews: normalizedReviews, pagination: { total, page: parseInt(page), limit: parseInt(limit) }, stats });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -144,7 +194,10 @@ exports.updateReview = async (req, res) => {
     review.highlights = highlights || review.highlights;
 
     await review.save();
-    const updated = await review.populate("customer", "name");
+    const updated = await review.populate({
+      path: "customer",
+      populate: { path: "user", select: "_id name" },
+    });
 
     res.status(200).json({ message: "Review updated successfully", review: updated });
   } catch (err) {
@@ -189,6 +242,10 @@ exports.getCustomerReviews = async (req, res) => {
       customer: customer._id,
     })
       .populate("menuItem", "name")
+      .populate({
+        path: "customer",
+        populate: { path: "user", select: "_id name" },
+      })
       .sort({ createdAt: -1 });
 
     res.status(200).json({ reviews });
