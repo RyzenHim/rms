@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FiCreditCard, FiFileText, FiSearch } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
+import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import orderService from "../../services/order_Service";
 
 const Cashier_Billing = () => {
@@ -12,6 +13,7 @@ const Cashier_Billing = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [methodMap, setMethodMap] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
+  useBodyScrollLock(Boolean(selectedOrder));
 
   const loadOrders = async () => {
     try {
@@ -271,7 +273,7 @@ ${order.paidAt ? `Paid At: ${new Date(order.paidAt).toLocaleString()}` : ""}
       </div>
 
       {selectedOrder ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/28">
           <div className="glass-panel max-h-[90vh] w-full max-w-2xl overflow-auto rounded-[2rem] p-6">
             <div className="flex items-start justify-between gap-4">
               <div>

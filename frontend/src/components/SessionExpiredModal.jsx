@@ -1,4 +1,5 @@
 import { useAuth } from "../context/AuthContext";
+import useBodyScrollLock from "../hooks/useBodyScrollLock";
 import useResolvedColorMode from "../hooks/useResolvedColorMode";
 
 const SessionExpiredModal = () => {
@@ -8,6 +9,7 @@ const SessionExpiredModal = () => {
     allowUserThemeToggle: true,
     surfaceColor: "#f8fafc",
   });
+  useBodyScrollLock(sessionExpired);
 
   const handleOK = () => {
     clearSessionExpired();
@@ -18,9 +20,9 @@ const SessionExpiredModal = () => {
   if (!sessionExpired) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[9999]">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/28">
       <div
-        className="max-w-sm w-full rounded-lg p-6 shadow-xl"
+        className="max-w-sm w-full rounded-lg p-6 shadow-xl backdrop-blur-xl"
         style={{ backgroundColor: palette.panelBg, color: palette.text, border: `1px solid ${palette.border}` }}
       >
         <h2 className="mb-2 text-xl font-bold sm:text-2xl" style={{ color: palette.text }}>

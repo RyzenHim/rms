@@ -9,6 +9,7 @@ import {
   FiUsers,
 } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
+import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import customerService from "../../services/customer_Service";
 
 const emptyForm = {
@@ -41,6 +42,7 @@ const AdminCustomers = () => {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [showDeletedSection, setShowDeletedSection] = useState(true);
+  useBodyScrollLock(showDetailModal || Boolean(editingCustomer));
 
   const loadCustomers = async () => {
     setLoading(true);
@@ -336,7 +338,7 @@ const AdminCustomers = () => {
       </section>
 
       {showDetailModal && selectedCustomer ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/28">
           <div className="glass-panel w-full max-w-5xl rounded-[1.8rem] p-5 shadow-[0_30px_80px_-40px_rgba(15,23,42,0.85)]">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -404,7 +406,7 @@ const AdminCustomers = () => {
       ) : null}
 
       {editingCustomer ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/28">
           <div className="glass-panel w-full max-w-lg rounded-[1.7rem] p-5 shadow-[0_30px_80px_-40px_rgba(15,23,42,0.85)]">
             <div className="flex items-start justify-between gap-3">
               <div>

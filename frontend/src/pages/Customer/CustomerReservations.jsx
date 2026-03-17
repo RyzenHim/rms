@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import api, { withAuth } from "../../services/api";
 import { ReservationFormContent } from "./ReservationForm";
 import { useAuth } from "../../context/AuthContext";
+import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 
 const CustomerReservations = () => {
   const [reservations, setReservations] = useState([]);
@@ -11,6 +12,7 @@ const CustomerReservations = () => {
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
+  useBodyScrollLock(showCancelModal);
 
   const { token } = useAuth();
 
@@ -264,7 +266,7 @@ const CustomerReservations = () => {
 
       {/* Cancel Modal */}
       {showCancelModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/28">
           <div className="bg-white dark:bg-[#27374D] rounded-lg shadow-lg p-5 sm:p-6 max-w-md w-full">
             <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-50 mb-3">
               Cancel Reservation

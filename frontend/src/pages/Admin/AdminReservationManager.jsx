@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FiCalendar, FiCheckCircle, FiClock, FiUsers, FiX } from "react-icons/fi";
 import axios from "axios";
+import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 
 const statusStyles = {
   pending: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
@@ -21,6 +22,7 @@ const AdminReservationManager = () => {
   });
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [stats, setStats] = useState(null);
+  useBodyScrollLock(Boolean(selectedReservation));
 
   const token = localStorage.getItem("token");
 
@@ -238,7 +240,7 @@ const AdminReservationManager = () => {
       )}
 
       {selectedReservation ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/28">
           <div className="glass-panel max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-[2rem] p-6">
             <div className="flex items-start justify-between gap-4">
               <div>

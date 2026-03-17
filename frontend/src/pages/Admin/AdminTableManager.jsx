@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FiGrid, FiLayers, FiMapPin, FiPlus, FiTool } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
+import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import api, { withAuth } from "../../services/api";
 
 const emptyForm = {
@@ -27,6 +28,7 @@ const AdminTableManager = () => {
   const [editingTable, setEditingTable] = useState(null);
   const [stats, setStats] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
+  useBodyScrollLock(showForm);
 
   useEffect(() => {
     if (!token) return;
@@ -219,7 +221,7 @@ const AdminTableManager = () => {
       )}
 
       {showForm ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/28">
           <div className="glass-panel max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[2rem] p-6">
             <h2 className="text-2xl font-black text-slate-900 dark:text-slate-50">{editingTable ? "Edit Table" : "Add New Table"}</h2>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Configure seating metadata, capacity, and placement details.</p>
