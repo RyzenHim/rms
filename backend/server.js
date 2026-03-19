@@ -13,7 +13,9 @@ app.use(express.json({ limit: "20mb" }));
 app.use("/assets", express.static(path.join(__dirname, "src/assets")));
 app.use(
     cors({
-        origin: "http://localhost:5173",
+        origin: ["http://localhost:5173",
+        "https://rms-lilac.vercel.app/"
+    ],
         credentials: true,
     })
 );
