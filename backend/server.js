@@ -14,7 +14,7 @@ app.use("/assets", express.static(path.join(__dirname, "src/assets")));
 app.use(
     cors({
         origin: ["http://localhost:5173",
-        "https://rms-lilac.vercel.app/"
+        "https://rms-lilac.vercel.app"
     ],
         credentials: true,
     })
