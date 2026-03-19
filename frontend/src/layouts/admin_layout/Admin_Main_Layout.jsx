@@ -21,6 +21,7 @@ const Admin_Main_Layout = () => {
         { to: "/admin/analytics", label: "Analytics" },
         { to: "/admin/inventory", label: "Inventory" },
         { to: "/admin/settings", label: "Settings" },
+        { to: "/admin/profile", label: "Profile" },
       ]}
     />
   );
