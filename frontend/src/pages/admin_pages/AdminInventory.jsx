@@ -228,7 +228,7 @@ const AdminInventory = () => {
 
   const procurementInsights = useMemo(() => {
     const activeSuppliersCount = suppliers.filter((supplier) => supplier.isActive !== false).length;
-    const openOrders = purchaseOrders.filter((order) => ["draft", "sent", "partially_received", "partially_paid"].includes(order.status));
+    const openOrders = purchaseOrders.filter((order) => ["draft", "ordered", "partially_received"].includes(order.status));
     const overduePayments = purchaseOrders.filter((order) => Number(order.balanceDue || 0) > 0);
     const pendingReceipts = purchaseOrders.filter(
       (order) => (order.items || []).some((item) => Number(item.orderedQuantity || 0) > Number(item.receivedQuantity || 0))
