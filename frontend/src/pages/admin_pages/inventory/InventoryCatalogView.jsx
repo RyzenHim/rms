@@ -15,9 +15,18 @@ export const InventoryCategoriesView = ({ editingCategoryId, categoryForm, setCa
       </div>
 
       <form onSubmit={handleCategorySubmit} className="mt-5 space-y-4">
-        <input type="text" placeholder="Category Name" value={categoryForm.name} onChange={(event) => setCategoryForm((prev) => ({ ...prev, name: normalizeValue(event.target.value) }))} className="input-base" required />
-        <textarea placeholder="Description" value={categoryForm.description} onChange={(event) => setCategoryForm((prev) => ({ ...prev, description: event.target.value }))} className="input-base min-h-[6rem]" rows={3} />
-        <input type="number" placeholder="Sort Order" value={categoryForm.sortOrder} onChange={(event) => setCategoryForm((prev) => ({ ...prev, sortOrder: Number(event.target.value || 0) }))} className="input-base" />
+        <label className="space-y-2 block">
+          <span className="form-label">Category Name</span>
+          <input type="text" placeholder="Enter category name" value={categoryForm.name} onChange={(event) => setCategoryForm((prev) => ({ ...prev, name: normalizeValue(event.target.value) }))} className="input-base" required />
+        </label>
+        <label className="space-y-2 block">
+          <span className="form-label">Description</span>
+          <textarea placeholder="Add category description" value={categoryForm.description} onChange={(event) => setCategoryForm((prev) => ({ ...prev, description: event.target.value }))} className="input-base min-h-[6rem]" rows={3} />
+        </label>
+        <label className="space-y-2 block">
+          <span className="form-label">Sort Order</span>
+          <input type="number" placeholder="Enter sort order" value={categoryForm.sortOrder} onChange={(event) => setCategoryForm((prev) => ({ ...prev, sortOrder: Number(event.target.value || 0) }))} className="input-base" />
+        </label>
         <div className="flex flex-wrap gap-3">
           <button type="submit" disabled={submitting || !canManageInventory} className="btn-primary">{canManageInventory ? (submitting ? "Saving..." : editingCategoryId ? "Update Category" : "Create Category") : "Admin/Manager Only"}</button>
           <button type="button" onClick={resetCategoryForm} className="btn-outline">Reset</button>
@@ -68,9 +77,18 @@ export const InventoryUnitsView = ({ editingUnitId, unitForm, setUnitForm, submi
       </div>
 
       <form onSubmit={handleUnitSubmit} className="mt-5 space-y-4">
-        <input type="text" placeholder="Unit Name" value={unitForm.name} onChange={(event) => setUnitForm((prev) => ({ ...prev, name: event.target.value }))} className="input-base" required />
-        <input type="text" placeholder="Unit Code (example: kg)" value={unitForm.code} onChange={(event) => setUnitForm((prev) => ({ ...prev, code: normalizeValue(event.target.value) }))} className="input-base" required />
-        <input type="number" placeholder="Sort Order" value={unitForm.sortOrder} onChange={(event) => setUnitForm((prev) => ({ ...prev, sortOrder: Number(event.target.value || 0) }))} className="input-base" />
+        <label className="space-y-2 block">
+          <span className="form-label">Unit Name</span>
+          <input type="text" placeholder="Enter unit name" value={unitForm.name} onChange={(event) => setUnitForm((prev) => ({ ...prev, name: event.target.value }))} className="input-base" required />
+        </label>
+        <label className="space-y-2 block">
+          <span className="form-label">Unit Code</span>
+          <input type="text" placeholder="Example: kg" value={unitForm.code} onChange={(event) => setUnitForm((prev) => ({ ...prev, code: normalizeValue(event.target.value) }))} className="input-base" required />
+        </label>
+        <label className="space-y-2 block">
+          <span className="form-label">Sort Order</span>
+          <input type="number" placeholder="Enter sort order" value={unitForm.sortOrder} onChange={(event) => setUnitForm((prev) => ({ ...prev, sortOrder: Number(event.target.value || 0) }))} className="input-base" />
+        </label>
         <div className="flex flex-wrap gap-3">
           <button type="submit" disabled={submitting || !canManageInventory} className="btn-primary">{canManageInventory ? (submitting ? "Saving..." : editingUnitId ? "Update Unit" : "Create Unit") : "Admin/Manager Only"}</button>
           <button type="button" onClick={resetUnitForm} className="btn-outline">Reset</button>

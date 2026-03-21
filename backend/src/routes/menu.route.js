@@ -2,6 +2,7 @@ const router = require("express").Router();
 const {
     getPublicMenu,
     getAdminMenuData,
+    getPlannerMenuData,
     updateMenuPdf,
     createCategory,
     updateCategory,
@@ -18,6 +19,7 @@ const { authorizeRoles } = require("../middlewares/authorize");
 
 router.get("/public", getPublicMenu);
 router.get("/admin-data", authenticate, authorizeRoles("admin", "manager"), getAdminMenuData);
+router.get("/planner-data", authenticate, authorizeRoles("admin", "manager", "kitchen", "cashier"), getPlannerMenuData);
 router.put("/pdf", authenticate, authorizeRoles("admin"), updateMenuPdf);
 
 router.post("/categories", authenticate, authorizeRoles("admin", "manager"), createCategory);

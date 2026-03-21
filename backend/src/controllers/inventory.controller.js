@@ -1,6 +1,7 @@
 const Inventory = require("../models/inventory.model");
 const InventoryCategory = require("../models/inventoryCategory.model");
 const InventoryUnit = require("../models/inventoryUnit.model");
+const InventoryTransaction = require("../models/inventoryTransaction.model");
 const { defaultInventoryCategories, defaultInventoryUnits } = require("../constants/inventoryMetadata");
 const { executeWithRetry } = require("../utils/transactionManager");
 
@@ -112,6 +113,45 @@ const buildInventoryQuery = ({ category, status = "all", sortBy = "name" }) => {
   return { query, sortOption };
 };
 
+const createInventoryTransaction = async (
+  {
+    inventoryItem,
+    quantity,
+    direction,
+    source,
+    reason = "",
+    notes = "",
+    performedBy = null,
+    order = null,
+    menuItem = null,
+    menuItemName = "",
+    eventContext = "",
+  },
+  session = null
+) => {
+  if (!inventoryItem?._id || !Number.isFinite(Number(quantity)) || Number(quantity) <= 0) return null;
+
+  return InventoryTransaction.create(
+    [
+      {
+        inventoryItem: inventoryItem._id,
+        quantity: Number(quantity),
+        direction,
+        source,
+        reason,
+        notes,
+        resultingStock: Number(inventoryItem.currentStock || 0),
+        performedBy,
+        order,
+        menuItem,
+        menuItemName,
+        eventContext,
+      },
+    ],
+    session ? { session } : undefined
+  );
+};
+
 exports.createInventory = async (req, res) => {
   try {
     const { name, description, category, unit, currentStock, minimumThreshold, maximumStock, unitCost, supplier, location } = req.body;
@@ -132,6 +172,16 @@ exports.createInventory = async (req, res) => {
       unitCost,
       supplier,
       location,
+    });
+
+    await createInventoryTransaction({
+      inventoryItem: inventory,
+      quantity: Number(currentStock || 0),
+      direction: "in",
+      source: "item_created",
+      reason: "Initial inventory item creation",
+      notes: description || "",
+      performedBy: req.user?._id || null,
     });
 
     res.status(201).json({ message: "Inventory item created", item: inventory });
@@ -224,10 +274,15 @@ exports.updateInventory = async (req, res) => {
 exports.updateStock = async (req, res) => {
   try {
     const { id } = req.params;
-    const { quantity, type } = req.body;
+    const { quantity, type, reason = "", notes = "" } = req.body;
+    const normalizedQuantity = Number(quantity);
 
-    if (!quantity || !type) {
+    if (!normalizedQuantity || !type) {
       return res.status(400).json({ message: "Quantity and type are required" });
+    }
+
+    if (!["add", "subtract"].includes(type)) {
+      return res.status(400).json({ message: "Stock update type must be add or subtract" });
     }
 
     const updatedItem = await executeWithRetry(
@@ -238,8 +293,8 @@ exports.updateStock = async (req, res) => {
         }
 
         let newStock = item.currentStock;
-        if (type === "add") newStock += quantity;
-        if (type === "subtract") newStock -= quantity;
+        if (type === "add") newStock += normalizedQuantity;
+        if (type === "subtract") newStock -= normalizedQuantity;
 
         if (newStock < 0) {
           throw new Error("Stock cannot be negative");
@@ -249,6 +304,18 @@ exports.updateStock = async (req, res) => {
         if (type === "add") item.lastRestocked = new Date();
 
         await item.save({ session });
+        await createInventoryTransaction(
+          {
+            inventoryItem: item,
+            quantity: normalizedQuantity,
+            direction: type === "add" ? "in" : "out",
+            source: "manual_adjustment",
+            reason: String(reason || "").trim() || (type === "add" ? "Manual restock" : "Manual usage"),
+            notes: String(notes || "").trim(),
+            performedBy: req.user?._id || null,
+          },
+          session
+        );
         return item;
       },
       3,
@@ -269,6 +336,23 @@ exports.getLowStockItems = async (req, res) => {
     }).sort({ currentStock: 1 });
 
     res.status(200).json({ items });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getInventoryTransactions = async (req, res) => {
+  try {
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit || 30)));
+    const transactions = await InventoryTransaction.find()
+      .populate("inventoryItem", "name unit category")
+      .populate("performedBy", "name roles")
+      .populate("order", "orderNumber serviceType tableNumber")
+      .populate("menuItem", "name course")
+      .sort({ createdAt: -1 })
+      .limit(limit);
+
+    res.status(200).json({ transactions });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

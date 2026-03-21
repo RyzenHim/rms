@@ -47,6 +47,11 @@ const menuItemSchema = new mongoose.Schema(
             enum: ["veg", "non_veg"],
             default: "non_veg",
         },
+        course: {
+            type: String,
+            enum: ["starter", "main", "beverage", "dessert"],
+            default: "main",
+        },
         image: {
             type: String,
             default: "",
@@ -85,6 +90,16 @@ const menuItemSchema = new mongoose.Schema(
             type: [String],
             default: [],
         },
+        suitablePartyTypes: {
+            type: [String],
+            default: [],
+        },
+        planningPortionFactor: {
+            type: Number,
+            min: 0.1,
+            max: 5,
+            default: 1,
+        },
         rating: {
             type: Number,
             min: 0,
@@ -121,6 +136,28 @@ const menuItemSchema = new mongoose.Schema(
                         type: Number,
                         required: true,
                         min: 0,
+                    },
+                },
+            ],
+            default: [],
+        },
+        recipeIngredients: {
+            type: [
+                {
+                    inventoryItem: {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: "Inventory",
+                        required: true,
+                    },
+                    quantity: {
+                        type: Number,
+                        required: true,
+                        min: 0.001,
+                    },
+                    notes: {
+                        type: String,
+                        default: "",
+                        trim: true,
                     },
                 },
             ],

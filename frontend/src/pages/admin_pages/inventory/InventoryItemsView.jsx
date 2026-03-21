@@ -55,30 +55,60 @@ const InventoryItemsView = ({
 
         <form onSubmit={handleItemSubmit} className="space-y-5">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <input type="text" placeholder="Item Name" value={itemForm.name} onChange={(event) => setItemForm((prev) => ({ ...prev, name: event.target.value }))} className="input-base" required />
-            <select value={itemForm.category} onChange={(event) => setItemForm((prev) => ({ ...prev, category: event.target.value }))} className="input-base" required>
-              <option value="">Select category</option>
-              {activeCategories.map((category) => (
-                <option key={category._id} value={category.name}>
-                  {titleize(category.name)}
-                </option>
-              ))}
-            </select>
-            <select value={itemForm.unit} onChange={(event) => setItemForm((prev) => ({ ...prev, unit: event.target.value }))} className="input-base" required>
-              <option value="">Select unit</option>
-              {activeUnits.map((unit) => (
-                <option key={unit._id} value={unit.code}>
-                  {unit.name} ({unit.code})
-                </option>
-              ))}
-            </select>
-            <input type="number" placeholder="Current Stock" value={itemForm.currentStock} onChange={(event) => setItemForm((prev) => ({ ...prev, currentStock: Number(event.target.value || 0) }))} className="input-base" required />
-            <input type="number" placeholder="Minimum Threshold" value={itemForm.minimumThreshold} onChange={(event) => setItemForm((prev) => ({ ...prev, minimumThreshold: Number(event.target.value || 0) }))} className="input-base" required />
-            <input type="number" placeholder="Maximum Stock" value={itemForm.maximumStock} onChange={(event) => setItemForm((prev) => ({ ...prev, maximumStock: Number(event.target.value || 0) }))} className="input-base" required />
-            <input type="number" placeholder="Unit Cost (Rs)" value={itemForm.unitCost} onChange={(event) => setItemForm((prev) => ({ ...prev, unitCost: Number(event.target.value || 0) }))} className="input-base" step="0.01" required />
-            <input type="text" placeholder="Supplier Name" value={itemForm.supplier} onChange={(event) => setItemForm((prev) => ({ ...prev, supplier: event.target.value }))} className="input-base" />
-            <input type="text" placeholder="Storage Location" value={itemForm.location} onChange={(event) => setItemForm((prev) => ({ ...prev, location: event.target.value }))} className="input-base" />
-            <textarea placeholder="Description" value={itemForm.description} onChange={(event) => setItemForm((prev) => ({ ...prev, description: event.target.value }))} className="input-base md:col-span-2 xl:col-span-3 min-h-[6rem]" rows={3} />
+            <label className="space-y-2">
+              <span className="form-label">Item Name</span>
+              <input type="text" placeholder="Enter item name" value={itemForm.name} onChange={(event) => setItemForm((prev) => ({ ...prev, name: event.target.value }))} className="input-base" required />
+            </label>
+            <label className="space-y-2">
+              <span className="form-label">Category</span>
+              <select value={itemForm.category} onChange={(event) => setItemForm((prev) => ({ ...prev, category: event.target.value }))} className="input-base" required>
+                <option value="">Select category</option>
+                {activeCategories.map((category) => (
+                  <option key={category._id} value={category.name}>
+                    {titleize(category.name)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-2">
+              <span className="form-label">Unit</span>
+              <select value={itemForm.unit} onChange={(event) => setItemForm((prev) => ({ ...prev, unit: event.target.value }))} className="input-base" required>
+                <option value="">Select unit</option>
+                {activeUnits.map((unit) => (
+                  <option key={unit._id} value={unit.code}>
+                    {unit.name} ({unit.code})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-2">
+              <span className="form-label">Current Stock</span>
+              <input type="number" placeholder="Enter current stock" value={itemForm.currentStock} onChange={(event) => setItemForm((prev) => ({ ...prev, currentStock: Number(event.target.value || 0) }))} className="input-base" required />
+            </label>
+            <label className="space-y-2">
+              <span className="form-label">Minimum Threshold</span>
+              <input type="number" placeholder="Enter minimum threshold" value={itemForm.minimumThreshold} onChange={(event) => setItemForm((prev) => ({ ...prev, minimumThreshold: Number(event.target.value || 0) }))} className="input-base" required />
+            </label>
+            <label className="space-y-2">
+              <span className="form-label">Maximum Stock</span>
+              <input type="number" placeholder="Enter maximum stock" value={itemForm.maximumStock} onChange={(event) => setItemForm((prev) => ({ ...prev, maximumStock: Number(event.target.value || 0) }))} className="input-base" required />
+            </label>
+            <label className="space-y-2">
+              <span className="form-label">Unit Cost (Rs)</span>
+              <input type="number" placeholder="Enter unit cost" value={itemForm.unitCost} onChange={(event) => setItemForm((prev) => ({ ...prev, unitCost: Number(event.target.value || 0) }))} className="input-base" step="0.01" required />
+            </label>
+            <label className="space-y-2">
+              <span className="form-label">Supplier Name</span>
+              <input type="text" placeholder="Enter supplier name" value={itemForm.supplier} onChange={(event) => setItemForm((prev) => ({ ...prev, supplier: event.target.value }))} className="input-base" />
+            </label>
+            <label className="space-y-2">
+              <span className="form-label">Storage Location</span>
+              <input type="text" placeholder="Enter storage location" value={itemForm.location} onChange={(event) => setItemForm((prev) => ({ ...prev, location: event.target.value }))} className="input-base" />
+            </label>
+            <label className="space-y-2 md:col-span-2 xl:col-span-3">
+              <span className="form-label">Description</span>
+              <textarea placeholder="Add item description" value={itemForm.description} onChange={(event) => setItemForm((prev) => ({ ...prev, description: event.target.value }))} className="input-base min-h-[6rem]" rows={3} />
+            </label>
           </div>
 
           <div className="flex flex-wrap gap-3">

@@ -279,64 +279,121 @@ const AdminEmployees = () => {
 
           <div className="mt-4 grid gap-3">
             <div className="grid gap-3 sm:grid-cols-2">
-              <input type="text" placeholder="Full name" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="input-base" required />
-              <input type="email" placeholder="Work email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} className="input-base" required />
+              <label className="space-y-2">
+                <span className="form-label">Full Name</span>
+                <input type="text" placeholder="Enter full name" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="input-base" required />
+              </label>
+              <label className="space-y-2">
+                <span className="form-label">Work Email</span>
+                <input type="email" placeholder="Enter work email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} className="input-base" required />
+              </label>
             </div>
 
             {!editingId ? (
-              <input type="password" placeholder="Temporary password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} className="input-base" required />
+              <label className="space-y-2">
+                <span className="form-label">Temporary Password</span>
+                <input type="password" placeholder="Enter temporary password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} className="input-base" required />
+              </label>
             ) : null}
 
             <div className="grid gap-3 md:grid-cols-3">
-              <select value={form.role} onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))} className="input-base">
-                {roleOptions.map((role) => (
-                  <option key={role} value={role}>
-                    {role}
-                  </option>
-                ))}
-              </select>
-              <input type="text" placeholder="Employee code" value={form.employeeCode} onChange={(e) => setForm((p) => ({ ...p, employeeCode: e.target.value }))} className="input-base" />
-              <input type="text" placeholder="Department" value={form.department} onChange={(e) => setForm((p) => ({ ...p, department: e.target.value }))} className="input-base" />
+              <label className="space-y-2">
+                <span className="form-label">Role</span>
+                <select value={form.role} onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))} className="input-base">
+                  {roleOptions.map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-2">
+                <span className="form-label">Employee Code</span>
+                <input type="text" placeholder="Enter employee code" value={form.employeeCode} onChange={(e) => setForm((p) => ({ ...p, employeeCode: e.target.value }))} className="input-base" />
+              </label>
+              <label className="space-y-2">
+                <span className="form-label">Department</span>
+                <input type="text" placeholder="Enter department" value={form.department} onChange={(e) => setForm((p) => ({ ...p, department: e.target.value }))} className="input-base" />
+              </label>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <input type="text" placeholder="Phone number" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} className="input-base" />
-              <input type="number" min="0" placeholder="Experience years" value={form.experienceYears} onChange={(e) => setForm((p) => ({ ...p, experienceYears: e.target.value }))} className="input-base" />
+              <label className="space-y-2">
+                <span className="form-label">Phone Number</span>
+                <input type="text" placeholder="Enter phone number" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} className="input-base" />
+              </label>
+              <label className="space-y-2">
+                <span className="form-label">Experience Years</span>
+                <input type="number" min="0" placeholder="Enter experience years" value={form.experienceYears} onChange={(e) => setForm((p) => ({ ...p, experienceYears: e.target.value }))} className="input-base" />
+              </label>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <input type="text" placeholder="Emergency contact name" value={form.emergencyContactName} onChange={(e) => setForm((p) => ({ ...p, emergencyContactName: e.target.value }))} className="input-base" />
-              <input type="text" placeholder="Emergency contact phone" value={form.emergencyContactPhone} onChange={(e) => setForm((p) => ({ ...p, emergencyContactPhone: e.target.value }))} className="input-base" />
+              <label className="space-y-2">
+                <span className="form-label">Emergency Contact Name</span>
+                <input type="text" placeholder="Enter emergency contact name" value={form.emergencyContactName} onChange={(e) => setForm((p) => ({ ...p, emergencyContactName: e.target.value }))} className="input-base" />
+              </label>
+              <label className="space-y-2">
+                <span className="form-label">Emergency Contact Phone</span>
+                <input type="text" placeholder="Enter emergency contact phone" value={form.emergencyContactPhone} onChange={(e) => setForm((p) => ({ ...p, emergencyContactPhone: e.target.value }))} className="input-base" />
+              </label>
             </div>
 
-            <textarea placeholder="Address" value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} className="input-base min-h-[5rem]" rows={2} />
+            <label className="space-y-2">
+              <span className="form-label">Address</span>
+              <textarea placeholder="Enter address" value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} className="input-base min-h-[5rem]" rows={2} />
+            </label>
 
             <div className="grid gap-3 md:grid-cols-3">
-              <select value={form.gender} onChange={(e) => setForm((p) => ({ ...p, gender: e.target.value }))} className="input-base">
-                <option value="">Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-              <input type="text" placeholder="Blood group" value={form.bloodGroup} onChange={(e) => setForm((p) => ({ ...p, bloodGroup: e.target.value }))} className="input-base" />
-              <input type="date" value={form.dateOfBirth} onChange={(e) => setForm((p) => ({ ...p, dateOfBirth: e.target.value }))} className="input-base" />
+              <label className="space-y-2">
+                <span className="form-label">Gender</span>
+                <select value={form.gender} onChange={(e) => setForm((p) => ({ ...p, gender: e.target.value }))} className="input-base">
+                  <option value="">Select gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              <label className="space-y-2">
+                <span className="form-label">Blood Group</span>
+                <input type="text" placeholder="Enter blood group" value={form.bloodGroup} onChange={(e) => setForm((p) => ({ ...p, bloodGroup: e.target.value }))} className="input-base" />
+              </label>
+              <label className="space-y-2">
+                <span className="form-label">Date of Birth</span>
+                <input type="date" value={form.dateOfBirth} onChange={(e) => setForm((p) => ({ ...p, dateOfBirth: e.target.value }))} className="input-base" />
+              </label>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <input type="text" placeholder="ID proof type" value={form.idProofType} onChange={(e) => setForm((p) => ({ ...p, idProofType: e.target.value }))} className="input-base" />
-              <input type="text" placeholder="ID proof number" value={form.idProofNumber} onChange={(e) => setForm((p) => ({ ...p, idProofNumber: e.target.value }))} className="input-base" />
+              <label className="space-y-2">
+                <span className="form-label">ID Proof Type</span>
+                <input type="text" placeholder="Enter ID proof type" value={form.idProofType} onChange={(e) => setForm((p) => ({ ...p, idProofType: e.target.value }))} className="input-base" />
+              </label>
+              <label className="space-y-2">
+                <span className="form-label">ID Proof Number</span>
+                <input type="text" placeholder="Enter ID proof number" value={form.idProofNumber} onChange={(e) => setForm((p) => ({ ...p, idProofNumber: e.target.value }))} className="input-base" />
+              </label>
             </div>
 
             <div className="grid gap-3 md:grid-cols-3">
-              <input type="number" min="0" placeholder="Salary" value={form.salary} onChange={(e) => setForm((p) => ({ ...p, salary: e.target.value }))} className="input-base" />
-              <select value={form.shift} onChange={(e) => setForm((p) => ({ ...p, shift: e.target.value }))} className="input-base">
-                {["morning", "evening", "night"].map((shift) => (
-                  <option key={shift} value={shift}>
-                    {shift}
-                  </option>
-                ))}
-              </select>
-              <input type="date" value={form.joiningDate} onChange={(e) => setForm((p) => ({ ...p, joiningDate: e.target.value }))} className="input-base" />
+              <label className="space-y-2">
+                <span className="form-label">Salary</span>
+                <input type="number" min="0" placeholder="Enter salary" value={form.salary} onChange={(e) => setForm((p) => ({ ...p, salary: e.target.value }))} className="input-base" />
+              </label>
+              <label className="space-y-2">
+                <span className="form-label">Shift</span>
+                <select value={form.shift} onChange={(e) => setForm((p) => ({ ...p, shift: e.target.value }))} className="input-base">
+                  {["morning", "evening", "night"].map((shift) => (
+                    <option key={shift} value={shift}>
+                      {shift}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-2">
+                <span className="form-label">Joining Date</span>
+                <input type="date" value={form.joiningDate} onChange={(e) => setForm((p) => ({ ...p, joiningDate: e.target.value }))} className="input-base" />
+              </label>
             </div>
 
             <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">

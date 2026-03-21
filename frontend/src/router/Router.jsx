@@ -186,6 +186,7 @@ const router = createBrowserRouter([
           { index: true, element: withLazy(<CashierDashboard />) },
           { path: "billing", element: withLazy(<CashierBilling />) },
           { path: "orders", element: withLazy(<RoleOrders roleLabel="Cashier" />) },
+          { path: "inventory", element: withLazy(<AdminInventory />) },
           { path: "settings", element: withLazy(<RoleSettings roleLabel="Cashier" />) },
           { path: "profile", element: withLazy(<ProfilePage />) },
         ],

@@ -1,5 +1,7 @@
 export const chartPalette = ["#0ea5e9", "#22c55e", "#f97316", "#8b5cf6", "#eab308", "#14b8a6"];
 export const partyTypes = ["Birthday", "Anniversary", "Corporate", "Wedding", "Family Gathering", "Festival Dinner"];
+export const serviceStyles = ["Buffet", "Plated", "Live Counter", "Family Style"];
+export const menuCourses = ["starter", "main", "beverage", "dessert"];
 
 export const initialItemForm = {
   name: "",
@@ -40,6 +42,7 @@ export const navGroups = [
     title: "Catalog",
     items: [
       { id: "planner", label: "Party Planner", icon: "calendar" },
+      { id: "stock-history", label: "Stock History", icon: "bar" },
       { id: "categories", label: "Categories", icon: "layers" },
       { id: "units", label: "Units", icon: "box" },
       { id: "scanner", label: "Scanner Drafts", icon: "camera" },
@@ -49,7 +52,6 @@ export const navGroups = [
     id: "future",
     title: "Future Features",
     items: [
-      { id: "stock-history", label: "Stock History", icon: "bar", disabled: true },
       { id: "purchase-orders", label: "Purchase Orders", icon: "archive", disabled: true },
       { id: "suppliers", label: "Suppliers", icon: "database", disabled: true },
     ],
@@ -142,11 +144,38 @@ export const parseDraftsFromScan = (text, categories, units) => {
 };
 
 export const inferCourse = (item = {}) => {
+  if (menuCourses.includes(item.course)) return item.course;
   const combined = normalizeValue(`${item.name || ""} ${item.category?.name || ""} ${item.subCategory?.name || ""} ${item.heading || ""} ${item.subHeading || ""}`);
   if (/(drink|beverage|coffee|tea|juice|cola|soda|shake)/.test(combined)) return "beverage";
   if (/(dessert|sweet|cake|ice cream|icecream|brownie|gulab|halwa|kheer)/.test(combined)) return "dessert";
   if (/(snack|starter|appetizer|fries|popcorn|bucket|crispy|wings|tikka)/.test(combined)) return "starter";
   return "main";
+};
+
+export const normalizePartyType = (value = "") => value.toString().trim();
+
+export const partyDemandMultipliers = {
+  Birthday: 1.05,
+  Anniversary: 0.95,
+  Corporate: 1.1,
+  Wedding: 1.2,
+  "Family Gathering": 1,
+  "Festival Dinner": 1.15,
+  default: 1,
+};
+
+export const serviceStyleMultipliers = {
+  Buffet: 1.12,
+  Plated: 1,
+  "Live Counter": 1.08,
+  "Family Style": 1.04,
+};
+
+export const defaultCoursePortionFactor = {
+  starter: 0.7,
+  main: 1,
+  beverage: 1,
+  dessert: 0.65,
 };
 
 export const plannerProfiles = {

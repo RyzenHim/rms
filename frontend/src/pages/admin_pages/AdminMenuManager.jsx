@@ -2,13 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { FiChevronDown, FiChevronUp, FiFileText, FiFolder, FiLayers, FiPackage, FiSearch } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 import menuService from "../../services/menu_Service";
+import inventoryService from "../../services/inventory_Service";
 
 const emptyCategoryForm = { name: "", description: "", image: "", sortOrder: 0, isActive: true };
 const emptySubCategoryForm = { name: "", category: "", heading: "", subHeading: "", description: "", image: "", sortOrder: 0, isActive: true };
 const emptyItemForm = {
   name: "", heading: "", subHeading: "", description: "", shortDescription: "", category: "", subCategory: "", foodType: "non_veg",
-  image: "", price: "", compareAtPrice: "", discountLabel: "", prepTimeMinutes: 20, spiceLevel: "none", stockStatus: "in_stock",
-  isFeatured: false, isActive: true, portions: [{ label: "", quantityText: "", price: "" }],
+  course: "main", image: "", price: "", compareAtPrice: "", discountLabel: "", prepTimeMinutes: 20, spiceLevel: "none", stockStatus: "in_stock",
+  suitablePartyTypes: [], planningPortionFactor: 1,
+  isFeatured: false, isActive: true, portions: [{ label: "", quantityText: "", price: "" }], recipeIngredients: [{ inventoryItem: "", quantity: "", notes: "" }],
 };
 
 const Section = ({ title, description, icon: Icon, open, onToggle, children }) => (
@@ -39,6 +41,7 @@ const AdminMenuManager = () => {
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
   const [items, setItems] = useState([]);
+  const [inventoryItems, setInventoryItems] = useState([]);
   const [pdfMeta, setPdfMeta] = useState(null);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [categoryForm, setCategoryForm] = useState(emptyCategoryForm);
@@ -54,7 +57,7 @@ const AdminMenuManager = () => {
   const filteredSubCategories = useMemo(() => (!itemForm.category ? subCategories : subCategories.filter((s) => s.category?._id === itemForm.category)), [subCategories, itemForm.category]);
   const filteredItems = useMemo(() => {
     const search = itemSearch.toLowerCase();
-    return items.filter((item) => `${item.name || ""} ${item.category?.name || ""} ${item.subCategory?.name || ""} ${item.foodType || ""}`.toLowerCase().includes(search));
+    return items.filter((item) => `${item.name || ""} ${item.category?.name || ""} ${item.subCategory?.name || ""} ${item.foodType || ""} ${item.course || ""} ${(item.suitablePartyTypes || []).join(" ")}`.toLowerCase().includes(search));
   }, [itemSearch, items]);
 
   const loadData = async () => {
@@ -65,6 +68,8 @@ const AdminMenuManager = () => {
       setSubCategories(data.subCategories || []);
       setItems(data.items || []);
       setPdfMeta(data.menuPdf || null);
+      const inventoryData = await inventoryService.getInventory(token);
+      setInventoryItems(inventoryData?.items || []);
     } catch (err) {
       setMessage({ type: "error", text: err?.response?.data?.message || "Unable to load menu management data" });
     } finally {
@@ -151,7 +156,12 @@ const AdminMenuManager = () => {
         price: itemForm.price === "" ? "" : Number(itemForm.price),
         compareAtPrice: itemForm.compareAtPrice === "" ? "" : Number(itemForm.compareAtPrice),
         prepTimeMinutes: itemForm.prepTimeMinutes === "" ? 20 : Number(itemForm.prepTimeMinutes),
+        planningPortionFactor: itemForm.planningPortionFactor === "" ? 1 : Number(itemForm.planningPortionFactor),
+        suitablePartyTypes: itemForm.suitablePartyTypes,
         portions: itemForm.portions.filter((p) => p.label && p.price !== "").map((p) => ({ ...p, price: Number(p.price) })),
+        recipeIngredients: itemForm.recipeIngredients
+          .filter((ingredient) => ingredient.inventoryItem && ingredient.quantity !== "")
+          .map((ingredient) => ({ ...ingredient, quantity: Number(ingredient.quantity) })),
       };
       if (editingItemId) await menuService.updateMenuItem(token, editingItemId, payload);
       else await menuService.createMenuItem(token, payload);
@@ -179,10 +189,11 @@ const AdminMenuManager = () => {
     setEditingItemId(item._id);
     setItemForm({
       name: item.name || "", heading: item.heading || "", subHeading: item.subHeading || "", description: item.description || "", shortDescription: item.shortDescription || "",
-      category: item.category?._id || "", subCategory: item.subCategory?._id || "", foodType: item.foodType || "non_veg", image: item.image || "", price: item.price ?? "",
+      category: item.category?._id || "", subCategory: item.subCategory?._id || "", foodType: item.foodType || "non_veg", course: item.course || "main", image: item.image || "", price: item.price ?? "",
       compareAtPrice: item.compareAtPrice ?? "", discountLabel: item.discountLabel || "", prepTimeMinutes: item.prepTimeMinutes ?? 20, spiceLevel: item.spiceLevel || "none",
-      stockStatus: item.stockStatus || "in_stock", isFeatured: Boolean(item.isFeatured), isActive: Boolean(item.isActive),
+      stockStatus: item.stockStatus || "in_stock", isFeatured: Boolean(item.isFeatured), isActive: Boolean(item.isActive), suitablePartyTypes: item.suitablePartyTypes || [], planningPortionFactor: item.planningPortionFactor ?? 1,
       portions: item.portions?.length ? item.portions.map((p) => ({ label: p.label || "", quantityText: p.quantityText || "", price: p.price ?? "" })) : [{ label: "", quantityText: "", price: "" }],
+      recipeIngredients: item.recipeIngredients?.length ? item.recipeIngredients.map((ingredient) => ({ inventoryItem: ingredient.inventoryItem?._id || "", quantity: ingredient.quantity ?? "", notes: ingredient.notes || "" })) : [{ inventoryItem: "", quantity: "", notes: "" }],
     });
     setOpen((prev) => ({ ...prev, itemForm: true }));
   };
@@ -193,6 +204,9 @@ const AdminMenuManager = () => {
   const updatePortion = (index, key, value) => setItemForm((prev) => ({ ...prev, portions: prev.portions.map((p, i) => (i === index ? { ...p, [key]: value } : p)) }));
   const addPortion = () => setItemForm((prev) => ({ ...prev, portions: [...prev.portions, { label: "", quantityText: "", price: "" }] }));
   const removePortion = (index) => setItemForm((prev) => ({ ...prev, portions: prev.portions.filter((_, i) => i !== index) }));
+  const updateRecipeIngredient = (index, key, value) => setItemForm((prev) => ({ ...prev, recipeIngredients: prev.recipeIngredients.map((ingredient, ingredientIndex) => (ingredientIndex === index ? { ...ingredient, [key]: value } : ingredient)) }));
+  const addRecipeIngredient = () => setItemForm((prev) => ({ ...prev, recipeIngredients: [...prev.recipeIngredients, { inventoryItem: "", quantity: "", notes: "" }] }));
+  const removeRecipeIngredient = (index) => setItemForm((prev) => ({ ...prev, recipeIngredients: prev.recipeIngredients.filter((_, ingredientIndex) => ingredientIndex !== index) }));
 
   return (
     <div className="space-y-6">
@@ -225,11 +239,23 @@ const AdminMenuManager = () => {
       <div className="grid gap-6 xl:grid-cols-2">
         <Section title={editingCategoryId ? "Edit Category" : "Create Category"} description="Opens only when you need to edit." icon={FiFolder} open={open.categoryForm} onToggle={() => setOpen((prev) => ({ ...prev, categoryForm: !prev.categoryForm }))}>
           <form onSubmit={handleCategorySubmit} className="grid gap-3">
-            <input type="text" placeholder="Category Name" value={categoryForm.name} onChange={(e) => setCategoryForm((prev) => ({ ...prev, name: e.target.value }))} className="input-base" required />
-            <input type="text" placeholder="Image URL" value={categoryForm.image} onChange={(e) => setCategoryForm((prev) => ({ ...prev, image: e.target.value }))} className="input-base" />
-            <textarea placeholder="Description" value={categoryForm.description} onChange={(e) => setCategoryForm((prev) => ({ ...prev, description: e.target.value }))} className="input-base min-h-[5rem]" rows={2} />
+            <label className="space-y-2">
+              <span className="form-label">Category Name</span>
+              <input type="text" placeholder="Enter category name" value={categoryForm.name} onChange={(e) => setCategoryForm((prev) => ({ ...prev, name: e.target.value }))} className="input-base" required />
+            </label>
+            <label className="space-y-2">
+              <span className="form-label">Image URL</span>
+              <input type="text" placeholder="Enter image URL" value={categoryForm.image} onChange={(e) => setCategoryForm((prev) => ({ ...prev, image: e.target.value }))} className="input-base" />
+            </label>
+            <label className="space-y-2">
+              <span className="form-label">Description</span>
+              <textarea placeholder="Add category description" value={categoryForm.description} onChange={(e) => setCategoryForm((prev) => ({ ...prev, description: e.target.value }))} className="input-base min-h-[5rem]" rows={2} />
+            </label>
             <div className="grid gap-3 sm:grid-cols-2">
-              <input type="number" placeholder="Sort Order" value={categoryForm.sortOrder} onChange={(e) => setCategoryForm((prev) => ({ ...prev, sortOrder: e.target.value }))} className="input-base" />
+              <label className="space-y-2">
+                <span className="form-label">Sort Order</span>
+                <input type="number" placeholder="Enter sort order" value={categoryForm.sortOrder} onChange={(e) => setCategoryForm((prev) => ({ ...prev, sortOrder: e.target.value }))} className="input-base" />
+              </label>
               <label className="glass-subtle flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200"><input type="checkbox" checked={categoryForm.isActive} onChange={(e) => setCategoryForm((prev) => ({ ...prev, isActive: e.target.checked }))} />Active category</label>
             </div>
             <div className="flex gap-3">{editingCategoryId ? <button type="button" onClick={resetCategoryForm} className="btn-outline">Cancel</button> : null}<button disabled={categorySaving} className="btn-primary">{categorySaving ? "Saving..." : editingCategoryId ? "Update Category" : "Create Category"}</button></div>
@@ -244,11 +270,38 @@ const AdminMenuManager = () => {
       <div className="grid gap-6 xl:grid-cols-2">
         <Section title={editingSubCategoryId ? "Edit Sub-Category" : "Create Sub-Category"} description="Consistent theme and spacing." icon={FiLayers} open={open.subForm} onToggle={() => setOpen((prev) => ({ ...prev, subForm: !prev.subForm }))}>
           <form onSubmit={handleSubCategorySubmit} className="grid gap-3">
-            <input type="text" placeholder="Sub-Category Name" value={subCategoryForm.name} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, name: e.target.value }))} className="input-base" required />
-            <select value={subCategoryForm.category} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, category: e.target.value }))} className="input-base" required><option value="">Select Parent Category</option>{activeCategories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select>
-            <div className="grid gap-3 sm:grid-cols-2"><input type="text" placeholder="Heading" value={subCategoryForm.heading} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, heading: e.target.value }))} className="input-base" /><input type="text" placeholder="Sub Heading" value={subCategoryForm.subHeading} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, subHeading: e.target.value }))} className="input-base" /></div>
-            <textarea placeholder="Description" value={subCategoryForm.description} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, description: e.target.value }))} className="input-base min-h-[5rem]" rows={2} />
-            <div className="grid gap-3 sm:grid-cols-2"><input type="text" placeholder="Image URL" value={subCategoryForm.image} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, image: e.target.value }))} className="input-base" /><input type="number" placeholder="Sort Order" value={subCategoryForm.sortOrder} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, sortOrder: e.target.value }))} className="input-base" /></div>
+            <label className="space-y-2">
+              <span className="form-label">Sub-Category Name</span>
+              <input type="text" placeholder="Enter sub-category name" value={subCategoryForm.name} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, name: e.target.value }))} className="input-base" required />
+            </label>
+            <label className="space-y-2">
+              <span className="form-label">Parent Category</span>
+              <select value={subCategoryForm.category} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, category: e.target.value }))} className="input-base" required><option value="">Select parent category</option>{activeCategories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select>
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-2">
+                <span className="form-label">Heading</span>
+                <input type="text" placeholder="Enter heading" value={subCategoryForm.heading} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, heading: e.target.value }))} className="input-base" />
+              </label>
+              <label className="space-y-2">
+                <span className="form-label">Sub Heading</span>
+                <input type="text" placeholder="Enter sub heading" value={subCategoryForm.subHeading} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, subHeading: e.target.value }))} className="input-base" />
+              </label>
+            </div>
+            <label className="space-y-2">
+              <span className="form-label">Description</span>
+              <textarea placeholder="Add sub-category description" value={subCategoryForm.description} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, description: e.target.value }))} className="input-base min-h-[5rem]" rows={2} />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-2">
+                <span className="form-label">Image URL</span>
+                <input type="text" placeholder="Enter image URL" value={subCategoryForm.image} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, image: e.target.value }))} className="input-base" />
+              </label>
+              <label className="space-y-2">
+                <span className="form-label">Sort Order</span>
+                <input type="number" placeholder="Enter sort order" value={subCategoryForm.sortOrder} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, sortOrder: e.target.value }))} className="input-base" />
+              </label>
+            </div>
             <label className="glass-subtle flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200"><input type="checkbox" checked={subCategoryForm.isActive} onChange={(e) => setSubCategoryForm((prev) => ({ ...prev, isActive: e.target.checked }))} />Active sub-category</label>
             <div className="flex gap-3">{editingSubCategoryId ? <button type="button" onClick={resetSubCategoryForm} className="btn-outline">Cancel</button> : null}<button disabled={subCategorySaving} className="btn-primary">{subCategorySaving ? "Saving..." : editingSubCategoryId ? "Update Sub-Category" : "Create Sub-Category"}</button></div>
           </form>
@@ -262,16 +315,52 @@ const AdminMenuManager = () => {
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Section title={editingItemId ? "Edit Menu Item" : "Create Menu Item"} description="Main item editor." icon={FiPackage} open={open.itemForm} onToggle={() => setOpen((prev) => ({ ...prev, itemForm: !prev.itemForm }))}>
           <form onSubmit={handleItemSubmit} className="grid gap-3">
-            <input type="text" placeholder="Item Name" value={itemForm.name} onChange={(e) => setItemForm((prev) => ({ ...prev, name: e.target.value }))} className="input-base" required />
-            <div className="grid gap-3 sm:grid-cols-2"><input type="text" placeholder="Heading" value={itemForm.heading} onChange={(e) => setItemForm((prev) => ({ ...prev, heading: e.target.value }))} className="input-base" /><input type="text" placeholder="Sub Heading" value={itemForm.subHeading} onChange={(e) => setItemForm((prev) => ({ ...prev, subHeading: e.target.value }))} className="input-base" /></div>
-            <textarea placeholder="Description" value={itemForm.description} onChange={(e) => setItemForm((prev) => ({ ...prev, description: e.target.value }))} className="input-base min-h-[5rem]" rows={2} required />
-            <input type="text" placeholder="Short Description" value={itemForm.shortDescription} onChange={(e) => setItemForm((prev) => ({ ...prev, shortDescription: e.target.value }))} className="input-base" />
-            <div className="grid gap-3 sm:grid-cols-3"><select value={itemForm.category} onChange={(e) => setItemForm((prev) => ({ ...prev, category: e.target.value, subCategory: "" }))} className="input-base" required><option value="">Select Category</option>{activeCategories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select><select value={itemForm.subCategory} onChange={(e) => setItemForm((prev) => ({ ...prev, subCategory: e.target.value }))} className="input-base"><option value="">Sub-Category (optional)</option>{filteredSubCategories.map((subCategory) => <option key={subCategory._id} value={subCategory._id}>{subCategory.name}</option>)}</select><select value={itemForm.foodType} onChange={(e) => setItemForm((prev) => ({ ...prev, foodType: e.target.value }))} className="input-base"><option value="veg">Veg</option><option value="non_veg">Non-Veg</option></select></div>
-            <input type="text" placeholder="Image URL" value={itemForm.image} onChange={(e) => setItemForm((prev) => ({ ...prev, image: e.target.value }))} className="input-base" />
-            <div className="grid gap-3 sm:grid-cols-2"><input type="number" step="0.01" min="0" placeholder="Base Price" value={itemForm.price} onChange={(e) => setItemForm((prev) => ({ ...prev, price: e.target.value }))} className="input-base" required /><input type="number" step="0.01" min="0" placeholder="Compare At Price" value={itemForm.compareAtPrice} onChange={(e) => setItemForm((prev) => ({ ...prev, compareAtPrice: e.target.value }))} className="input-base" /></div>
-            <input type="text" placeholder="Discount Label" value={itemForm.discountLabel} onChange={(e) => setItemForm((prev) => ({ ...prev, discountLabel: e.target.value }))} className="input-base" />
-            <div className="glass-subtle rounded-[1.4rem] p-4"><div className="mb-3 flex items-center justify-between"><p className="text-sm font-black text-slate-900 dark:text-slate-50">Portions</p><button type="button" onClick={addPortion} className="glass-pill rounded-full px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200">Add Portion</button></div><div className="space-y-2">{itemForm.portions.map((portion, index) => <div key={`${portion.label}-${index}`} className="grid gap-2 lg:grid-cols-[1fr_1fr_120px_86px]"><input type="text" placeholder="Label" value={portion.label} onChange={(e) => updatePortion(index, "label", e.target.value)} className="input-base text-sm" /><input type="text" placeholder="Qty text" value={portion.quantityText} onChange={(e) => updatePortion(index, "quantityText", e.target.value)} className="input-base text-sm" /><input type="number" step="0.01" min="0" placeholder="Price" value={portion.price} onChange={(e) => updatePortion(index, "price", e.target.value)} className="input-base text-sm" /><button type="button" onClick={() => removePortion(index)} className="btn-danger text-xs">Remove</button></div>)}</div></div>
-            <div className="grid gap-3 sm:grid-cols-3"><input type="number" min="1" placeholder="Prep Time (mins)" value={itemForm.prepTimeMinutes} onChange={(e) => setItemForm((prev) => ({ ...prev, prepTimeMinutes: e.target.value }))} className="input-base" /><select value={itemForm.spiceLevel} onChange={(e) => setItemForm((prev) => ({ ...prev, spiceLevel: e.target.value }))} className="input-base">{["none", "mild", "medium", "hot", "extra_hot"].map((level) => <option key={level} value={level}>{level}</option>)}</select><select value={itemForm.stockStatus} onChange={(e) => setItemForm((prev) => ({ ...prev, stockStatus: e.target.value }))} className="input-base">{["in_stock", "low_stock", "out_of_stock"].map((status) => <option key={status} value={status}>{status}</option>)}</select></div>
+            <label className="space-y-2"><span className="form-label">Item Name</span><input type="text" placeholder="Enter item name" value={itemForm.name} onChange={(e) => setItemForm((prev) => ({ ...prev, name: e.target.value }))} className="input-base" required /></label>
+            <div className="grid gap-3 sm:grid-cols-2"><label className="space-y-2"><span className="form-label">Heading</span><input type="text" placeholder="Enter heading" value={itemForm.heading} onChange={(e) => setItemForm((prev) => ({ ...prev, heading: e.target.value }))} className="input-base" /></label><label className="space-y-2"><span className="form-label">Sub Heading</span><input type="text" placeholder="Enter sub heading" value={itemForm.subHeading} onChange={(e) => setItemForm((prev) => ({ ...prev, subHeading: e.target.value }))} className="input-base" /></label></div>
+            <label className="space-y-2"><span className="form-label">Description</span><textarea placeholder="Add item description" value={itemForm.description} onChange={(e) => setItemForm((prev) => ({ ...prev, description: e.target.value }))} className="input-base min-h-[5rem]" rows={2} required /></label>
+            <label className="space-y-2"><span className="form-label">Short Description</span><input type="text" placeholder="Enter short description" value={itemForm.shortDescription} onChange={(e) => setItemForm((prev) => ({ ...prev, shortDescription: e.target.value }))} className="input-base" /></label>
+            <div className="grid gap-3 sm:grid-cols-3"><label className="space-y-2"><span className="form-label">Category</span><select value={itemForm.category} onChange={(e) => setItemForm((prev) => ({ ...prev, category: e.target.value, subCategory: "" }))} className="input-base" required><option value="">Select category</option>{activeCategories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select></label><label className="space-y-2"><span className="form-label">Sub-Category</span><select value={itemForm.subCategory} onChange={(e) => setItemForm((prev) => ({ ...prev, subCategory: e.target.value }))} className="input-base"><option value="">Select sub-category</option>{filteredSubCategories.map((subCategory) => <option key={subCategory._id} value={subCategory._id}>{subCategory.name}</option>)}</select></label><label className="space-y-2"><span className="form-label">Food Type</span><select value={itemForm.foodType} onChange={(e) => setItemForm((prev) => ({ ...prev, foodType: e.target.value }))} className="input-base"><option value="veg">Veg</option><option value="non_veg">Non-Veg</option></select></label></div>
+            <div className="grid gap-3 sm:grid-cols-2"><label className="space-y-2"><span className="form-label">Planner Course</span><select value={itemForm.course} onChange={(e) => setItemForm((prev) => ({ ...prev, course: e.target.value }))} className="input-base"><option value="starter">Starter</option><option value="main">Main</option><option value="beverage">Beverage</option><option value="dessert">Dessert</option></select></label><label className="space-y-2"><span className="form-label">Expected Portions Per Guest</span><input type="number" step="0.1" min="0.1" max="5" placeholder="Enter planning portion factor" value={itemForm.planningPortionFactor} onChange={(e) => setItemForm((prev) => ({ ...prev, planningPortionFactor: e.target.value }))} className="input-base" /></label></div>
+            <label className="space-y-2"><span className="form-label">Suitable Party Types</span><select multiple value={itemForm.suitablePartyTypes} onChange={(e) => setItemForm((prev) => ({ ...prev, suitablePartyTypes: Array.from(e.target.selectedOptions, (option) => option.value) }))} className="input-base min-h-[9rem]">{["Birthday", "Anniversary", "Corporate", "Wedding", "Family Gathering", "Festival Dinner"].map((partyType) => <option key={partyType} value={partyType}>{partyType}</option>)}</select></label>
+            <label className="space-y-2"><span className="form-label">Image URL</span><input type="text" placeholder="Enter image URL" value={itemForm.image} onChange={(e) => setItemForm((prev) => ({ ...prev, image: e.target.value }))} className="input-base" /></label>
+            <div className="grid gap-3 sm:grid-cols-2"><label className="space-y-2"><span className="form-label">Base Price</span><input type="number" step="0.01" min="0" placeholder="Enter base price" value={itemForm.price} onChange={(e) => setItemForm((prev) => ({ ...prev, price: e.target.value }))} className="input-base" required /></label><label className="space-y-2"><span className="form-label">Compare At Price</span><input type="number" step="0.01" min="0" placeholder="Enter compare price" value={itemForm.compareAtPrice} onChange={(e) => setItemForm((prev) => ({ ...prev, compareAtPrice: e.target.value }))} className="input-base" /></label></div>
+            <label className="space-y-2"><span className="form-label">Discount Label</span><input type="text" placeholder="Enter discount label" value={itemForm.discountLabel} onChange={(e) => setItemForm((prev) => ({ ...prev, discountLabel: e.target.value }))} className="input-base" /></label>
+            <div className="glass-subtle rounded-[1.4rem] p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-black text-slate-900 dark:text-slate-50">Recipe Ingredients</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Map menu items to inventory ingredients so stock deducts automatically when orders are served.</p>
+                </div>
+                <button type="button" onClick={addRecipeIngredient} className="glass-pill rounded-full px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200">Add Ingredient</button>
+              </div>
+              <div className="space-y-3">
+                {itemForm.recipeIngredients.map((ingredient, index) => {
+                  const selectedInventory = inventoryItems.find((item) => item._id === ingredient.inventoryItem);
+                  return (
+                    <div key={`${ingredient.inventoryItem}-${index}`} className="grid gap-3 rounded-[1rem] border border-white/30 p-3 dark:border-white/10 lg:grid-cols-[1.4fr_120px_1fr_88px]">
+                      <label className="space-y-2">
+                        <span className="form-label">Inventory Item</span>
+                        <select value={ingredient.inventoryItem} onChange={(e) => updateRecipeIngredient(index, "inventoryItem", e.target.value)} className="input-base text-sm">
+                          <option value="">Select inventory item</option>
+                          {inventoryItems.map((inventoryItem) => <option key={inventoryItem._id} value={inventoryItem._id}>{inventoryItem.name} ({inventoryItem.unit})</option>)}
+                        </select>
+                      </label>
+                      <label className="space-y-2">
+                        <span className="form-label">Quantity</span>
+                        <input type="number" step="0.01" min="0" value={ingredient.quantity} onChange={(e) => updateRecipeIngredient(index, "quantity", e.target.value)} placeholder="Qty" className="input-base text-sm" />
+                      </label>
+                      <label className="space-y-2">
+                        <span className="form-label">Notes</span>
+                        <input type="text" value={ingredient.notes} onChange={(e) => updateRecipeIngredient(index, "notes", e.target.value)} placeholder={selectedInventory ? `Used in ${selectedInventory.unit}` : "Prep note"} className="input-base text-sm" />
+                      </label>
+                      <button type="button" onClick={() => removeRecipeIngredient(index)} className="btn-danger mt-7 text-xs">Remove</button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="glass-subtle rounded-[1.4rem] p-4"><div className="mb-3 flex items-center justify-between"><p className="text-sm font-black text-slate-900 dark:text-slate-50">Portions</p><button type="button" onClick={addPortion} className="glass-pill rounded-full px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200">Add Portion</button></div><div className="space-y-3">{itemForm.portions.map((portion, index) => <div key={`${portion.label}-${index}`} className="grid gap-3 rounded-[1rem] border border-white/30 p-3 dark:border-white/10 lg:grid-cols-[1fr_1fr_120px_88px]"><label className="space-y-2"><span className="form-label">Portion Label</span><input type="text" placeholder="Label" value={portion.label} onChange={(e) => updatePortion(index, "label", e.target.value)} className="input-base text-sm" /></label><label className="space-y-2"><span className="form-label">Quantity Text</span><input type="text" placeholder="Qty text" value={portion.quantityText} onChange={(e) => updatePortion(index, "quantityText", e.target.value)} className="input-base text-sm" /></label><label className="space-y-2"><span className="form-label">Portion Price</span><input type="number" step="0.01" min="0" placeholder="Price" value={portion.price} onChange={(e) => updatePortion(index, "price", e.target.value)} className="input-base text-sm" /></label><button type="button" onClick={() => removePortion(index)} className="btn-danger mt-7 text-xs">Remove</button></div>)}</div></div>
+            <div className="grid gap-3 sm:grid-cols-3"><label className="space-y-2"><span className="form-label">Prep Time (mins)</span><input type="number" min="1" placeholder="Enter prep time" value={itemForm.prepTimeMinutes} onChange={(e) => setItemForm((prev) => ({ ...prev, prepTimeMinutes: e.target.value }))} className="input-base" /></label><label className="space-y-2"><span className="form-label">Spice Level</span><select value={itemForm.spiceLevel} onChange={(e) => setItemForm((prev) => ({ ...prev, spiceLevel: e.target.value }))} className="input-base">{["none", "mild", "medium", "hot", "extra_hot"].map((level) => <option key={level} value={level}>{level}</option>)}</select></label><label className="space-y-2"><span className="form-label">Stock Status</span><select value={itemForm.stockStatus} onChange={(e) => setItemForm((prev) => ({ ...prev, stockStatus: e.target.value }))} className="input-base">{["in_stock", "low_stock", "out_of_stock"].map((status) => <option key={status} value={status}>{status}</option>)}</select></label></div>
             <div className="flex flex-wrap gap-4"><label className="glass-subtle flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200"><input type="checkbox" checked={itemForm.isFeatured} onChange={(e) => setItemForm((prev) => ({ ...prev, isFeatured: e.target.checked }))} />Featured</label><label className="glass-subtle flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200"><input type="checkbox" checked={itemForm.isActive} onChange={(e) => setItemForm((prev) => ({ ...prev, isActive: e.target.checked }))} />Active</label></div>
             <div className="flex gap-3">{editingItemId ? <button type="button" onClick={resetItemForm} className="btn-outline">Cancel</button> : null}<button disabled={itemSaving} className="btn-primary">{itemSaving ? "Saving..." : editingItemId ? "Update Item" : "Create Item"}</button></div>
           </form>
@@ -279,7 +368,7 @@ const AdminMenuManager = () => {
 
         <Section title="Menu Item List" description="Searchable and collapsible." icon={FiSearch} open={open.itemList} onToggle={() => setOpen((prev) => ({ ...prev, itemList: !prev.itemList }))}>
           <div className="relative"><FiSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input type="text" value={itemSearch} onChange={(e) => setItemSearch(e.target.value)} placeholder="Search items..." className="input-base pl-11" /></div>
-          <div className="mt-4 space-y-3">{filteredItems.map((item) => <article key={item._id} className="glass-subtle rounded-[1.3rem] p-4"><p className="text-base font-black text-slate-900 dark:text-slate-50">{item.name}</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{item.category?.name} {item.subCategory?.name ? `> ${item.subCategory?.name}` : ""} | {(item.foodType || "non_veg").replace("_", "-")}</p><p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{item.shortDescription || item.description}</p><p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">Base: Rs {Number(item.price || 0).toFixed(2)} • Portions: {item.portions?.length || 0}</p><div className="mt-3 flex gap-2"><button onClick={() => onItemEdit(item)} className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold text-sky-700 dark:text-sky-300">Edit</button><button onClick={() => onDeleteItem(item._id)} className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold text-rose-700 dark:text-rose-300">Delete</button></div></article>)}{!filteredItems.length && !loading ? <p className="text-sm text-slate-500 dark:text-slate-400">No menu items yet.</p> : null}</div>
+          <div className="mt-4 space-y-3">{filteredItems.map((item) => <article key={item._id} className="glass-subtle rounded-[1.3rem] p-4"><p className="text-base font-black text-slate-900 dark:text-slate-50">{item.name}</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{item.category?.name} {item.subCategory?.name ? `> ${item.subCategory?.name}` : ""} | {(item.foodType || "non_veg").replace("_", "-")} | {(item.course || "main").replace("_", "-")}</p><p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{item.shortDescription || item.description}</p><p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">Base: Rs {Number(item.price || 0).toFixed(2)} • Portions: {item.portions?.length || 0} • Ingredients: {item.recipeIngredients?.length || 0}</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{(item.suitablePartyTypes || []).length ? item.suitablePartyTypes.join(", ") : "No party tags"} | Portion factor {Number(item.planningPortionFactor || 1).toFixed(2)}</p><div className="mt-3 flex gap-2"><button onClick={() => onItemEdit(item)} className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold text-sky-700 dark:text-sky-300">Edit</button><button onClick={() => onDeleteItem(item._id)} className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold text-rose-700 dark:text-rose-300">Delete</button></div></article>)}{!filteredItems.length && !loading ? <p className="text-sm text-slate-500 dark:text-slate-400">No menu items yet.</p> : null}</div>
         </Section>
       </div>
     </div>

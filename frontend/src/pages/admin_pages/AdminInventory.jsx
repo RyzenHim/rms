@@ -7,7 +7,8 @@ import InventoryItemsView from "./inventory/InventoryItemsView";
 import { InventoryCategoriesView, InventoryUnitsView } from "./inventory/InventoryCatalogView";
 import InventoryScannerView from "./inventory/InventoryScannerView";
 import InventoryPlannerView from "./inventory/InventoryPlannerView";
-import { categoryRestockIdeas, createDraft, inferCourse, initialCategoryForm, initialItemForm, initialUnitForm, navGroups, parseDraftsFromScan, partyTypes, plannerProfiles, titleize, toNumber } from "./inventory/inventoryUtils";
+import InventoryHistoryView from "./inventory/InventoryHistoryView";
+import { categoryRestockIdeas, createDraft, defaultCoursePortionFactor, inferCourse, initialCategoryForm, initialItemForm, initialUnitForm, navGroups, normalizePartyType, parseDraftsFromScan, partyDemandMultipliers, partyTypes, plannerProfiles, serviceStyleMultipliers, serviceStyles, titleize, toNumber } from "./inventory/inventoryUtils";
 import { useAuth } from "../../context/AuthContext";
 
 const iconMap = {
@@ -32,6 +33,7 @@ const AdminInventory = () => {
   const [categories, setCategories] = useState([]);
   const [units, setUnits] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
@@ -53,10 +55,13 @@ const AdminInventory = () => {
   const [plannerForm, setPlannerForm] = useState({
     partyType: partyTypes[0],
     partyTypeOptions: partyTypes,
+    serviceStyle: serviceStyles[0],
+    serviceStyleOptions: serviceStyles,
     attendants: 50,
     guestSplitMode: "percentage",
     vegValue: 60,
     bufferPercent: 10,
+    repeatRate: 10,
     notes: "",
     selectedItems: [],
   });
@@ -68,6 +73,24 @@ const AdminInventory = () => {
     if (!token) return;
     refreshAll();
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const menuDrivenPartyTypes = Array.from(
+      new Set(
+        menuItems
+          .flatMap((item) => item.suitablePartyTypes || [])
+          .map((partyType) => normalizePartyType(partyType))
+          .filter(Boolean)
+      )
+    );
+    const nextPartyTypeOptions = Array.from(new Set([...partyTypes, ...menuDrivenPartyTypes]));
+
+    setPlannerForm((prev) => ({
+      ...prev,
+      partyTypeOptions: nextPartyTypeOptions,
+      partyType: nextPartyTypeOptions.includes(prev.partyType) ? prev.partyType : nextPartyTypeOptions[0] || partyTypes[0],
+    }));
+  }, [menuItems]);
 
   const filteredItems = useMemo(() => {
     if (filterCategory === "all") return items;
@@ -142,8 +165,15 @@ const AdminInventory = () => {
         ? Math.round((attendants * Math.min(100, Math.max(0, plannerForm.vegValue))) / 100)
         : Math.min(attendants, Math.max(0, Number(plannerForm.vegValue || 0)));
     const nonVegGuests = Math.max(0, attendants - vegGuests);
-    const withBuffer = attendants * (1 + Number(plannerForm.bufferPercent || 0) / 100);
-    const selectedMenu = menuItems.filter((item) => plannerForm.selectedItems.includes(item._id));
+    const selectedMenu = menuItems
+      .filter((item) => plannerForm.selectedItems.includes(item._id))
+      .map((item) => ({ ...item, courseLabel: titleize(inferCourse(item)) }));
+    const partyMultiplier = partyDemandMultipliers[plannerForm.partyType] || partyDemandMultipliers.default;
+    const serviceMultiplier = serviceStyleMultipliers[plannerForm.serviceStyle] || 1;
+    const bufferMultiplier = 1 + Number(plannerForm.bufferPercent || 0) / 100;
+    const repeatMultiplier = 1 + Number(plannerForm.repeatRate || 0) / 100;
+    const overallMultiplier = partyMultiplier * serviceMultiplier * bufferMultiplier * repeatMultiplier;
+    const withBuffer = attendants * overallMultiplier;
     const byCourse = selectedMenu.reduce((acc, item) => {
       const course = inferCourse(item);
       const bucket = `${course}-${course === "starter" || course === "main" ? item.foodType : "all"}`;
@@ -152,38 +182,75 @@ const AdminInventory = () => {
       return acc;
     }, {});
     const requiredByCategory = {};
+    const requiredByIngredient = new Map();
 
-    const addDemand = (guestCount, course, type, selectedCount) => {
+    const addDemand = (guestCount, course, type, selectedItemsForGroup = []) => {
       const profile = plannerProfiles[course]?.[type] || plannerProfiles[course]?.all;
-      if (!profile || !selectedCount || !guestCount) return;
-      const share = guestCount / selectedCount;
-      Object.entries(profile).forEach(([category, factor]) => {
-        requiredByCategory[category] = (requiredByCategory[category] || 0) + share * factor;
+      if (!selectedItemsForGroup.length || !guestCount) return;
+      const share = guestCount / selectedItemsForGroup.length;
+
+      selectedItemsForGroup.forEach((menuItem) => {
+        const menuItemFactor = Number(menuItem.planningPortionFactor || defaultCoursePortionFactor[course] || 1);
+        if (Array.isArray(menuItem.recipeIngredients) && menuItem.recipeIngredients.length) {
+          menuItem.recipeIngredients.forEach((ingredient) => {
+            const inventoryItem = ingredient.inventoryItem;
+            if (!inventoryItem?._id) return;
+            const consumedQuantity = share * Number(ingredient.quantity || 0) * menuItemFactor;
+            requiredByIngredient.set(String(inventoryItem._id), {
+              inventoryItem,
+              quantity: (requiredByIngredient.get(String(inventoryItem._id))?.quantity || 0) + consumedQuantity,
+            });
+            requiredByCategory[inventoryItem.category] = (requiredByCategory[inventoryItem.category] || 0) + consumedQuantity;
+          });
+          return;
+        }
+
+        if (!profile) return;
+        Object.entries(profile).forEach(([category, factor]) => {
+          requiredByCategory[category] = (requiredByCategory[category] || 0) + share * factor * menuItemFactor;
+        });
       });
     };
 
-    addDemand(vegGuests * (1 + Number(plannerForm.bufferPercent || 0) / 100), "starter", "veg", byCourse["starter-veg"]?.length || 0);
-    addDemand(nonVegGuests * (1 + Number(plannerForm.bufferPercent || 0) / 100), "starter", "non_veg", byCourse["starter-non_veg"]?.length || 0);
-    addDemand(vegGuests * (1 + Number(plannerForm.bufferPercent || 0) / 100), "main", "veg", byCourse["main-veg"]?.length || 0);
-    addDemand(nonVegGuests * (1 + Number(plannerForm.bufferPercent || 0) / 100), "main", "non_veg", byCourse["main-non_veg"]?.length || 0);
-    addDemand(withBuffer, "beverage", "all", byCourse["beverage-all"]?.length || 0);
-    addDemand(withBuffer, "dessert", "all", byCourse["dessert-all"]?.length || 0);
+    addDemand(vegGuests * overallMultiplier, "starter", "veg", byCourse["starter-veg"] || []);
+    addDemand(nonVegGuests * overallMultiplier, "starter", "non_veg", byCourse["starter-non_veg"] || []);
+    addDemand(vegGuests * overallMultiplier, "main", "veg", byCourse["main-veg"] || []);
+    addDemand(nonVegGuests * overallMultiplier, "main", "non_veg", byCourse["main-non_veg"] || []);
+    addDemand(withBuffer, "beverage", "all", byCourse["beverage-all"] || []);
+    addDemand(withBuffer, "dessert", "all", byCourse["dessert-all"] || []);
 
     const availableByCategory = items.reduce((acc, item) => {
       acc[item.category] = (acc[item.category] || 0) + Math.max(0, Number(item.currentStock || 0));
       return acc;
     }, {});
 
+    const ingredientChecks = Array.from(requiredByIngredient.values()).map(({ inventoryItem, quantity }) => {
+      const available = Number(inventoryItem.currentStock || 0);
+      const shortfall = Math.max(0, quantity - available);
+      return {
+        id: inventoryItem._id,
+        name: inventoryItem.name,
+        category: inventoryItem.category,
+        unit: inventoryItem.unit,
+        required: quantity,
+        available,
+        shortfall,
+      };
+    });
+
     const categoriesCheck = Object.entries(requiredByCategory).map(([category, required]) => {
       const available = availableByCategory[category] || 0;
       const shortfall = Math.max(0, required - available);
+      const ingredientShortages = ingredientChecks.filter((entry) => entry.category === category && entry.shortfall > 0);
       const lowItems = items
         .filter((item) => item.category === category)
         .sort((a, b) => (a.currentStock - a.minimumThreshold) - (b.currentStock - b.minimumThreshold))
         .slice(0, 3)
         .map((item) => item.name);
       const suggestionBase = categoryRestockIdeas[category] || categoryRestockIdeas.other;
-      const suggestion = lowItems.length
+      const suggestion = ingredientShortages.length
+        ? `Increase ${ingredientShortages.map((entry) => `${entry.name} (${entry.shortfall.toFixed(1)} ${entry.unit})`).join(", ")}.`
+        : lowItems.length
         ? `Top up ${lowItems.join(", ")} first. If stock is still tight, add ${suggestionBase.slice(0, 2).join(" and ")}.`
         : `Consider adding ${suggestionBase.slice(0, 3).join(", ")} for this event.`;
 
@@ -199,22 +266,35 @@ const AdminInventory = () => {
 
     const shortages = categoriesCheck.filter((entry) => entry.shortfall > 0);
     const recommendations = [];
+    const mappedSelectionCount = selectedMenu.filter((item) => item.recipeIngredients?.length).length;
+    const recommendedSelections = menuItems
+      .filter((item) => (item.suitablePartyTypes || []).includes(plannerForm.partyType))
+      .slice(0, 8);
     if (!selectedMenu.length) recommendations.push("Select starters, mains, beverages, or desserts to generate event demand.");
     if (!shortages.length && selectedMenu.length) recommendations.push("Current live stock looks broadly sufficient for the selected party setup with the chosen safety buffer.");
     if (shortages.length) recommendations.push(`Focus your restock on ${shortages.map((entry) => titleize(entry.category)).join(", ")} before confirming this party menu.`);
+    if (ingredientChecks.length) recommendations.push("Recipe-based ingredient checks are active for the menu items that already have ingredient mappings.");
+    if (!ingredientChecks.length && selectedMenu.length) recommendations.push("Some selected menu items still rely on heuristic planning because recipe ingredients have not been mapped yet.");
+    if (mappedSelectionCount > 0 && selectedMenu.length) recommendations.push(`${mappedSelectionCount} of ${selectedMenu.length} selected menu items are using mapped ingredients for accurate party planning.`);
     if ((byCourse["starter-veg"]?.length || 0) + (byCourse["starter-non_veg"]?.length || 0) === 0) recommendations.push("Add at least one starter selection so the planner can estimate appetizer demand.");
     if ((byCourse["main-veg"]?.length || 0) + (byCourse["main-non_veg"]?.length || 0) === 0) recommendations.push("Choose one or more main-course items to get a meaningful meal-stock prediction.");
     if (nonVegGuests > vegGuests) recommendations.push("Because non-veg guests are the majority, keep extra protein stock beyond the normal threshold.");
+    if (recommendedSelections.length && !selectedMenu.some((item) => (item.suitablePartyTypes || []).includes(plannerForm.partyType))) recommendations.push(`Consider adding some ${plannerForm.partyType.toLowerCase()}-friendly menu items that are already tagged in Menu Manager.`);
     if (plannerForm.notes.trim()) recommendations.push(`Planner note considered: ${plannerForm.notes.trim()}`);
 
     return {
       guestCounts: { veg: vegGuests, nonVeg: nonVegGuests },
       selectedMenu,
       categories: categoriesCheck,
+      ingredientChecks,
+      topShortages: ingredientChecks.filter((entry) => entry.shortfall > 0).sort((a, b) => b.shortfall - a.shortfall).slice(0, 6),
+      recommendedSelections,
+      recipeCoverage: selectedMenu.length ? Math.round((mappedSelectionCount / selectedMenu.length) * 100) : 0,
+      multiplier: overallMultiplier,
       recommendations,
       isSufficient: shortages.length === 0 && selectedMenu.length > 0,
       summaryText: selectedMenu.length
-        ? `${selectedMenu.length} menu item${selectedMenu.length > 1 ? "s" : ""} selected. The planner is using current stock levels, party size, guest split, and a ${plannerForm.bufferPercent}% safety margin.`
+        ? `${selectedMenu.length} menu item${selectedMenu.length > 1 ? "s" : ""} selected. The planner is using current stock levels, party size, guest split, ${plannerForm.serviceStyle.toLowerCase()} service, a ${plannerForm.repeatRate}% repeat-serving factor, and a ${plannerForm.bufferPercent}% safety margin.`
         : "No menu selections yet, so the planner is waiting for your course choices before estimating stock demand.",
     };
   }, [items, menuItems, plannerForm]);
@@ -239,18 +319,19 @@ const AdminInventory = () => {
   };
 
   const loadMenuItems = async () => {
-    const cached = menuService.getCachedPublicMenu();
-    if (cached?.items?.length) {
-      setMenuItems(cached.items);
-    }
-    const data = await menuService.getPublicMenu();
+    const data = await menuService.getPlannerMenuData(token);
     setMenuItems(data?.items || []);
+  };
+
+  const loadTransactions = async () => {
+    const data = await inventoryService.getTransactions(token, { limit: 40 });
+    setTransactions(data?.transactions || []);
   };
 
   const refreshAll = async () => {
     setLoading(true);
     try {
-      await Promise.all([loadInventory(), loadMetadata(), loadMenuItems()]);
+      await Promise.all([loadInventory(), loadMetadata(), loadMenuItems(), loadTransactions()]);
     } catch (err) {
       setMessage({ type: "error", text: err?.response?.data?.message || "Failed to load inventory workspace" });
     } finally {
@@ -432,8 +513,10 @@ const AdminInventory = () => {
       setMessage({ type: "error", text: "Please enter a valid positive quantity" });
       return;
     }
+    const reason = window.prompt(`Reason for this ${type === "add" ? "restock" : "usage"}:`, type === "add" ? "Manual restock" : "Kitchen usage") || "";
+    const notes = window.prompt("Optional notes for stock history:", "") || "";
     try {
-      await inventoryService.updateStock(token, id, { quantity, type });
+      await inventoryService.updateStock(token, id, { quantity, type, reason, notes });
       setMessage({ type: "success", text: `Stock ${type}ed successfully` });
       await refreshAll();
     } catch (err) {
@@ -567,6 +650,9 @@ const AdminInventory = () => {
     }
     if (activeView === "planner") {
       return <InventoryPlannerView plannerForm={plannerForm} setPlannerForm={setPlannerForm} menuOptions={menuOptions} plannerResult={plannerResult} togglePlannerSelection={(itemId) => setPlannerForm((prev) => ({ ...prev, selectedItems: prev.selectedItems.includes(itemId) ? prev.selectedItems.filter((id) => id !== itemId) : [...prev.selectedItems, itemId] }))} canManageInventory={canManageInventory} />;
+    }
+    if (activeView === "stock-history") {
+      return <InventoryHistoryView transactions={transactions} />;
     }
     if (activeView === "categories") {
       return <InventoryCategoriesView editingCategoryId={editingCategoryId} categoryForm={categoryForm} setCategoryForm={setCategoryForm} submitting={submitting} handleCategorySubmit={handleCategorySubmit} resetCategoryForm={resetCategoryForm} categories={categories} activeCategories={activeCategories} setEditingCategoryId={setEditingCategoryId} handleDeleteCategory={handleDeleteCategory} canManageInventory={canManageInventory} />;

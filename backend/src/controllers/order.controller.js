@@ -3,8 +3,10 @@ const MenuItem = require("../models/menuItem.model");
 const Customer = require("../models/customer.model");
 const Table = require("../models/table.model");
 const Reservation = require("../models/reservation.model");
+const Inventory = require("../models/inventory.model");
+const InventoryTransaction = require("../models/inventoryTransaction.model");
 const jwt = require("jsonwebtoken");
-const { executeOrderTransaction } = require("../utils/transactionManager");
+const { executeOrderTransaction, executeWithRetry } = require("../utils/transactionManager");
 
 const TAX_RATE = 0.05;
 
@@ -323,33 +325,112 @@ exports.updateOrderStatus = async (req, res) => {
             return res.status(403).json({ message: "You cannot set this order status" });
         }
 
-        order.status = status;
-        if (status === "done_preparing") {
-            order.readyAt = new Date();
-            order.readyNotification = {
-                sent: false,
-                sentAt: null,
-            };
-        }
+        const updatedOrder = await executeWithRetry(async (session) => {
+            const sessionOrder = await Order.findById(id).session(session);
+            if (!sessionOrder) {
+                throw new Error("Order not found");
+            }
 
-        // Update table status when order is served
-        if (status === "served" && order.serviceType === "dine_in") {
-            await Table.findOneAndUpdate(
-                { tableNumber: order.tableNumber },
-                { status: "available" }
-            );
-        }
+            sessionOrder.status = status;
+            if (status === "done_preparing") {
+                sessionOrder.readyAt = new Date();
+                sessionOrder.readyNotification = {
+                    sent: false,
+                    sentAt: null,
+                };
+            }
 
-        await order.save();
+            if (status === "served" && !sessionOrder.inventoryDeductedAt) {
+                const menuItemIds = sessionOrder.items.map((item) => item.menuItem);
+                const menuItems = await MenuItem.find({ _id: { $in: menuItemIds } })
+                    .populate("recipeIngredients.inventoryItem", "name currentStock unit isActive category")
+                    .session(session);
+                const menuMap = new Map(menuItems.map((item) => [String(item._id), item]));
+                const requiredIngredients = new Map();
 
-        const populated = await Order.findById(order._id)
+                for (const orderItem of sessionOrder.items) {
+                    const menuItem = menuMap.get(String(orderItem.menuItem));
+                    if (!menuItem || !Array.isArray(menuItem.recipeIngredients) || !menuItem.recipeIngredients.length) {
+                        continue;
+                    }
+
+                    for (const ingredient of menuItem.recipeIngredients) {
+                        const inventoryItemId = String(ingredient.inventoryItem?._id || ingredient.inventoryItem);
+                        const consumedQuantity = Number(ingredient.quantity || 0) * Number(orderItem.quantity || 0);
+                        const existingRequirement = requiredIngredients.get(inventoryItemId) || {
+                            quantity: 0,
+                            menuItemId: menuItem._id,
+                            menuItemName: menuItem.name,
+                            orderQuantity: Number(orderItem.quantity || 0),
+                        };
+                        existingRequirement.quantity += consumedQuantity;
+                        requiredIngredients.set(inventoryItemId, existingRequirement);
+                    }
+                }
+
+                if (requiredIngredients.size > 0) {
+                    const inventoryItems = await Inventory.find({ _id: { $in: Array.from(requiredIngredients.keys()) }, isActive: true }).session(session);
+                    const inventoryMap = new Map(inventoryItems.map((item) => [String(item._id), item]));
+
+                    for (const [inventoryId, requirement] of requiredIngredients.entries()) {
+                        const inventoryItem = inventoryMap.get(inventoryId);
+                        if (!inventoryItem) {
+                            throw new Error("A recipe ingredient is missing from inventory");
+                        }
+                        if (inventoryItem.currentStock < requirement.quantity) {
+                            throw new Error(`Insufficient stock for ${inventoryItem.name}. Needed ${requirement.quantity} ${inventoryItem.unit}, available ${inventoryItem.currentStock} ${inventoryItem.unit}`);
+                        }
+                    }
+
+                    for (const [inventoryId, requirement] of requiredIngredients.entries()) {
+                        const inventoryItem = inventoryMap.get(inventoryId);
+                        inventoryItem.currentStock = Number(inventoryItem.currentStock || 0) - requirement.quantity;
+                        await inventoryItem.save({ session });
+                        await InventoryTransaction.create(
+                            [
+                                {
+                                    inventoryItem: inventoryItem._id,
+                                    quantity: requirement.quantity,
+                                    direction: "out",
+                                    source: "order_served",
+                                    reason: `Auto deduction for served order ${sessionOrder.orderNumber}`,
+                                    notes: `Deducted automatically when the order moved to served status.`,
+                                    resultingStock: Number(inventoryItem.currentStock || 0),
+                                    performedBy: req.user?._id || null,
+                                    order: sessionOrder._id,
+                                    menuItem: requirement.menuItemId,
+                                    menuItemName: requirement.menuItemName,
+                                    eventContext: `${sessionOrder.serviceType}:${sessionOrder.tableNumber}`,
+                                },
+                            ],
+                            { session }
+                        );
+                    }
+                }
+
+                sessionOrder.inventoryDeductedAt = new Date();
+            }
+
+            if (status === "served" && sessionOrder.serviceType === "dine_in") {
+                await Table.findOneAndUpdate(
+                    { tableNumber: sessionOrder.tableNumber },
+                    { status: "available" },
+                    { session }
+                );
+            }
+
+            await sessionOrder.save({ session });
+            return sessionOrder;
+        });
+
+        const populated = await Order.findById(updatedOrder._id)
             .populate("createdBy", "name email roles")
             .populate("items.menuItem", "name image");
 
         return res.status(200).json({ message: "Order status updated", order: populated });
     } catch (error) {
         console.error("UPDATE ORDER STATUS ERROR:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        return res.status(500).json({ message: error.message || "Internal server error" });
     }
 };
 

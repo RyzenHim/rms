@@ -9,6 +9,7 @@ const Cashier_Main_Layout = () => {
         { to: "/cashier", label: "Dashboard", end: true },
         { to: "/cashier/billing", label: "Billing" },
         { to: "/cashier/orders", label: "Orders" },
+        { to: "/cashier/inventory", label: "Inventory" },
         { to: "/cashier/settings", label: "Settings" },
       ]}
     />

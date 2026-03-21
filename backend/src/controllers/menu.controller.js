@@ -4,6 +4,7 @@ const FoodCategory = require("../models/foodCategory.model");
 const MenuSubCategory = require("../models/menuSubCategory.model");
 const MenuItem = require("../models/menuItem.model");
 const Review = require("../models/review.model");
+const Inventory = require("../models/inventory.model");
 
 const MENU_PDF_NAME = "eaf70e15-12ba-4f67-bee9-93384bd96a64.pdf";
 const MENU_PDF_PATH = path.join(__dirname, "..", "assets", MENU_PDF_NAME);
@@ -53,6 +54,17 @@ const normalizePortions = (portions) => {
         .filter((portion) => portion.label && Number.isFinite(portion.price) && portion.price >= 0);
 };
 
+const normalizeRecipeIngredients = (ingredients) => {
+    if (!Array.isArray(ingredients)) return [];
+    return ingredients
+        .map((ingredient) => ({
+            inventoryItem: ingredient?.inventoryItem || null,
+            quantity: parseNumber(ingredient?.quantity, NaN),
+            notes: String(ingredient?.notes || "").trim(),
+        }))
+        .filter((ingredient) => ingredient.inventoryItem && Number.isFinite(ingredient.quantity) && ingredient.quantity > 0);
+};
+
 const normalizeCategoryPayload = (payload = {}) => ({
     name: String(payload.name || "").trim(),
     description: String(payload.description || "").trim(),
@@ -79,6 +91,7 @@ const normalizeMenuItemPayload = (payload = {}) => ({
     heading: String(payload.heading || "").trim(),
     subHeading: String(payload.subHeading || "").trim(),
     foodType: payload.foodType === "veg" ? "veg" : "non_veg",
+    course: ["starter", "main", "beverage", "dessert"].includes(payload.course) ? payload.course : "main",
     category: payload.category,
     subCategory: payload.subCategory || null,
     image: String(payload.image || "").trim(),
@@ -91,12 +104,29 @@ const normalizeMenuItemPayload = (payload = {}) => ({
     dietaryTags: Array.isArray(payload.dietaryTags)
         ? payload.dietaryTags.map((tag) => String(tag).trim()).filter(Boolean)
         : [],
+    suitablePartyTypes: Array.isArray(payload.suitablePartyTypes)
+        ? payload.suitablePartyTypes.map((tag) => String(tag).trim()).filter(Boolean)
+        : [],
+    planningPortionFactor: parseNumber(payload.planningPortionFactor, 1),
     rating: parseNumber(payload.rating, 4.5),
     stockStatus: payload.stockStatus || "in_stock",
     isFeatured: Boolean(payload.isFeatured),
     isActive: payload.isActive !== undefined ? Boolean(payload.isActive) : true,
     portions: normalizePortions(payload.portions),
+    recipeIngredients: normalizeRecipeIngredients(payload.recipeIngredients),
 });
+
+const validateRecipeIngredients = async (recipeIngredients = []) => {
+    if (!recipeIngredients.length) return { ok: true };
+
+    const inventoryIds = recipeIngredients.map((ingredient) => ingredient.inventoryItem);
+    const inventoryItems = await Inventory.find({ _id: { $in: inventoryIds }, isActive: true }).select("_id");
+    if (inventoryItems.length !== inventoryIds.length) {
+        return { ok: false, message: "One or more selected inventory ingredients are invalid or inactive" };
+    }
+
+    return { ok: true };
+};
 
 const getMenuPdfMeta = (req) => {
     const exists = fs.existsSync(MENU_PDF_PATH);
@@ -187,6 +217,7 @@ const seedDefaults = async () => {
             shortDescription: "Hot crispy legs in value buckets",
             category: categories[0]._id,
             subCategory: subCategories[0]._id,
+            course: "starter",
             image:
                 "https://images.unsplash.com/photo-1562967916-eb82221dfb92?auto=format&fit=crop&w=1000&q=80",
             price: 169,
@@ -197,6 +228,8 @@ const seedDefaults = async () => {
             rating: 4.7,
             isFeatured: true,
             foodType: "non_veg",
+            suitablePartyTypes: ["Birthday", "Corporate", "Family Gathering"],
+            planningPortionFactor: 0.8,
             portions: [
                 { label: "2 pcs", quantityText: "2 pieces", price: 169 },
                 { label: "4 pcs", quantityText: "4 pieces", price: 319 },
@@ -212,6 +245,7 @@ const seedDefaults = async () => {
             shortDescription: "Crispy chicken favorite",
             category: categories[0]._id,
             subCategory: subCategories[1]._id,
+            course: "main",
             image:
                 "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?auto=format&fit=crop&w=1000&q=80",
             price: 149,
@@ -222,6 +256,8 @@ const seedDefaults = async () => {
             rating: 4.6,
             isFeatured: true,
             foodType: "non_veg",
+            suitablePartyTypes: ["Birthday", "Corporate", "Wedding"],
+            planningPortionFactor: 1,
             portions: [
                 { label: "2 pcs", quantityText: "2 pieces", price: 149 },
                 { label: "5 pcs", quantityText: "Family mini bucket", price: 349 },
@@ -236,6 +272,7 @@ const seedDefaults = async () => {
             shortDescription: "Creamy chilled coffee",
             category: categories[1]._id,
             subCategory: subCategories[2]._id,
+            course: "beverage",
             image:
                 "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=1000&q=80",
             price: 99,
@@ -245,6 +282,8 @@ const seedDefaults = async () => {
             rating: 4.7,
             isFeatured: true,
             foodType: "veg",
+            suitablePartyTypes: ["Birthday", "Corporate", "Anniversary"],
+            planningPortionFactor: 1,
             portions: [{ label: "Regular", quantityText: "300 ml", price: 99 }],
         },
         {
@@ -255,6 +294,7 @@ const seedDefaults = async () => {
             description: "Crunchy paneer popcorn served with mint mayo.",
             shortDescription: "Veg crispy bite snack",
             category: categories[2]._id,
+            course: "starter",
             image:
                 "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=1000&q=80",
             price: 129,
@@ -265,6 +305,8 @@ const seedDefaults = async () => {
             rating: 4.5,
             isFeatured: true,
             foodType: "veg",
+            suitablePartyTypes: ["Birthday", "Anniversary", "Family Gathering"],
+            planningPortionFactor: 0.7,
             portions: [{ label: "8 pcs", quantityText: "8 pieces", price: 129 }],
         },
     ]);
@@ -360,6 +402,7 @@ exports.getAdminMenuData = async (req, res) => {
         const items = await MenuItem.find()
             .populate("category", "name slug")
             .populate("subCategory", "name slug heading subHeading")
+            .populate("recipeIngredients.inventoryItem", "name unit category currentStock minimumThreshold")
             .sort({ createdAt: -1 });
 
         return res.status(200).json({
@@ -370,6 +413,21 @@ exports.getAdminMenuData = async (req, res) => {
         });
     } catch (error) {
         console.error("GET ADMIN MENU DATA ERROR:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+exports.getPlannerMenuData = async (req, res) => {
+    try {
+        const items = await MenuItem.find({ isActive: true, stockStatus: { $ne: "out_of_stock" } })
+            .populate("category", "name slug")
+            .populate("subCategory", "name slug heading subHeading")
+            .populate("recipeIngredients.inventoryItem", "name unit category currentStock minimumThreshold")
+            .sort({ isFeatured: -1, createdAt: -1 });
+
+        return res.status(200).json({ items });
+    } catch (error) {
+        console.error("GET PLANNER MENU DATA ERROR:", error);
         return res.status(500).json({ message: "Internal server error" });
     }
 };
@@ -582,6 +640,11 @@ exports.createMenuItem = async (req, res) => {
             return res.status(400).json({ message: categoryValidation.message });
         }
 
+        const recipeValidation = await validateRecipeIngredients(payload.recipeIngredients);
+        if (!recipeValidation.ok) {
+            return res.status(400).json({ message: recipeValidation.message });
+        }
+
         const baseSlug = createSlug(req.body.slug || payload.name);
         if (!baseSlug) {
             return res.status(400).json({ message: "Valid menu item name or slug is required" });
@@ -591,7 +654,8 @@ exports.createMenuItem = async (req, res) => {
         const menuItem = await MenuItem.create(payload);
         const populated = await MenuItem.findById(menuItem._id)
             .populate("category", "name slug")
-            .populate("subCategory", "name slug heading subHeading");
+            .populate("subCategory", "name slug heading subHeading")
+            .populate("recipeIngredients.inventoryItem", "name unit category currentStock minimumThreshold");
 
         return res.status(201).json({ message: "Menu item created", item: populated });
     } catch (error) {
@@ -625,6 +689,11 @@ exports.updateMenuItem = async (req, res) => {
             return res.status(400).json({ message: categoryValidation.message });
         }
 
+        const recipeValidation = await validateRecipeIngredients(payload.recipeIngredients);
+        if (!recipeValidation.ok) {
+            return res.status(400).json({ message: recipeValidation.message });
+        }
+
         const baseSlug = createSlug(req.body.slug || payload.name);
         if (!baseSlug) {
             return res.status(400).json({ message: "Valid menu item name or slug is required" });
@@ -636,7 +705,8 @@ exports.updateMenuItem = async (req, res) => {
 
         const populated = await MenuItem.findById(existing._id)
             .populate("category", "name slug")
-            .populate("subCategory", "name slug heading subHeading");
+            .populate("subCategory", "name slug heading subHeading")
+            .populate("recipeIngredients.inventoryItem", "name unit category currentStock minimumThreshold");
 
         return res.status(200).json({ message: "Menu item updated", item: populated });
     } catch (error) {

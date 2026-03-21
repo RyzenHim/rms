@@ -84,30 +84,60 @@ const InventoryScannerView = ({
               </div>
 
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                <input type="text" value={draft.name} onChange={(event) => updateDraft(draft.draftId, "name", event.target.value)} placeholder="Item Name" className="input-base" />
-                <select value={draft.category} onChange={(event) => updateDraft(draft.draftId, "category", event.target.value)} className="input-base">
-                  <option value="">Select category</option>
-                  {activeCategories.map((category) => (
-                    <option key={category._id} value={category.name}>
-                      {titleize(category.name)}
-                    </option>
-                  ))}
-                </select>
-                <select value={draft.unit} onChange={(event) => updateDraft(draft.draftId, "unit", event.target.value)} className="input-base">
-                  <option value="">Select unit</option>
-                  {activeUnits.map((unit) => (
-                    <option key={unit._id} value={unit.code}>
-                      {unit.name} ({unit.code})
-                    </option>
-                  ))}
-                </select>
-                <input type="number" value={draft.currentStock} onChange={(event) => updateDraft(draft.draftId, "currentStock", event.target.value)} placeholder="Current Stock" className="input-base" />
-                <input type="number" value={draft.minimumThreshold} onChange={(event) => updateDraft(draft.draftId, "minimumThreshold", event.target.value)} placeholder="Minimum Threshold" className="input-base" />
-                <input type="number" value={draft.maximumStock} onChange={(event) => updateDraft(draft.draftId, "maximumStock", event.target.value)} placeholder="Maximum Stock" className="input-base" />
-                <input type="number" value={draft.unitCost} onChange={(event) => updateDraft(draft.draftId, "unitCost", event.target.value)} placeholder="Unit Cost" className="input-base" />
-                <input type="text" value={draft.supplier} onChange={(event) => updateDraft(draft.draftId, "supplier", event.target.value)} placeholder="Supplier" className="input-base" />
-                <input type="text" value={draft.location} onChange={(event) => updateDraft(draft.draftId, "location", event.target.value)} placeholder="Location" className="input-base" />
-                <textarea value={draft.description} onChange={(event) => updateDraft(draft.draftId, "description", event.target.value)} placeholder="Description" className="input-base md:col-span-2 xl:col-span-3 min-h-[5rem]" rows={3} />
+                <label className="space-y-2">
+                  <span className="form-label">Item Name</span>
+                  <input type="text" value={draft.name} onChange={(event) => updateDraft(draft.draftId, "name", event.target.value)} placeholder="Enter item name" className="input-base" />
+                </label>
+                <label className="space-y-2">
+                  <span className="form-label">Category</span>
+                  <select value={draft.category} onChange={(event) => updateDraft(draft.draftId, "category", event.target.value)} className="input-base">
+                    <option value="">Select category</option>
+                    {activeCategories.map((category) => (
+                      <option key={category._id} value={category.name}>
+                        {titleize(category.name)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-2">
+                  <span className="form-label">Unit</span>
+                  <select value={draft.unit} onChange={(event) => updateDraft(draft.draftId, "unit", event.target.value)} className="input-base">
+                    <option value="">Select unit</option>
+                    {activeUnits.map((unit) => (
+                      <option key={unit._id} value={unit.code}>
+                        {unit.name} ({unit.code})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-2">
+                  <span className="form-label">Current Stock</span>
+                  <input type="number" value={draft.currentStock} onChange={(event) => updateDraft(draft.draftId, "currentStock", event.target.value)} placeholder="Enter current stock" className="input-base" />
+                </label>
+                <label className="space-y-2">
+                  <span className="form-label">Minimum Threshold</span>
+                  <input type="number" value={draft.minimumThreshold} onChange={(event) => updateDraft(draft.draftId, "minimumThreshold", event.target.value)} placeholder="Enter minimum threshold" className="input-base" />
+                </label>
+                <label className="space-y-2">
+                  <span className="form-label">Maximum Stock</span>
+                  <input type="number" value={draft.maximumStock} onChange={(event) => updateDraft(draft.draftId, "maximumStock", event.target.value)} placeholder="Enter maximum stock" className="input-base" />
+                </label>
+                <label className="space-y-2">
+                  <span className="form-label">Unit Cost</span>
+                  <input type="number" value={draft.unitCost} onChange={(event) => updateDraft(draft.draftId, "unitCost", event.target.value)} placeholder="Enter unit cost" className="input-base" />
+                </label>
+                <label className="space-y-2">
+                  <span className="form-label">Supplier</span>
+                  <input type="text" value={draft.supplier} onChange={(event) => updateDraft(draft.draftId, "supplier", event.target.value)} placeholder="Enter supplier name" className="input-base" />
+                </label>
+                <label className="space-y-2">
+                  <span className="form-label">Location</span>
+                  <input type="text" value={draft.location} onChange={(event) => updateDraft(draft.draftId, "location", event.target.value)} placeholder="Enter storage location" className="input-base" />
+                </label>
+                <label className="space-y-2 md:col-span-2 xl:col-span-3">
+                  <span className="form-label">Description</span>
+                  <textarea value={draft.description} onChange={(event) => updateDraft(draft.draftId, "description", event.target.value)} placeholder="Add description" className="input-base min-h-[5rem]" rows={3} />
+                </label>
               </div>
 
               {draft.rawText ? <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">OCR source: {draft.rawText}</p> : null}

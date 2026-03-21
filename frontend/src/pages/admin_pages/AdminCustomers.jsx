@@ -419,9 +419,18 @@ const AdminCustomers = () => {
             </div>
 
             <form onSubmit={handleUpdate} className="mt-4 space-y-3">
-              <input type="text" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Customer name" className="input-base" />
-              <input type="text" value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} placeholder="Phone number" className="input-base" />
-              <input type="number" value={form.loyaltyPoints} onChange={(e) => setForm((prev) => ({ ...prev, loyaltyPoints: Number(e.target.value) }))} placeholder="Loyalty points" className="input-base" />
+              <label className="space-y-2 block">
+                <span className="form-label">Customer Name</span>
+                <input type="text" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Enter customer name" className="input-base" />
+              </label>
+              <label className="space-y-2 block">
+                <span className="form-label">Phone Number</span>
+                <input type="text" value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} placeholder="Enter phone number" className="input-base" />
+              </label>
+              <label className="space-y-2 block">
+                <span className="form-label">Loyalty Points</span>
+                <input type="number" value={form.loyaltyPoints} onChange={(e) => setForm((prev) => ({ ...prev, loyaltyPoints: Number(e.target.value) }))} placeholder="Enter loyalty points" className="input-base" />
+              </label>
 
               <div className="flex flex-wrap gap-5 rounded-[1.15rem] border border-white/30 bg-white/40 px-4 py-3 dark:border-white/10 dark:bg-white/5">
                 <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">

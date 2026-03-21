@@ -11,6 +11,11 @@ const inventoryService = {
     return data;
   },
 
+  async getTransactions(token, params = {}) {
+    const { data } = await api.get("/inventory/transactions", { ...withAuth(token), params });
+    return data;
+  },
+
   async createItem(token, payload) {
     const { data } = await api.post("/inventory", payload, withAuth(token));
     return data;

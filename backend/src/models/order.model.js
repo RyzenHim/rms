@@ -153,6 +153,10 @@ const orderSchema = new mongoose.Schema(
                 default: null,
             },
         },
+        inventoryDeductedAt: {
+            type: Date,
+            default: null,
+        },
     },
     {
         timestamps: true,
