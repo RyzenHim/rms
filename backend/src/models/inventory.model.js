@@ -13,13 +13,13 @@ const inventorySchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ["vegetables", "grains", "proteins", "dairy", "spices", "oils", "condiments", "beverages", "other"],
       required: true,
+      trim: true,
     },
     unit: {
       type: String,
-      enum: ["kg", "liters", "pieces", "packets", "dozen"],
       required: true,
+      trim: true,
     },
     currentStock: {
       type: Number,

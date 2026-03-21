@@ -169,6 +169,7 @@ const router = createBrowserRouter([
         element: <KitchenStaff_Layout />,
         children: [
           { index: true, element: withLazy(<KitchenOrders />) },
+          { path: "inventory", element: withLazy(<AdminInventory />) },
           { path: "settings", element: withLazy(<RoleSettings roleLabel="Kitchen Staff" />) },
           { path: "profile", element: withLazy(<ProfilePage />) },
         ],
