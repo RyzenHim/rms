@@ -6,7 +6,7 @@ const KitchenStaff_Layout = () => {
       title="Kitchen Staff"
       basePath="/kitchen"
       links={[
-        { to: "/kitchen", label: "Orders", end: true },
+        { to: "/kitchen/orders-home", label: "Orders" },
         { to: "/kitchen/inventory", label: "Inventory" },
         { to: "/kitchen/settings", label: "Settings" },
       ]}

@@ -6,7 +6,7 @@ const Cashier_Main_Layout = () => {
       title="Cashier Panel"
       basePath="/cashier"
       links={[
-        { to: "/cashier", label: "Dashboard", end: true },
+        { to: "/cashier/dashboard-home", label: "Dashboard" },
         { to: "/cashier/billing", label: "Billing" },
         { to: "/cashier/orders", label: "Orders" },
         { to: "/cashier/inventory", label: "Inventory" },

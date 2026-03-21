@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import Visitor_Layout from "../layouts/visitor_layout/Visitor_Layout";
 import ProtectedRoute from "../components/routing/ProtectedRoute";
 import RoleHomeRedirect from "../components/routing/RoleHomeRedirect";
+import RoleLandingRedirect from "../components/routing/RoleLandingRedirect";
 import Customer_Main_Layout from "../layouts/customer_layout/Customer_Main_Layout";
 import Admin_Main_Layout from "../layouts/admin_layout/Admin_Main_Layout";
 import Manager_Main_Layout from "../layouts/manager_layout/Manager_Main_Layout";
@@ -150,7 +151,8 @@ const router = createBrowserRouter([
         path: "/manager",
         element: <Manager_Main_Layout />,
         children: [
-          { index: true, element: withLazy(<ManagerDashboard />) },
+          { index: true, element: withLazy(<RoleLandingRedirect roleLabel="Manager" fallbackPath="/manager/dashboard-home" />) },
+          { path: "dashboard-home", element: withLazy(<ManagerDashboard />) },
           { path: "orders", element: withLazy(<RoleOrders roleLabel="Manager" />) },
           { path: "table-status", element: withLazy(<AdminTableStatus />) },
           { path: "employees", element: withLazy(<AdminEmployees />) },
@@ -168,7 +170,8 @@ const router = createBrowserRouter([
         path: "/kitchen",
         element: <KitchenStaff_Layout />,
         children: [
-          { index: true, element: withLazy(<KitchenOrders />) },
+          { index: true, element: withLazy(<RoleLandingRedirect roleLabel="Kitchen Staff" fallbackPath="/kitchen/orders-home" />) },
+          { path: "orders-home", element: withLazy(<KitchenOrders />) },
           { path: "inventory", element: withLazy(<AdminInventory />) },
           { path: "settings", element: withLazy(<RoleSettings roleLabel="Kitchen Staff" />) },
           { path: "profile", element: withLazy(<ProfilePage />) },
@@ -183,7 +186,8 @@ const router = createBrowserRouter([
         path: "/cashier",
         element: <Cashier_Main_Layout />,
         children: [
-          { index: true, element: withLazy(<CashierDashboard />) },
+          { index: true, element: withLazy(<RoleLandingRedirect roleLabel="Cashier" fallbackPath="/cashier/dashboard-home" />) },
+          { path: "dashboard-home", element: withLazy(<CashierDashboard />) },
           { path: "billing", element: withLazy(<CashierBilling />) },
           { path: "orders", element: withLazy(<RoleOrders roleLabel="Cashier" />) },
           { path: "inventory", element: withLazy(<AdminInventory />) },
@@ -200,7 +204,8 @@ const router = createBrowserRouter([
         path: "/waiter",
         element: <Waiter_Main_Layout />,
         children: [
-          { index: true, element: withLazy(<WaiterOrders />) },
+          { index: true, element: withLazy(<RoleLandingRedirect roleLabel="Waiter" fallbackPath="/waiter/orders-home" />) },
+          { path: "orders-home", element: withLazy(<WaiterOrders />) },
           { path: "table-status", element: withLazy(<AdminTableStatus />) },
           { path: "settings", element: withLazy(<RoleSettings roleLabel="Waiter" />) },
           { path: "profile", element: withLazy(<ProfilePage />) },

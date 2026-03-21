@@ -8,6 +8,7 @@ import {
   FiSliders,
 } from "react-icons/fi";
 import AppModal from "../../components/modals/AppModal";
+import { getRoleSettingsStorageKey } from "../../utils/roleSettings";
 
 const roleConfigs = {
   Manager: [
@@ -156,7 +157,7 @@ const defaultPreferences = {
 };
 
 const RoleSettings = ({ roleLabel }) => {
-  const storageKey = useMemo(() => `rms_role_settings_${roleLabel.replace(/\s+/g, "_").toLowerCase()}`, [roleLabel]);
+  const storageKey = useMemo(() => getRoleSettingsStorageKey(roleLabel), [roleLabel]);
   const [preferences, setPreferences] = useState(defaultPreferences);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [activeSection, setActiveSection] = useState(null);
