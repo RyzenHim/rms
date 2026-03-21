@@ -8,7 +8,7 @@ import { InventoryCategoriesView, InventoryUnitsView } from "./inventory/Invento
 import InventoryScannerView from "./inventory/InventoryScannerView";
 import InventoryPlannerView from "./inventory/InventoryPlannerView";
 import InventoryHistoryView from "./inventory/InventoryHistoryView";
-import { categoryRestockIdeas, createDraft, defaultCoursePortionFactor, inferCourse, initialCategoryForm, initialItemForm, initialUnitForm, navGroups, normalizePartyType, parseDraftsFromScan, partyDemandMultipliers, partyTypes, plannerProfiles, serviceStyleMultipliers, serviceStyles, titleize, toNumber } from "./inventory/inventoryUtils";
+import { categoryRestockIdeas, createDraft, defaultCoursePortionFactor, getInventoryNameSimilarity, inferCourse, initialCategoryForm, initialItemForm, initialUnitForm, navGroups, normalizePartyType, parseDraftsFromScan, partyDemandMultipliers, partyTypes, plannerProfiles, serviceStyleMultipliers, serviceStyles, singularizeWord, titleize, toNumber } from "./inventory/inventoryUtils";
 import { useAuth } from "../../context/AuthContext";
 
 const iconMap = {
@@ -22,6 +22,8 @@ const iconMap = {
   archive: FiArchive,
   database: FiDatabase,
 };
+
+const normalizeInventoryMatchValue = (value = "") => singularizeWord(value);
 
 const AdminInventory = () => {
   const { token, user, getPrimaryRole } = useAuth();
@@ -573,6 +575,76 @@ const AdminInventory = () => {
 
   const removeDraft = (draftId) => setDrafts((prev) => prev.filter((draft) => draft.draftId !== draftId));
 
+  const getMatchingCandidates = (draft) =>
+    items
+      .map((item) => {
+        const sameCategory = normalizeInventoryMatchValue(item.category) === normalizeInventoryMatchValue(draft.category);
+        const sameUnit = normalizeInventoryMatchValue(item.unit) === normalizeInventoryMatchValue(draft.unit);
+        const nameScore = getInventoryNameSimilarity(item.name, draft.name);
+        const exactName = normalizeInventoryMatchValue(item.name) === normalizeInventoryMatchValue(draft.name);
+        const totalScore =
+          (exactName ? 1 : nameScore) +
+          (sameCategory ? 0.2 : 0) +
+          (sameUnit ? 0.2 : 0);
+
+        return {
+          item,
+          exactName,
+          sameCategory,
+          sameUnit,
+          nameScore,
+          totalScore: Number(totalScore.toFixed(2)),
+        };
+      })
+      .filter((candidate) => candidate.exactName || (candidate.nameScore >= 0.72 && (candidate.sameCategory || candidate.sameUnit)))
+      .sort((left, right) => right.totalScore - left.totalScore);
+
+  const findMatchingInventoryItem = (draft) => getMatchingCandidates(draft)[0]?.item || null;
+
+  const saveDraftToInventory = async (draft) => {
+    const matchingItem = findMatchingInventoryItem(draft);
+    const stockQuantity = Math.max(0, toNumber(draft.currentStock));
+
+    if (matchingItem) {
+      if (stockQuantity > 0) {
+        await inventoryService.updateStock(token, matchingItem._id, {
+          quantity: stockQuantity,
+          type: "add",
+          reason: "Scanner draft stock merge",
+          notes: `Merged from ${draft.source === "scan" ? "OCR scan" : "manual scanner draft"}`,
+        });
+      }
+
+      await inventoryService.updateItem(token, matchingItem._id, {
+        description: draft.description || matchingItem.description || "",
+        category: draft.category,
+        unit: draft.unit,
+        minimumThreshold: Math.max(1, toNumber(draft.minimumThreshold, matchingItem.minimumThreshold || 10)),
+        maximumStock: Math.max(1, toNumber(draft.maximumStock, matchingItem.maximumStock || 100)),
+        unitCost: Math.max(0, toNumber(draft.unitCost, matchingItem.unitCost || 0)),
+        supplier: draft.supplier || matchingItem.supplier || "",
+        location: draft.location || matchingItem.location || "",
+      });
+
+      return { mode: "updated", itemName: matchingItem.name };
+    }
+
+    await inventoryService.createItem(token, {
+      name: draft.name,
+      description: draft.description,
+      category: draft.category,
+      unit: draft.unit,
+      currentStock: stockQuantity,
+      minimumThreshold: Math.max(1, toNumber(draft.minimumThreshold, 10)),
+      maximumStock: Math.max(1, toNumber(draft.maximumStock, 100)),
+      unitCost: Math.max(0, toNumber(draft.unitCost)),
+      supplier: draft.supplier,
+      location: draft.location,
+    });
+
+    return { mode: "created", itemName: draft.name };
+  };
+
   const saveDraft = async (draftId) => {
     if (!canManageInventory) {
       setMessage({ type: "error", text: "Only admin or manager accounts can save drafts into the database" });
@@ -585,20 +657,12 @@ const AdminInventory = () => {
       return;
     }
     try {
-      await inventoryService.createItem(token, {
-        name: draft.name,
-        description: draft.description,
-        category: draft.category,
-        unit: draft.unit,
-        currentStock: toNumber(draft.currentStock),
-        minimumThreshold: Math.max(1, toNumber(draft.minimumThreshold, 10)),
-        maximumStock: Math.max(1, toNumber(draft.maximumStock, 100)),
-        unitCost: Math.max(0, toNumber(draft.unitCost)),
-        supplier: draft.supplier,
-        location: draft.location,
-      });
+      const result = await saveDraftToInventory(draft);
       setDrafts((prev) => prev.filter((entry) => entry.draftId !== draftId));
-      setMessage({ type: "success", text: "Draft saved to inventory database" });
+      setMessage({
+        type: "success",
+        text: result.mode === "updated" ? `Draft merged into existing item: ${result.itemName}` : "Draft saved to inventory database",
+      });
       await refreshAll();
     } catch (err) {
       setMessage({ type: "error", text: err?.response?.data?.message || "Failed to save draft" });
@@ -613,23 +677,19 @@ const AdminInventory = () => {
     if (!drafts.length) return;
     setSubmitting(true);
     try {
+      let createdCount = 0;
+      let updatedCount = 0;
       for (const draft of drafts) {
         if (!draft.name || !draft.category || !draft.unit) continue;
-        await inventoryService.createItem(token, {
-          name: draft.name,
-          description: draft.description,
-          category: draft.category,
-          unit: draft.unit,
-          currentStock: toNumber(draft.currentStock),
-          minimumThreshold: Math.max(1, toNumber(draft.minimumThreshold, 10)),
-          maximumStock: Math.max(1, toNumber(draft.maximumStock, 100)),
-          unitCost: Math.max(0, toNumber(draft.unitCost)),
-          supplier: draft.supplier,
-          location: draft.location,
-        });
+        const result = await saveDraftToInventory(draft);
+        if (result.mode === "updated") updatedCount += 1;
+        if (result.mode === "created") createdCount += 1;
       }
       setDrafts([]);
-      setMessage({ type: "success", text: "All valid draft items were saved to the database" });
+      setMessage({
+        type: "success",
+        text: `Draft sync complete: ${createdCount} created, ${updatedCount} stock-updated`,
+      });
       await refreshAll();
     } catch (err) {
       setMessage({ type: "error", text: err?.response?.data?.message || "Failed while saving draft items" });
@@ -661,7 +721,7 @@ const AdminInventory = () => {
       return <InventoryUnitsView editingUnitId={editingUnitId} unitForm={unitForm} setUnitForm={setUnitForm} submitting={submitting} handleUnitSubmit={handleUnitSubmit} resetUnitForm={resetUnitForm} units={units} activeUnits={activeUnits} setEditingUnitId={setEditingUnitId} handleDeleteUnit={handleDeleteUnit} canManageInventory={canManageInventory} />;
     }
     if (activeView === "scanner") {
-      return <InventoryScannerView scanning={scanning} selectedImageName={selectedImageName} scanProgress={scanProgress} handleScanImage={handleScanImage} addManualDraft={addManualDraft} saveAllDrafts={saveAllDrafts} drafts={drafts} submitting={submitting} updateDraft={updateDraft} activeCategories={activeCategories} activeUnits={activeUnits} saveDraft={saveDraft} removeDraft={removeDraft} scanText={scanText} canManageInventory={canManageInventory} />;
+      return <InventoryScannerView scanning={scanning} selectedImageName={selectedImageName} scanProgress={scanProgress} handleScanImage={handleScanImage} addManualDraft={addManualDraft} saveAllDrafts={saveAllDrafts} drafts={drafts} submitting={submitting} updateDraft={updateDraft} activeCategories={activeCategories} activeUnits={activeUnits} saveDraft={saveDraft} removeDraft={removeDraft} scanText={scanText} canManageInventory={canManageInventory} getMatchingItem={findMatchingInventoryItem} getMatchingCandidates={getMatchingCandidates} />;
     }
     return (
       <section className="card-elevated p-8">

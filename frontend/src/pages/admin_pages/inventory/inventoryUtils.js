@@ -65,6 +65,38 @@ export const toNumber = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+export const singularizeWord = (value = "") => {
+  const normalized = normalizeValue(value);
+  if (normalized.endsWith("ies") && normalized.length > 3) return `${normalized.slice(0, -3)}y`;
+  if (normalized.endsWith("oes") && normalized.length > 3) return normalized.slice(0, -2);
+  if (normalized.endsWith("es") && normalized.length > 3) return normalized.slice(0, -2);
+  if (normalized.endsWith("s") && normalized.length > 2) return normalized.slice(0, -1);
+  return normalized;
+};
+
+export const tokenizeInventoryName = (value = "") =>
+  singularizeWord(value)
+    .split(/\s+/)
+    .filter(Boolean);
+
+export const getInventoryNameSimilarity = (left = "", right = "") => {
+  const leftNormalized = singularizeWord(left);
+  const rightNormalized = singularizeWord(right);
+  if (!leftNormalized || !rightNormalized) return 0;
+  if (leftNormalized === rightNormalized) return 1;
+  if (leftNormalized.includes(rightNormalized) || rightNormalized.includes(leftNormalized)) return 0.92;
+
+  const leftTokens = tokenizeInventoryName(leftNormalized);
+  const rightTokens = tokenizeInventoryName(rightNormalized);
+  const overlap = leftTokens.filter((token) => rightTokens.includes(token)).length;
+  const tokenScore = overlap / Math.max(leftTokens.length, rightTokens.length, 1);
+
+  const charOverlap = [...new Set(leftNormalized)].filter((char) => rightNormalized.includes(char)).length;
+  const charScore = charOverlap / Math.max(new Set(leftNormalized).size, new Set(rightNormalized).size, 1);
+
+  return Number(((tokenScore * 0.7) + (charScore * 0.3)).toFixed(2));
+};
+
 export const createDraft = (overrides = {}) => ({
   draftId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   name: "",

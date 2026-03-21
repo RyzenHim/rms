@@ -17,6 +17,8 @@ const InventoryScannerView = ({
   removeDraft,
   scanText,
   canManageInventory,
+  getMatchingItem,
+  getMatchingCandidates,
 }) => (
   <div className="space-y-6">
     <section className="glass-panel rounded-[2rem] p-6 md:p-8">
@@ -72,6 +74,16 @@ const InventoryScannerView = ({
         <div className="mt-5 space-y-4">
           {drafts.map((draft) => (
             <article key={draft.draftId} className="glass-subtle rounded-[1.4rem] p-4">
+              {getMatchingItem?.(draft) ? (
+                <div className="mb-4 rounded-[1rem] border border-amber-200/70 bg-amber-50/80 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+                  Matching inventory item found: <span className="font-bold">{getMatchingItem(draft).name}</span>. Saving this draft will add to existing stock instead of creating a duplicate row.
+                  {getMatchingCandidates?.(draft)?.length > 1 ? (
+                    <div className="mt-2 text-xs">
+                      Other close matches: {getMatchingCandidates(draft).slice(1, 3).map((candidate) => `${candidate.item.name} (${Math.round(candidate.totalScore * 100)}%)`).join(", ")}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="font-black text-slate-900 dark:text-slate-50">{draft.name || "Untitled Draft"}</p>
