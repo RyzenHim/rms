@@ -2,9 +2,25 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import api, { withAuth } from "../../services/api";
 
+const getDefaultCustomerMenuUrl = () => {
+  const configuredUrl =
+    import.meta.env.VITE_QR_MENU_BASE_URL ||
+    (import.meta.env.VITE_PUBLIC_SITE_URL ? `${String(import.meta.env.VITE_PUBLIC_SITE_URL).replace(/\/+$/, "")}/customer/menu` : "");
+
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin.replace(/\/+$/, "")}/customer/menu`;
+  }
+
+  return "http://localhost:5173/customer/menu";
+};
+
 const AdminTableQR = () => {
   const { token } = useAuth();
-  const [baseUrl, setBaseUrl] = useState("http://localhost:5173/customer/menu");
+  const [baseUrl, setBaseUrl] = useState(getDefaultCustomerMenuUrl);
   const [tableLinks, setTableLinks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");

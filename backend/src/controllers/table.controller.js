@@ -1,6 +1,38 @@
 const Table = require("../models/table.model");
 const jwt = require("jsonwebtoken");
 
+const getDefaultQrBaseUrl = (req) => {
+  const configuredFrontendUrl = String(
+    process.env.QR_MENU_BASE_URL ||
+      (process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL.replace(/\/+$/, "")}/customer/menu` : "") ||
+      ""
+  ).trim();
+
+  if (configuredFrontendUrl) {
+    return configuredFrontendUrl;
+  }
+
+  const requestOrigin = String(req.get("origin") || "").trim();
+  if (requestOrigin) {
+    return `${requestOrigin.replace(/\/+$/, "")}/customer/menu`;
+  }
+
+  return "http://localhost:5173/customer/menu";
+};
+
+const getResolvedQrBaseUrl = (req) => {
+  const configuredBaseUrl = getDefaultQrBaseUrl(req);
+  const requestedBaseUrl = String(req.query.baseUrl || "").trim();
+
+  // When the backend is deployed, prefer the configured production URL over a
+  // localhost value that might be sent from a local admin frontend.
+  if (configuredBaseUrl && !/localhost|127\.0\.0\.1/i.test(configuredBaseUrl)) {
+    return configuredBaseUrl;
+  }
+
+  return requestedBaseUrl || configuredBaseUrl;
+};
+
 // Get all tables
 exports.getAllTables = async (req, res) => {
   try {
@@ -175,7 +207,7 @@ exports.getTableStats = async (req, res) => {
 // Generate signed QR links for active tables
 exports.getTableQrLinks = async (req, res) => {
   try {
-    const rawBaseUrl = String(req.query.baseUrl || "http://localhost:5173/customer/menu").trim();
+    const rawBaseUrl = getResolvedQrBaseUrl(req);
     const tokenSecret = process.env.QR_SIGNING_SECRET || process.env.JWT_SECRET;
 
     if (!tokenSecret) {
