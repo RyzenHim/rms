@@ -32,6 +32,8 @@ const analyticsRouter = require("./src/routes/analytics.route");
 const tableRouter = require("./src/routes/table.route");
 const reservationRouter = require("./src/routes/reservation.route");
 const customerRouter = require("./src/routes/customer.route");
+const supplierRouter = require("./src/routes/supplier.route");
+const purchaseOrderRouter = require("./src/routes/purchaseOrder.route");
 
 app.get("/health", (req, res) => res.status(200).json({ status: "ok" }));
 app.use("/api/auth", authRouter);
@@ -46,6 +48,8 @@ app.use("/api/analytics", analyticsRouter);
 app.use("/api/tables", tableRouter);
 app.use("/api/reservations", reservationRouter);
 app.use("/api/customers", customerRouter);
+app.use("/api/suppliers", supplierRouter);
+app.use("/api/purchase-orders", purchaseOrderRouter);
 
 const startServer = async () => {
     await connectDB();

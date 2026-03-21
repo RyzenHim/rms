@@ -19,7 +19,7 @@ const inventoryTransactionSchema = new mongoose.Schema(
         },
         source: {
             type: String,
-            enum: ["manual_adjustment", "order_served", "scanner_import", "item_created"],
+            enum: ["manual_adjustment", "order_served", "scanner_import", "item_created", "purchase_order_receipt"],
             required: true,
         },
         reason: {
