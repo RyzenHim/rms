@@ -52,11 +52,33 @@ export const navGroups = [
     id: "future",
     title: "Future Features",
     items: [
-      { id: "purchase-orders", label: "Purchase Orders", icon: "archive", disabled: true },
-      { id: "suppliers", label: "Suppliers", icon: "database", disabled: true },
+      { id: "purchase-orders", label: "Purchase Orders", icon: "archive" },
+      { id: "suppliers", label: "Suppliers", icon: "database" },
     ],
   },
 ];
+
+export const initialSupplierForm = {
+  name: "",
+  contactPerson: "",
+  email: "",
+  phone: "",
+  address: "",
+  taxId: "",
+  notes: "",
+  isActive: true,
+};
+
+export const initialPurchaseOrderForm = {
+  supplier: "",
+  status: "draft",
+  notes: "",
+  expectedDeliveryDate: "",
+  items: [{ inventoryItem: "", orderedQuantity: "", unitPrice: "", notes: "" }],
+  totalPaid: "",
+  paymentMethod: "other",
+  paymentNote: "",
+};
 
 export const normalizeValue = (value = "") => value.toString().trim().toLowerCase().replace(/\s+/g, " ");
 export const titleize = (value = "") => value.replace(/\b\w/g, (char) => char.toUpperCase());

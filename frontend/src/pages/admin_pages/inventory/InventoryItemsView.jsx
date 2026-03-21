@@ -9,6 +9,7 @@ const InventoryItemsView = ({
   setItemForm,
   activeCategories,
   activeUnits,
+  suppliers,
   submitting,
   handleItemSubmit,
   resetItemForm,
@@ -98,8 +99,15 @@ const InventoryItemsView = ({
               <input type="number" placeholder="Enter unit cost" value={itemForm.unitCost} onChange={(event) => setItemForm((prev) => ({ ...prev, unitCost: Number(event.target.value || 0) }))} className="input-base" step="0.01" required />
             </label>
             <label className="space-y-2">
-              <span className="form-label">Supplier Name</span>
-              <input type="text" placeholder="Enter supplier name" value={itemForm.supplier} onChange={(event) => setItemForm((prev) => ({ ...prev, supplier: event.target.value }))} className="input-base" />
+              <span className="form-label">Supplier</span>
+              <select value={itemForm.supplier} onChange={(event) => setItemForm((prev) => ({ ...prev, supplier: event.target.value }))} className="input-base">
+                <option value="">No supplier linked</option>
+                {suppliers.map((supplier) => (
+                  <option key={supplier._id} value={supplier.name}>
+                    {supplier.name}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="space-y-2">
               <span className="form-label">Storage Location</span>

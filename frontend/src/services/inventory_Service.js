@@ -16,6 +16,66 @@ const inventoryService = {
     return data;
   },
 
+  async getSuppliers(token, params = {}) {
+    const { data } = await api.get("/suppliers", { ...withAuth(token), params });
+    return data;
+  },
+
+  async getSupplier(token, id) {
+    const { data } = await api.get(`/suppliers/${id}`, withAuth(token));
+    return data;
+  },
+
+  async createSupplier(token, payload) {
+    const { data } = await api.post("/suppliers", payload, withAuth(token));
+    return data;
+  },
+
+  async updateSupplier(token, id, payload) {
+    const { data } = await api.put(`/suppliers/${id}`, payload, withAuth(token));
+    return data;
+  },
+
+  async deleteSupplier(token, id) {
+    const { data } = await api.delete(`/suppliers/${id}`, withAuth(token));
+    return data;
+  },
+
+  async getPurchaseOrders(token, params = {}) {
+    const { data } = await api.get("/purchase-orders", { ...withAuth(token), params });
+    return data;
+  },
+
+  async getPurchaseOrder(token, id) {
+    const { data } = await api.get(`/purchase-orders/${id}`, withAuth(token));
+    return data;
+  },
+
+  async createPurchaseOrder(token, payload) {
+    const { data } = await api.post("/purchase-orders", payload, withAuth(token));
+    return data;
+  },
+
+  async updatePurchaseOrder(token, id, payload) {
+    const { data } = await api.put(`/purchase-orders/${id}`, payload, withAuth(token));
+    return data;
+  },
+
+  async recordPurchasePayment(token, id, payload) {
+    const { data } = await api.patch(`/purchase-orders/${id}/payments`, payload, withAuth(token));
+    return data;
+  },
+
+  async receivePurchaseOrderItems(token, id, payload) {
+    const { data } = await api.patch(`/purchase-orders/${id}/receive`, payload, withAuth(token));
+    return data;
+  },
+
+  async deletePurchaseOrder(token, id) {
+    const { data } = await api.delete(`/purchase-orders/${id}`, withAuth(token));
+    return data;
+  },
+
   async createItem(token, payload) {
     const { data } = await api.post("/inventory", payload, withAuth(token));
     return data;

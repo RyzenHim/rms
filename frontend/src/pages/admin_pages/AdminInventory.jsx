@@ -8,7 +8,8 @@ import { InventoryCategoriesView, InventoryUnitsView } from "./inventory/Invento
 import InventoryScannerView from "./inventory/InventoryScannerView";
 import InventoryPlannerView from "./inventory/InventoryPlannerView";
 import InventoryHistoryView from "./inventory/InventoryHistoryView";
-import { categoryRestockIdeas, createDraft, defaultCoursePortionFactor, getInventoryNameSimilarity, inferCourse, initialCategoryForm, initialItemForm, initialUnitForm, navGroups, normalizePartyType, parseDraftsFromScan, partyDemandMultipliers, partyTypes, plannerProfiles, serviceStyleMultipliers, serviceStyles, singularizeWord, titleize, toNumber } from "./inventory/inventoryUtils";
+import { InventoryPurchaseOrdersView, InventorySuppliersView } from "./inventory/InventoryProcurementView";
+import { categoryRestockIdeas, createDraft, defaultCoursePortionFactor, getInventoryNameSimilarity, inferCourse, initialCategoryForm, initialItemForm, initialPurchaseOrderForm, initialSupplierForm, initialUnitForm, navGroups, normalizePartyType, parseDraftsFromScan, partyDemandMultipliers, partyTypes, plannerProfiles, serviceStyleMultipliers, serviceStyles, singularizeWord, titleize, toNumber } from "./inventory/inventoryUtils";
 import { useAuth } from "../../context/AuthContext";
 
 const iconMap = {
@@ -30,12 +31,16 @@ const AdminInventory = () => {
   const primaryRole = getPrimaryRole(user?.roles || []);
   const canManageInventory = ["admin", "manager"].includes(primaryRole);
   const canAdjustStock = ["admin", "manager", "kitchen"].includes(primaryRole);
+  const canRecordPayments = ["admin", "manager", "cashier"].includes(primaryRole);
   const [items, setItems] = useState([]);
   const [stats, setStats] = useState(null);
   const [categories, setCategories] = useState([]);
   const [units, setUnits] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [purchaseSummary, setPurchaseSummary] = useState({ totalOrders: 0, totalValue: 0, totalPaid: 0, totalDue: 0 });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
@@ -46,9 +51,12 @@ const AdminInventory = () => {
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [editingUnitId, setEditingUnitId] = useState(null);
+  const [editingSupplierId, setEditingSupplierId] = useState(null);
   const [itemForm, setItemForm] = useState(initialItemForm);
   const [categoryForm, setCategoryForm] = useState(initialCategoryForm);
   const [unitForm, setUnitForm] = useState(initialUnitForm);
+  const [supplierForm, setSupplierForm] = useState(initialSupplierForm);
+  const [purchaseOrderForm, setPurchaseOrderForm] = useState(initialPurchaseOrderForm);
   const [drafts, setDrafts] = useState([]);
   const [scanning, setScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
@@ -70,6 +78,7 @@ const AdminInventory = () => {
 
   const activeCategories = useMemo(() => categories.filter((category) => category.isActive !== false), [categories]);
   const activeUnits = useMemo(() => units.filter((unit) => unit.isActive !== false), [units]);
+  const activeSuppliers = useMemo(() => suppliers.filter((supplier) => supplier.isActive !== false), [suppliers]);
 
   useEffect(() => {
     if (!token) return;
@@ -93,6 +102,13 @@ const AdminInventory = () => {
       partyType: nextPartyTypeOptions.includes(prev.partyType) ? prev.partyType : nextPartyTypeOptions[0] || partyTypes[0],
     }));
   }, [menuItems]);
+
+  useEffect(() => {
+    setPurchaseOrderForm((prev) => ({
+      ...prev,
+      supplier: prev.supplier || suppliers[0]?._id || "",
+    }));
+  }, [suppliers]);
 
   const filteredItems = useMemo(() => {
     if (filterCategory === "all") return items;
@@ -145,10 +161,134 @@ const AdminInventory = () => {
     [items]
   );
 
+  const categoryValueData = useMemo(() => {
+    const grouped = items.reduce((acc, item) => {
+      const key = item.category || "other";
+      acc[key] = (acc[key] || 0) + Number(item.currentStock || 0) * Number(item.unitCost || 0);
+      return acc;
+    }, {});
+
+    return Object.entries(grouped)
+      .map(([name, value]) => ({ name: titleize(name), value: Number(value.toFixed(2)) }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
+  }, [items]);
+
   const lowStockItems = useMemo(
     () => items.filter((item) => item.currentStock < item.minimumThreshold).slice(0, 8),
     [items]
   );
+
+  const topMovingItems = useMemo(() => {
+    const movement = transactions.reduce((acc, transaction) => {
+      const inventoryItem = transaction.inventoryItem;
+      const inventoryId = String(inventoryItem?._id || transaction.inventoryItemId || "");
+      if (!inventoryId) return acc;
+
+      if (!acc[inventoryId]) {
+        acc[inventoryId] = {
+          id: inventoryId,
+          name: inventoryItem?.name || transaction.itemName || "Unknown Item",
+          unit: inventoryItem?.unit || transaction.unit || "",
+          moved: 0,
+          inQuantity: 0,
+          outQuantity: 0,
+          eventCount: 0,
+        };
+      }
+
+      const quantity = Number(transaction.quantity || 0);
+      acc[inventoryId].moved += Math.abs(quantity);
+      acc[inventoryId].eventCount += 1;
+      if (transaction.direction === "in") acc[inventoryId].inQuantity += quantity;
+      if (transaction.direction === "out") acc[inventoryId].outQuantity += quantity;
+      return acc;
+    }, {});
+
+    return Object.values(movement)
+      .sort((a, b) => b.moved - a.moved)
+      .slice(0, 6);
+  }, [transactions]);
+
+  const recentTransactions = useMemo(
+    () =>
+      transactions.slice(0, 8).map((transaction) => ({
+        id: transaction._id,
+        itemName: transaction.inventoryItem?.name || transaction.itemName || "Inventory item",
+        direction: transaction.direction,
+        quantity: Number(transaction.quantity || 0),
+        unit: transaction.inventoryItem?.unit || transaction.unit || "",
+        source: transaction.source || "manual",
+        reason: transaction.reason || "",
+        createdAt: transaction.createdAt,
+        resultingStock: transaction.resultingStock,
+      })),
+    [transactions]
+  );
+
+  const procurementInsights = useMemo(() => {
+    const activeSuppliersCount = suppliers.filter((supplier) => supplier.isActive !== false).length;
+    const openOrders = purchaseOrders.filter((order) => ["draft", "sent", "partially_received", "partially_paid"].includes(order.status));
+    const overduePayments = purchaseOrders.filter((order) => Number(order.balanceDue || 0) > 0);
+    const pendingReceipts = purchaseOrders.filter(
+      (order) => (order.items || []).some((item) => Number(item.orderedQuantity || 0) > Number(item.receivedQuantity || 0))
+    );
+
+    const recentOrders = [...purchaseOrders]
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+      .slice(0, 5)
+      .map((order) => ({
+        id: order._id,
+        orderNumber: order.purchaseOrderNumber,
+        supplierName: order.supplier?.name || "Supplier",
+        status: order.status,
+        totalAmount: Number(order.totalAmount || 0),
+        balanceDue: Number(order.balanceDue || 0),
+        itemCount: (order.items || []).length,
+      }));
+
+    const supplierExposure = suppliers
+      .map((supplier) => {
+        const supplierOrders = purchaseOrders.filter((order) => String(order.supplier?._id || order.supplier) === String(supplier._id));
+        const totalOrdered = supplierOrders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
+        const totalPaid = supplierOrders.reduce((sum, order) => sum + Number(order.totalPaid || 0), 0);
+        const outstanding = supplierOrders.reduce((sum, order) => sum + Number(order.balanceDue || 0), 0);
+        return {
+          id: supplier._id,
+          name: supplier.name,
+          totalOrdered,
+          totalPaid,
+          outstanding,
+          orders: supplierOrders.length,
+        };
+      })
+      .filter((supplier) => supplier.orders > 0)
+      .sort((a, b) => b.outstanding - a.outstanding)
+      .slice(0, 5);
+
+    return {
+      activeSuppliersCount,
+      openOrdersCount: openOrders.length,
+      overduePaymentsCount: overduePayments.length,
+      pendingReceiptsCount: pendingReceipts.length,
+      totalOrders: Number(purchaseSummary.totalOrders || 0),
+      totalValue: Number(purchaseSummary.totalValue || 0),
+      totalPaid: Number(purchaseSummary.totalPaid || 0),
+      totalDue: Number(purchaseSummary.totalDue || 0),
+      recentOrders,
+      supplierExposure,
+    };
+  }, [purchaseOrders, purchaseSummary, suppliers]);
+
+  const dashboardAlerts = useMemo(() => {
+    const alerts = [];
+    if (lowStockItems.length) alerts.push(`${lowStockItems.length} item${lowStockItems.length > 1 ? "s are" : " is"} below minimum stock.`);
+    if (drafts.length) alerts.push(`${drafts.length} scanner draft${drafts.length > 1 ? "s are" : " is"} waiting to be saved.`);
+    if (procurementInsights.totalDue > 0) alerts.push(`Rs ${procurementInsights.totalDue.toLocaleString()} is still pending across purchase orders.`);
+    if (procurementInsights.pendingReceiptsCount) alerts.push(`${procurementInsights.pendingReceiptsCount} purchase order${procurementInsights.pendingReceiptsCount > 1 ? "s have" : " has"} stock pending receipt.`);
+    if (!alerts.length) alerts.push("Inventory operations look stable right now with no urgent dashboard alerts.");
+    return alerts;
+  }, [drafts.length, lowStockItems.length, procurementInsights.pendingReceiptsCount, procurementInsights.totalDue]);
 
   const menuOptions = useMemo(() => {
     const enriched = menuItems.map((item) => ({ ...item, courseLabel: titleize(inferCourse(item)) }));
@@ -330,10 +470,21 @@ const AdminInventory = () => {
     setTransactions(data?.transactions || []);
   };
 
+  const loadSuppliers = async () => {
+    const data = await inventoryService.getSuppliers(token);
+    setSuppliers(data?.suppliers || []);
+  };
+
+  const loadPurchaseOrders = async () => {
+    const data = await inventoryService.getPurchaseOrders(token);
+    setPurchaseOrders(data?.purchaseOrders || []);
+    setPurchaseSummary(data?.summary || { totalOrders: 0, totalValue: 0, totalPaid: 0, totalDue: 0 });
+  };
+
   const refreshAll = async () => {
     setLoading(true);
     try {
-      await Promise.all([loadInventory(), loadMetadata(), loadMenuItems(), loadTransactions()]);
+      await Promise.all([loadInventory(), loadMetadata(), loadMenuItems(), loadTransactions(), loadSuppliers(), loadPurchaseOrders()]);
     } catch (err) {
       setMessage({ type: "error", text: err?.response?.data?.message || "Failed to load inventory workspace" });
     } finally {
@@ -358,6 +509,18 @@ const AdminInventory = () => {
   const resetUnitForm = () => {
     setUnitForm(initialUnitForm);
     setEditingUnitId(null);
+  };
+
+  const resetSupplierForm = () => {
+    setSupplierForm(initialSupplierForm);
+    setEditingSupplierId(null);
+  };
+
+  const resetPurchaseOrderForm = () => {
+    setPurchaseOrderForm({
+      ...initialPurchaseOrderForm,
+      supplier: suppliers[0]?._id || "",
+    });
   };
 
   const getStockStatus = (item) => {
@@ -443,6 +606,80 @@ const AdminInventory = () => {
     }
   };
 
+  const handleSupplierSubmit = async (event) => {
+    event.preventDefault();
+    if (!canManageInventory) {
+      setMessage({ type: "error", text: "Only admin or manager accounts can manage suppliers" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      if (editingSupplierId) await inventoryService.updateSupplier(token, editingSupplierId, supplierForm);
+      else await inventoryService.createSupplier(token, supplierForm);
+      setMessage({ type: "success", text: `Supplier ${editingSupplierId ? "updated" : "created"} successfully` });
+      resetSupplierForm();
+      await refreshAll();
+    } catch (err) {
+      setMessage({ type: "error", text: err?.response?.data?.message || "Failed to save supplier" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const addPurchaseOrderLine = () =>
+    setPurchaseOrderForm((prev) => ({
+      ...prev,
+      items: [...prev.items, { inventoryItem: "", orderedQuantity: "", unitPrice: "", notes: "" }],
+    }));
+
+  const updatePurchaseOrderLine = (index, key, value) =>
+    setPurchaseOrderForm((prev) => ({
+      ...prev,
+      items: prev.items.map((line, lineIndex) => (lineIndex === index ? { ...line, [key]: value } : line)),
+    }));
+
+  const removePurchaseOrderLine = (index) =>
+    setPurchaseOrderForm((prev) => ({
+      ...prev,
+      items: prev.items.filter((_, lineIndex) => lineIndex !== index),
+    }));
+
+  const handlePurchaseOrderSubmit = async (event) => {
+    event.preventDefault();
+    if (!canManageInventory) {
+      setMessage({ type: "error", text: "Only admin or manager accounts can create purchase orders" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const payload = {
+        supplier: purchaseOrderForm.supplier,
+        status: purchaseOrderForm.status,
+        notes: purchaseOrderForm.notes,
+        expectedDeliveryDate: purchaseOrderForm.expectedDeliveryDate || null,
+        totalPaid: purchaseOrderForm.totalPaid === "" ? 0 : Number(purchaseOrderForm.totalPaid),
+        paymentMethod: purchaseOrderForm.paymentMethod,
+        paymentNote: purchaseOrderForm.paymentNote,
+        items: purchaseOrderForm.items
+          .filter((line) => line.inventoryItem && line.orderedQuantity !== "" && line.unitPrice !== "")
+          .map((line) => ({
+            inventoryItem: line.inventoryItem,
+            orderedQuantity: Number(line.orderedQuantity),
+            unitPrice: Number(line.unitPrice),
+            notes: line.notes || "",
+          })),
+      };
+      await inventoryService.createPurchaseOrder(token, payload);
+      setMessage({ type: "success", text: "Purchase order created successfully" });
+      resetPurchaseOrderForm();
+      await refreshAll();
+    } catch (err) {
+      setMessage({ type: "error", text: err?.response?.data?.message || "Failed to create purchase order" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleEditItem = (item) => {
     setEditingItemId(item._id);
     setItemForm({
@@ -500,6 +737,110 @@ const AdminInventory = () => {
       await refreshAll();
     } catch (err) {
       setMessage({ type: "error", text: err?.response?.data?.message || "Failed to delete unit" });
+    }
+  };
+
+  const handleEditSupplier = (supplier) => {
+    setEditingSupplierId(supplier._id);
+    setSupplierForm({
+      name: supplier.name || "",
+      contactPerson: supplier.contactPerson || "",
+      email: supplier.email || "",
+      phone: supplier.phone || "",
+      address: supplier.address || "",
+      taxId: supplier.taxId || "",
+      notes: supplier.notes || "",
+      isActive: supplier.isActive !== false,
+    });
+    setActiveView("suppliers");
+  };
+
+  const handleDeleteSupplier = async (id) => {
+    if (!canManageInventory) {
+      setMessage({ type: "error", text: "Only admin or manager accounts can manage suppliers" });
+      return;
+    }
+    if (!window.confirm("Delete or deactivate this supplier?")) return;
+    try {
+      await inventoryService.deleteSupplier(token, id);
+      setMessage({ type: "success", text: "Supplier deleted or deactivated successfully" });
+      await refreshAll();
+    } catch (err) {
+      setMessage({ type: "error", text: err?.response?.data?.message || "Failed to delete supplier" });
+    }
+  };
+
+  const recordPurchasePayment = async (order) => {
+    if (!canRecordPayments) {
+      setMessage({ type: "error", text: "You do not have permission to record purchase payments" });
+      return;
+    }
+    const amountInput = window.prompt(`Enter payment amount for ${order.purchaseOrderNumber}:`, String(order.balanceDue || 0));
+    if (!amountInput) return;
+    const amount = Number(amountInput);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setMessage({ type: "error", text: "Enter a valid positive payment amount" });
+      return;
+    }
+    const method = window.prompt("Payment method (cash, bank_transfer, upi, card, other):", "other") || "other";
+    const note = window.prompt("Payment note:", "") || "";
+    try {
+      await inventoryService.recordPurchasePayment(token, order._id, { amount, method, note });
+      setMessage({ type: "success", text: `Payment recorded for ${order.purchaseOrderNumber}` });
+      await refreshAll();
+    } catch (err) {
+      setMessage({ type: "error", text: err?.response?.data?.message || "Failed to record payment" });
+    }
+  };
+
+  const receivePurchaseOrder = async (order) => {
+    if (!canManageInventory) {
+      setMessage({ type: "error", text: "Only admin or manager accounts can receive purchase stock" });
+      return;
+    }
+    const receivableItems = (order.items || []).filter((item) => Number(item.orderedQuantity || 0) > Number(item.receivedQuantity || 0));
+    if (!receivableItems.length) {
+      setMessage({ type: "success", text: "This purchase order is already fully received" });
+      return;
+    }
+
+    const updates = [];
+    for (const item of receivableItems) {
+      const remaining = Number(item.orderedQuantity || 0) - Number(item.receivedQuantity || 0);
+      const input = window.prompt(`Receive quantity for ${item.itemName} (${remaining} ${item.unit} pending):`, String(remaining));
+      if (input === null) continue;
+      const quantityReceived = Number(input);
+      if (!Number.isFinite(quantityReceived) || quantityReceived <= 0) continue;
+      updates.push({
+        inventoryItem: item.inventoryItem,
+        quantityReceived,
+        notes: `Received from ${order.purchaseOrderNumber}`,
+      });
+    }
+
+    if (!updates.length) return;
+
+    try {
+      await inventoryService.receivePurchaseOrderItems(token, order._id, { items: updates });
+      setMessage({ type: "success", text: `Stock received for ${order.purchaseOrderNumber}` });
+      await refreshAll();
+    } catch (err) {
+      setMessage({ type: "error", text: err?.response?.data?.message || "Failed to receive purchase order stock" });
+    }
+  };
+
+  const handleDeletePurchaseOrder = async (id) => {
+    if (!canManageInventory) {
+      setMessage({ type: "error", text: "Only admin or manager accounts can delete purchase orders" });
+      return;
+    }
+    if (!window.confirm("Delete this purchase order?")) return;
+    try {
+      await inventoryService.deletePurchaseOrder(token, id);
+      setMessage({ type: "success", text: "Purchase order deleted successfully" });
+      await refreshAll();
+    } catch (err) {
+      setMessage({ type: "error", text: err?.response?.data?.message || "Failed to delete purchase order" });
     }
   };
 
@@ -703,10 +1044,10 @@ const AdminInventory = () => {
       return <p className="py-20 text-center text-sm font-semibold text-slate-600 dark:text-slate-300">Loading inventory workspace...</p>;
     }
     if (activeView === "dashboard") {
-      return <InventoryDashboardView summaryCards={summaryCards} categoryChartData={categoryChartData} topValueItems={topValueItems} stockHealthData={stockHealthData} lowStockItems={lowStockItems} draftsCount={drafts.length} onOpenScanner={() => setActiveView("scanner")} onOpenAddItem={() => { setActiveView("items"); setShowItemForm(true); }} onOpenItems={() => setActiveView("items")} canManageInventory={canManageInventory} />;
+      return <InventoryDashboardView summaryCards={summaryCards} categoryChartData={categoryChartData} topValueItems={topValueItems} categoryValueData={categoryValueData} stockHealthData={stockHealthData} lowStockItems={lowStockItems} draftsCount={drafts.length} recentTransactions={recentTransactions} topMovingItems={topMovingItems} procurementInsights={procurementInsights} dashboardAlerts={dashboardAlerts} onOpenScanner={() => setActiveView("scanner")} onOpenAddItem={() => { setActiveView("items"); setShowItemForm(true); }} onOpenItems={() => setActiveView("items")} canManageInventory={canManageInventory} />;
     }
     if (activeView === "items") {
-      return <InventoryItemsView showItemForm={showItemForm} setShowItemForm={setShowItemForm} editingItemId={editingItemId} itemForm={itemForm} setItemForm={setItemForm} activeCategories={activeCategories} activeUnits={activeUnits} submitting={submitting} handleItemSubmit={handleItemSubmit} resetItemForm={resetItemForm} filterCategory={filterCategory} setFilterCategory={setFilterCategory} filteredItems={filteredItems} updateStock={updateStock} handleEditItem={handleEditItem} handleDeleteItem={handleDeleteItem} getStockStatus={getStockStatus} canManageInventory={canManageInventory} canAdjustStock={canAdjustStock} />;
+      return <InventoryItemsView showItemForm={showItemForm} setShowItemForm={setShowItemForm} editingItemId={editingItemId} itemForm={itemForm} setItemForm={setItemForm} activeCategories={activeCategories} activeUnits={activeUnits} suppliers={activeSuppliers} submitting={submitting} handleItemSubmit={handleItemSubmit} resetItemForm={resetItemForm} filterCategory={filterCategory} setFilterCategory={setFilterCategory} filteredItems={filteredItems} updateStock={updateStock} handleEditItem={handleEditItem} handleDeleteItem={handleDeleteItem} getStockStatus={getStockStatus} canManageInventory={canManageInventory} canAdjustStock={canAdjustStock} />;
     }
     if (activeView === "planner") {
       return <InventoryPlannerView plannerForm={plannerForm} setPlannerForm={setPlannerForm} menuOptions={menuOptions} plannerResult={plannerResult} togglePlannerSelection={(itemId) => setPlannerForm((prev) => ({ ...prev, selectedItems: prev.selectedItems.includes(itemId) ? prev.selectedItems.filter((id) => id !== itemId) : [...prev.selectedItems, itemId] }))} canManageInventory={canManageInventory} />;
@@ -719,6 +1060,12 @@ const AdminInventory = () => {
     }
     if (activeView === "units") {
       return <InventoryUnitsView editingUnitId={editingUnitId} unitForm={unitForm} setUnitForm={setUnitForm} submitting={submitting} handleUnitSubmit={handleUnitSubmit} resetUnitForm={resetUnitForm} units={units} activeUnits={activeUnits} setEditingUnitId={setEditingUnitId} handleDeleteUnit={handleDeleteUnit} canManageInventory={canManageInventory} />;
+    }
+    if (activeView === "suppliers") {
+      return <InventorySuppliersView supplierForm={supplierForm} setSupplierForm={setSupplierForm} editingSupplierId={editingSupplierId} handleSupplierSubmit={handleSupplierSubmit} resetSupplierForm={resetSupplierForm} suppliers={suppliers} canManageInventory={canManageInventory} canRecordPayments={canRecordPayments} submitting={submitting} onEditSupplier={handleEditSupplier} onDeleteSupplier={handleDeleteSupplier} />;
+    }
+    if (activeView === "purchase-orders") {
+      return <InventoryPurchaseOrdersView purchaseOrderForm={purchaseOrderForm} setPurchaseOrderForm={setPurchaseOrderForm} suppliers={suppliers} items={items} purchaseOrders={purchaseOrders} purchaseSummary={purchaseSummary} canManageInventory={canManageInventory} canRecordPayments={canRecordPayments} submitting={submitting} handlePurchaseOrderSubmit={handlePurchaseOrderSubmit} addPurchaseOrderLine={addPurchaseOrderLine} updatePurchaseOrderLine={updatePurchaseOrderLine} removePurchaseOrderLine={removePurchaseOrderLine} recordPayment={recordPurchasePayment} receiveOrderStock={receivePurchaseOrder} deletePurchaseOrder={handleDeletePurchaseOrder} />;
     }
     if (activeView === "scanner") {
       return <InventoryScannerView scanning={scanning} selectedImageName={selectedImageName} scanProgress={scanProgress} handleScanImage={handleScanImage} addManualDraft={addManualDraft} saveAllDrafts={saveAllDrafts} drafts={drafts} submitting={submitting} updateDraft={updateDraft} activeCategories={activeCategories} activeUnits={activeUnits} saveDraft={saveDraft} removeDraft={removeDraft} scanText={scanText} canManageInventory={canManageInventory} getMatchingItem={findMatchingInventoryItem} getMatchingCandidates={getMatchingCandidates} />;

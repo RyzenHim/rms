@@ -2,6 +2,7 @@ const Inventory = require("../models/inventory.model");
 const InventoryCategory = require("../models/inventoryCategory.model");
 const InventoryUnit = require("../models/inventoryUnit.model");
 const InventoryTransaction = require("../models/inventoryTransaction.model");
+const Supplier = require("../models/supplier.model");
 const { defaultInventoryCategories, defaultInventoryUnits } = require("../constants/inventoryMetadata");
 const { executeWithRetry } = require("../utils/transactionManager");
 
@@ -90,6 +91,20 @@ const validateCategoryAndUnit = async ({ category, unit }) => {
   };
 };
 
+const validateSupplierName = async (supplier = "") => {
+  const normalizedSupplier = String(supplier || "").trim();
+  if (!normalizedSupplier) {
+    return { supplier: "" };
+  }
+
+  const supplierDoc = await Supplier.findOne({ name: normalizedSupplier });
+  if (!supplierDoc) {
+    return { error: "Please select a valid supplier from the supplier list" };
+  }
+
+  return { supplier: supplierDoc.name };
+};
+
 const buildInventoryQuery = ({ category, status = "all", sortBy = "name" }) => {
   const query = { isActive: true };
 
@@ -156,9 +171,12 @@ exports.createInventory = async (req, res) => {
   try {
     const { name, description, category, unit, currentStock, minimumThreshold, maximumStock, unitCost, supplier, location } = req.body;
 
-    const validated = await validateCategoryAndUnit({ category, unit });
-    if (validated.error) {
-      return res.status(400).json({ message: validated.error });
+    const [validated, validatedSupplier] = await Promise.all([
+      validateCategoryAndUnit({ category, unit }),
+      validateSupplierName(supplier),
+    ]);
+    if (validated.error || validatedSupplier.error) {
+      return res.status(400).json({ message: validated.error || validatedSupplier.error });
     }
 
     const inventory = await Inventory.create({
@@ -170,7 +188,7 @@ exports.createInventory = async (req, res) => {
       minimumThreshold,
       maximumStock,
       unitCost,
-      supplier,
+      supplier: validatedSupplier.supplier,
       location,
     });
 
@@ -241,12 +259,12 @@ exports.updateInventory = async (req, res) => {
     const { id } = req.params;
     const updates = { ...req.body };
 
-    if (updates.category || updates.unit) {
-      const existingItem = await Inventory.findById(id);
-      if (!existingItem) {
-        return res.status(404).json({ message: "Inventory item not found" });
-      }
+    const existingItem = await Inventory.findById(id);
+    if (!existingItem) {
+      return res.status(404).json({ message: "Inventory item not found" });
+    }
 
+    if (updates.category || updates.unit) {
       const validated = await validateCategoryAndUnit({
         category: updates.category || existingItem.category,
         unit: updates.unit || existingItem.unit,
@@ -258,6 +276,14 @@ exports.updateInventory = async (req, res) => {
 
       updates.category = validated.category;
       updates.unit = validated.unit;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, "supplier")) {
+      const validatedSupplier = await validateSupplierName(updates.supplier);
+      if (validatedSupplier.error) {
+        return res.status(400).json({ message: validatedSupplier.error });
+      }
+      updates.supplier = validatedSupplier.supplier;
     }
 
     const item = await Inventory.findByIdAndUpdate(id, updates, { new: true, runValidators: true });
