@@ -116,6 +116,29 @@ const EmployeeSidebar = ({
                         {mobileOpen ? <FiX className="h-5 w-5" /> : <FiMenu className="h-5 w-5" />}
                     </button>
                 </div>
+                <div className="flex gap-2 overflow-x-auto border-t px-4 py-2" style={{ borderColor: palette.border }}>
+                    {links.map((link) => {
+                        const Icon = getIconForLabel(link.label);
+                        return (
+                            <NavLink
+                                key={`mobile-header-${link.to}`}
+                                to={link.to}
+                                end={link.end}
+                                onClick={() => setMobileOpen(false)}
+                                className={({ isActive }) => `inline-flex items-center gap-2 whitespace-nowrap rounded-full px-3 py-2 text-xs font-semibold ${isActive ? "shadow-sm" : ""}`}
+                                style={({ isActive }) => ({
+                                    backgroundColor: isActive ? palette.cardBg : "transparent",
+                                    color: palette.text,
+                                    border: `1px solid ${palette.border}`,
+                                    boxShadow: isActive ? palette.glassShadow : "none",
+                                })}
+                            >
+                                <Icon className="h-3.5 w-3.5" />
+                                {link.label}
+                            </NavLink>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* Mobile Overlay */}
@@ -129,7 +152,7 @@ const EmployeeSidebar = ({
 
             {/* Sidebar */}
             <aside
-                className={`fixed left-0 top-12 z-30 flex h-[calc(100vh-3rem)] flex-col border-r transition-all duration-300 md:sticky md:top-0 md:h-screen ${sidebarOpen ? "w-64" : "w-20"
+                className={`fixed left-0 top-[6.7rem] z-30 flex h-[calc(100vh-6.7rem)] flex-col border-r transition-all duration-300 md:sticky md:top-0 md:h-screen ${sidebarOpen ? "w-64" : "w-20"
                     } ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
                 style={{
                     borderColor: palette.border,

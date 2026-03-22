@@ -51,7 +51,7 @@ const RoleShell = ({ links = [] }) => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-hidden">
-        <div className="h-screen overflow-y-auto" style={{ backgroundColor: palette.pageBg }}>
+        <div className="min-h-[calc(100vh-6.7rem)] overflow-y-auto md:h-screen" style={{ backgroundColor: palette.pageBg }}>
           <div className="mx-auto w-full max-w-[112rem] px-3 py-4 sm:px-4 lg:px-6">
             <div
               className="rounded-[1.5rem] border p-3 shadow-md transition-all duration-300 sm:p-4 md:p-5"

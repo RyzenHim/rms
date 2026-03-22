@@ -17,6 +17,7 @@ const MenuItemQuickViewModal = ({
   onIncrementItem,
   onDecrementItem,
   onRemoveItem,
+  onGoToTray,
   cartItems = [],
 }) => {
   const navigate = useNavigate();
@@ -155,10 +156,10 @@ const MenuItemQuickViewModal = ({
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
-              <span className="rounded-full border px-3 py-1 text-xs font-semibold" style={{ borderColor: palette.border, color: palette.text }}>
+              <span className="rounded-full border px-3 py-1 text-xs font-semibold" style={{ borderColor: palette.border, color: palette.text, backgroundColor: palette.panelBg }}>
                 {item.foodType === "veg" ? "Veg" : "Non-Veg"}
               </span>
-              <span className="rounded-full border px-3 py-1 text-xs font-semibold" style={{ borderColor: palette.border, color: palette.text }}>
+              <span className="rounded-full border px-3 py-1 text-xs font-semibold" style={{ borderColor: palette.border, color: palette.text, backgroundColor: palette.panelBg }}>
                 {String(item.stockStatus || "in_stock").replaceAll("_", " ")}
               </span>
               {item.discountLabel ? (
@@ -185,7 +186,7 @@ const MenuItemQuickViewModal = ({
             ) : null}
 
             {item.portions?.length ? (
-              <div className="mt-5 rounded-2xl border p-4" style={{ borderColor: palette.border, backgroundColor: palette.panelBg }}>
+              <div className="mt-5 rounded-2xl border p-4" style={{ borderColor: palette.border, background: `linear-gradient(135deg, ${theme?.primaryColor || palette.primary}10 0%, ${palette.panelBg} 100%)` }}>
                 <p className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: palette.muted }}>Available Portions</p>
                 <div className="mt-3 space-y-2">
                   {item.portions.map((portion) => (
@@ -204,7 +205,7 @@ const MenuItemQuickViewModal = ({
             ) : null}
 
             {trayEntry ? (
-              <div className="mt-5 flex items-center gap-2 rounded-2xl border p-2" style={{ borderColor: palette.border, backgroundColor: palette.panelBg }}>
+              <div className="mt-5 flex flex-wrap items-center gap-2 rounded-2xl border p-2" style={{ borderColor: palette.border, backgroundColor: palette.panelBg }}>
                 <button
                   onClick={() => onDecrementItem?.(item)}
                   className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-white"
@@ -225,6 +226,13 @@ const MenuItemQuickViewModal = ({
                   style={{ borderColor: palette.border, color: palette.text, backgroundColor: palette.cardBg }}
                 >
                   <FiTrash2 className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => onGoToTray?.()}
+                  className="w-full rounded-xl border px-4 py-3 text-sm font-bold sm:w-auto"
+                  style={{ borderColor: palette.border, color: theme?.primaryColor || palette.primary, backgroundColor: `${theme?.primaryColor || palette.primary}14` }}
+                >
+                  View Tray
                 </button>
               </div>
             ) : (

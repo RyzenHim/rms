@@ -225,8 +225,38 @@ const AppNavbar = ({
         </button>
       </div>
 
+      <div className="border-t px-3 py-2 md:hidden" style={{ borderColor: palette.border, backgroundColor: palette.panelBg }}>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {navLinks.map((link) => (
+            <NavLink
+              key={`mobile-chip-${link.to}`}
+              to={link.to}
+              end={link.end}
+              className="whitespace-nowrap rounded-full px-3 py-2 text-xs font-semibold transition-all"
+              style={({ isActive }) =>
+                isActive
+                  ? { backgroundColor: palette.cardBg, color: palette.text, border: `1px solid ${palette.border}`, boxShadow: palette.glassShadow }
+                  : { backgroundColor: "transparent", color: palette.text, border: `1px solid ${palette.border}` }
+              }
+            >
+              {link.label}
+            </NavLink>
+          ))}
+          {isAuthenticated ? (
+            <button
+              onClick={openTrayPage}
+              className="inline-flex items-center gap-2 whitespace-nowrap rounded-full px-3 py-2 text-xs font-semibold"
+              style={{ backgroundColor: palette.cardBg, color: palette.text, border: `1px solid ${palette.border}` }}
+            >
+              <FiShoppingCart className="h-3.5 w-3.5" />
+              Tray ({trayItemCount})
+            </button>
+          ) : null}
+        </div>
+      </div>
+
       {mobileOpen ? (
-        <div className="space-y-2 border-t p-3 md:hidden" style={{ borderColor: palette.border, backgroundColor: palette.panelBg, backdropFilter: palette.backdrop }}>
+        <div className="max-h-[calc(100vh-7.5rem)] space-y-2 overflow-y-auto border-t p-3 md:hidden" style={{ borderColor: palette.border, backgroundColor: palette.panelBg, backdropFilter: palette.backdrop }}>
           {navLinks.map((link) => (
             <NavLink
               key={link.to}
@@ -243,6 +273,20 @@ const AppNavbar = ({
               {link.label}
             </NavLink>
           ))}
+
+          {isAuthenticated ? (
+            <button
+              onClick={() => {
+                openTrayPage();
+                setMobileOpen(false);
+              }}
+              className="inline-flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-semibold transition-all"
+              style={{ borderColor: palette.border, color: palette.text, backgroundColor: palette.cardBg }}
+            >
+              <FiShoppingCart className="h-4 w-4" />
+              Open Tray ({trayItemCount})
+            </button>
+          ) : null}
 
           {allowUserThemeToggle ? (
             <button

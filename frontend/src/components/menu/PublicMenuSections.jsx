@@ -41,7 +41,9 @@ const PublicMenuSections = ({
   onItemTap,
   cartItems = [],
   showTrayActions = false,
+  onGoToTray,
 }) => {
+  const softPrimary = `${primaryColor}14`;
   const sortedCategories = useMemo(
     () => [...categories].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)),
     [categories],
@@ -160,6 +162,16 @@ const PublicMenuSections = ({
           >
             Remove
           </button>
+          <button
+            onClick={(event) => {
+              event.stopPropagation();
+              onGoToTray?.();
+            }}
+            className="rounded-xl border px-3 py-2 text-sm font-bold"
+            style={{ borderColor: palette.border, backgroundColor: `${primaryColor}14`, color: primaryColor }}
+          >
+            View Tray
+          </button>
         </div>
       );
     }
@@ -208,7 +220,7 @@ const PublicMenuSections = ({
                   .filter((x) => x.items.length > 0)
                   .map(({ subCategory, items: subCategoryItems }) => (
                     <div key={subCategory._id}>
-                      <div className="mb-3 rounded-2xl px-4 py-3" style={{ backgroundColor: palette.cardBg }}>
+                      <div className="mb-3 rounded-[1.6rem] border px-4 py-3" style={{ background: `linear-gradient(135deg, ${softPrimary} 0%, ${palette.panelBg} 100%)`, borderColor: palette.border }}>
                         <p className="text-xs uppercase tracking-[0.18em]" style={{ color: palette.muted }}>
                           {subCategory.heading || category.name}
                         </p>
@@ -217,7 +229,7 @@ const PublicMenuSections = ({
                           {subCategory.subHeading || subCategory.description || "Chef curated section"}
                         </p>
                       </div>
-                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                         {subCategoryItems.map((item) => (
                           <article
                             key={item._id}
@@ -264,7 +276,16 @@ const PublicMenuSections = ({
                                 </div>
                               ) : null}
                               <div className="flex min-h-[56px] items-start justify-between gap-3">
-                                <h4 className="line-clamp-2 text-lg font-bold">{item.name}</h4>
+                                <div>
+                                  <div className="mb-2 inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold" style={{ borderColor: palette.border, backgroundColor: palette.panelBg }}>
+                                    <span
+                                      className="inline-block h-2.5 w-2.5 rounded-full"
+                                      style={{ backgroundColor: (item.foodType || "non_veg") === "veg" ? "#16a34a" : "#dc2626" }}
+                                    />
+                                    {(item.foodType || "non_veg") === "veg" ? "Veg" : "Non-Veg"}
+                                  </div>
+                                  <h4 className="line-clamp-2 text-lg font-bold">{item.name}</h4>
+                                </div>
                                 <div className="text-right">
                                   <p className="text-lg font-black">Rs {Number(item.price || 0).toFixed(2)}</p>
                                   {Number(item.compareAtPrice || 0) > Number(item.price || 0) ? (
@@ -282,25 +303,18 @@ const PublicMenuSections = ({
                                   {item.description}
                                 </p>
                               ) : null}
-                              <div className="mt-2 inline-flex items-center gap-2 rounded-full border px-2 py-1 text-xs font-semibold" style={{ borderColor: palette.border }}>
-                                <span
-                                  className="inline-block h-2.5 w-2.5 rounded-full"
-                                  style={{ backgroundColor: (item.foodType || "non_veg") === "veg" ? "#16a34a" : "#dc2626" }}
-                                />
-                                {(item.foodType || "non_veg") === "veg" ? "Veg" : "Non-Veg"}
-                              </div>
-                              <div className="mt-2 min-h-[58px] content-start flex flex-wrap gap-2 text-[11px]">
-                                <span className="rounded-full border px-2 py-1 font-semibold" style={{ borderColor: palette.border }}>
+                              <div className="mt-3 min-h-[58px] content-start flex flex-wrap gap-2 text-[11px]">
+                                <span className="rounded-full border px-2 py-1 font-semibold" style={{ borderColor: palette.border, backgroundColor: palette.panelBg }}>
                                   Prep: {Number(item.prepTimeMinutes || 0)} min
                                 </span>
-                                <span className="rounded-full border px-2 py-1 font-semibold" style={{ borderColor: palette.border }}>
+                                <span className="rounded-full border px-2 py-1 font-semibold" style={{ borderColor: palette.border, backgroundColor: palette.panelBg }}>
                                   Spice: {String(item.spiceLevel || "none").replace("_", " ")}
                                 </span>
-                                <span className="rounded-full border px-2 py-1 font-semibold" style={{ borderColor: palette.border }}>
+                                <span className="rounded-full border px-2 py-1 font-semibold" style={{ borderColor: palette.border, backgroundColor: palette.panelBg }}>
                                   {String(item.stockStatus || "in_stock").replace("_", " ")}
                                 </span>
                                 {item.isFeatured ? (
-                                  <span className="rounded-full border px-2 py-1 font-semibold" style={{ borderColor: palette.border }}>
+                                  <span className="rounded-full border px-2 py-1 font-semibold" style={{ borderColor: palette.border, backgroundColor: palette.panelBg }}>
                                     Featured
                                   </span>
                                 ) : null}
@@ -324,7 +338,7 @@ const PublicMenuSections = ({
                   ))}
 
                 {group.ungrouped.length > 0 ? (
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {group.ungrouped.map((item) => (
                       <article
                         key={item._id}
@@ -369,6 +383,13 @@ const PublicMenuSections = ({
                             ) : null}
                           </div>
                         ) : null}
+                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold" style={{ borderColor: palette.border, backgroundColor: palette.panelBg }}>
+                          <span
+                            className="inline-block h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: (item.foodType || "non_veg") === "veg" ? "#16a34a" : "#dc2626" }}
+                          />
+                          {(item.foodType || "non_veg") === "veg" ? "Veg" : "Non-Veg"}
+                        </div>
                         <h4 className="min-h-[56px] line-clamp-2 text-lg font-bold">{item.name}</h4>
                         <p className="mt-1 min-h-[40px] text-sm" style={{ color: palette.muted }}>{item.shortDescription || item.description}</p>
                         {item.shortDescription && item.description ? (
@@ -384,25 +405,18 @@ const PublicMenuSections = ({
                             </p>
                           ) : null}
                         </div>
-                        <div className="mt-2 inline-flex items-center gap-2 rounded-full border px-2 py-1 text-xs font-semibold" style={{ borderColor: palette.border }}>
-                          <span
-                            className="inline-block h-2.5 w-2.5 rounded-full"
-                            style={{ backgroundColor: (item.foodType || "non_veg") === "veg" ? "#16a34a" : "#dc2626" }}
-                          />
-                          {(item.foodType || "non_veg") === "veg" ? "Veg" : "Non-Veg"}
-                        </div>
-                        <div className="mt-2 min-h-[58px] content-start flex flex-wrap gap-2 text-[11px]">
-                          <span className="rounded-full border px-2 py-1 font-semibold" style={{ borderColor: palette.border }}>
+                        <div className="mt-3 min-h-[58px] content-start flex flex-wrap gap-2 text-[11px]">
+                          <span className="rounded-full border px-2 py-1 font-semibold" style={{ borderColor: palette.border, backgroundColor: palette.panelBg }}>
                             Prep: {Number(item.prepTimeMinutes || 0)} min
                           </span>
-                          <span className="rounded-full border px-2 py-1 font-semibold" style={{ borderColor: palette.border }}>
+                          <span className="rounded-full border px-2 py-1 font-semibold" style={{ borderColor: palette.border, backgroundColor: palette.panelBg }}>
                             Spice: {String(item.spiceLevel || "none").replace("_", " ")}
                           </span>
-                          <span className="rounded-full border px-2 py-1 font-semibold" style={{ borderColor: palette.border }}>
+                          <span className="rounded-full border px-2 py-1 font-semibold" style={{ borderColor: palette.border, backgroundColor: palette.panelBg }}>
                             {String(item.stockStatus || "in_stock").replace("_", " ")}
                           </span>
                           {item.isFeatured ? (
-                            <span className="rounded-full border px-2 py-1 font-semibold" style={{ borderColor: palette.border }}>
+                            <span className="rounded-full border px-2 py-1 font-semibold" style={{ borderColor: palette.border, backgroundColor: palette.panelBg }}>
                               Featured
                             </span>
                           ) : null}

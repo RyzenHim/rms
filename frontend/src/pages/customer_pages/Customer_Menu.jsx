@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
-import { FiClock, FiCreditCard, FiGlobe, FiHome, FiGrid, FiMinus, FiPlus, FiSearch, FiShoppingCart, FiTrash2, FiZap } from "react-icons/fi";
+import { FiArrowRight, FiClock, FiCreditCard, FiGlobe, FiHome, FiGrid, FiMinus, FiPlus, FiSearch, FiShoppingCart, FiTrash2, FiZap } from "react-icons/fi";
 import menuService from "../../services/menu_Service";
 import themeService from "../../services/theme_Service";
 import orderService from "../../services/order_Service";
@@ -32,6 +32,8 @@ const formatAddressLabel = (address) => {
   const tag = address.label === "other" ? address.customLabel || "Other" : address.label;
   return `${tag} - ${address.street || ""}, ${address.city || ""}`.replace(/,\s*$/, "");
 };
+
+const withSoftTint = (color, alpha = "16") => `${color}${alpha}`;
 
 const Customer_Menu = () => {
   const { token, user } = useAuth();
@@ -72,6 +74,9 @@ const Customer_Menu = () => {
   const [orderMode] = useState(searchParams.get("qrToken") ? "dine_in" : "online");
   const { cart, setCart, clearCart, itemCount } = useOrderTray();
   const { palette } = useResolvedColorMode(theme);
+  const accentSoft = withSoftTint(theme.primaryColor, "14");
+  const accentMedium = withSoftTint(theme.primaryColor, "22");
+  const secondarySoft = withSoftTint(theme.secondaryColor, "18");
   const statusMeta = {
     placed: { bg: "bg-slate-100", text: "text-slate-700", label: "Placed" },
     received: { bg: "bg-blue-100", text: "text-blue-800", label: "Received" },
@@ -298,80 +303,136 @@ const Customer_Menu = () => {
     setSearchParams(nextParams, { replace: true });
   };
 
+  const goToTray = () => {
+    const traySection = document.getElementById("order-tray");
+    traySection?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <div className="min-h-screen pb-10" style={{ backgroundColor: palette.pageBg, color: palette.text }}>
       <section className="mx-auto mt-3 w-full max-w-[112rem] px-3 md:px-5">
-        <div className="card-elevated space-y-3 p-3.5 md:p-4" style={{ backgroundColor: palette.panelBg, boxShadow: palette.glassShadow }}>
+        <div
+          className="card-elevated space-y-4 rounded-[1.9rem] border p-3.5 md:p-5"
+          style={{
+            background: `linear-gradient(135deg, ${accentSoft} 0%, ${palette.panelBg} 42%, ${secondarySoft} 100%)`,
+            borderColor: palette.border,
+            boxShadow: palette.glassShadow,
+          }}
+        >
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.22em]" style={{ color: palette.muted }}>Fast Ordering</p>
-              <h1 className="mt-1.5 text-2xl font-black tracking-tight" style={{ color: palette.text }}>
+              <h1 className="mt-1.5 text-2xl font-black tracking-tight md:text-[2rem]" style={{ color: palette.text }}>
                 Build your tray with precision
               </h1>
               <p className="mt-1.5 max-w-2xl text-xs leading-5" style={{ color: palette.muted }}>
                 Search, compare, review dishes, and place table or online orders from one compact workspace.
               </p>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em]" style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}>
+            <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em]" style={{ borderColor: palette.border, backgroundColor: accentMedium, color: palette.text }}>
               <FiZap className="h-3.5 w-3.5" />
               Live Tray Sync
             </div>
           </div>
-          <div className="grid gap-2 md:grid-cols-[1.35fr_1fr_1fr_0.85fr_0.85fr]">
-            <div className="relative">
-              <FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: palette.muted }} />
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[1.35fr_1fr_1fr_0.85fr_0.85fr]">
+            <div className="relative rounded-2xl border p-2" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
+              <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: palette.muted }}>Search</label>
+              <FiSearch className="pointer-events-none absolute left-5 top-[2.65rem] h-4 w-4 -translate-y-1/2" style={{ color: palette.muted }} />
               <input
                 type="text"
                 placeholder="Search menu items"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-10 w-full rounded-lg border pl-10 pr-2 text-sm"
-                style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
+                className="h-10 w-full rounded-xl border pl-10 pr-2 text-sm"
+                style={{ borderColor: palette.border, backgroundColor: palette.pageBg, color: palette.text }}
               />
             </div>
-            <select
-              value={categoryFilter}
-              onChange={(e) => {
-                setCategoryFilter(e.target.value);
-                setSubCategoryFilter("");
-              }}
-              className="h-10 rounded-lg border px-2 text-sm"
-              style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
-            >
-              <option value="">All Categories</option>
-              {menuData.categories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}
-            </select>
-            <select
-              value={subCategoryFilter}
-              onChange={(e) => setSubCategoryFilter(e.target.value)}
-              className="h-10 rounded-lg border px-2 text-sm"
-              style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
-            >
-              <option value="">All Subcategories</option>
-              {subCategoryOptions.map((subCategory) => <option key={subCategory._id} value={subCategory._id}>{subCategory.name}</option>)}
-            </select>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="h-10 rounded-lg border px-2 text-sm"
-              style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
-            >
-              <option value="featured">Featured</option>
-              <option value="price-asc">Price: Low to High</option>
-              <option value="price-desc">Price: High to Low</option>
-              <option value="newest">Newest</option>
-            </select>
-            <div className="flex h-10 rounded-lg border gap-1 p-1" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
-              <button onClick={() => setFoodTypeFilter("")} className={`flex-1 rounded-md px-2 py-1 text-xs font-bold transition-all ${foodTypeFilter === "" ? "text-white shadow-md" : ""}`} style={{ backgroundColor: foodTypeFilter === "" ? theme.primaryColor : "transparent", color: foodTypeFilter === "" ? "#fff" : palette.text }}>All</button>
-              <button onClick={() => setFoodTypeFilter("veg")} className={`flex-1 rounded-md px-2 py-1 text-xs font-bold transition-all ${foodTypeFilter === "veg" ? "text-white shadow-md" : ""}`} style={{ backgroundColor: foodTypeFilter === "veg" ? "#16a34a" : "transparent", color: foodTypeFilter === "veg" ? "#fff" : palette.text }}>Veg</button>
-              <button onClick={() => setFoodTypeFilter("non_veg")} className={`flex-1 rounded-md px-2 py-1 text-xs font-bold transition-all ${foodTypeFilter === "non_veg" ? "text-white shadow-md" : ""}`} style={{ backgroundColor: foodTypeFilter === "non_veg" ? "#dc2626" : "transparent", color: foodTypeFilter === "non_veg" ? "#fff" : palette.text }}>Non-Veg</button>
+            <div className="rounded-2xl border p-2" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
+              <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: palette.muted }}>Category</label>
+              <select
+                value={categoryFilter}
+                onChange={(e) => {
+                  setCategoryFilter(e.target.value);
+                  setSubCategoryFilter("");
+                }}
+                className="h-10 w-full rounded-xl border px-2 text-sm"
+                style={{ borderColor: palette.border, backgroundColor: palette.pageBg, color: palette.text }}
+              >
+                <option value="">All Categories</option>
+                {menuData.categories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}
+              </select>
             </div>
+            <div className="rounded-2xl border p-2" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
+              <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: palette.muted }}>Subcategory</label>
+              <select
+                value={subCategoryFilter}
+                onChange={(e) => setSubCategoryFilter(e.target.value)}
+                className="h-10 w-full rounded-xl border px-2 text-sm"
+                style={{ borderColor: palette.border, backgroundColor: palette.pageBg, color: palette.text }}
+              >
+                <option value="">All Subcategories</option>
+                {subCategoryOptions.map((subCategory) => <option key={subCategory._id} value={subCategory._id}>{subCategory.name}</option>)}
+              </select>
+            </div>
+            <div className="rounded-2xl border p-2" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
+              <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: palette.muted }}>Sort By</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="h-10 w-full rounded-xl border px-2 text-sm"
+                style={{ borderColor: palette.border, backgroundColor: palette.pageBg, color: palette.text }}
+              >
+                <option value="featured">Featured</option>
+                <option value="price-asc">Price: Low to High</option>
+                <option value="price-desc">Price: High to Low</option>
+                <option value="newest">Newest</option>
+              </select>
+            </div>
+            <div className="rounded-2xl border p-2" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
+              <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: palette.muted }}>Food Type</label>
+              <div className="flex h-10 rounded-xl border gap-1 p-1" style={{ borderColor: palette.border, backgroundColor: palette.pageBg }}>
+                <button onClick={() => setFoodTypeFilter("")} className={`flex-1 rounded-md px-2 py-1 text-xs font-bold transition-all ${foodTypeFilter === "" ? "text-white shadow-md" : ""}`} style={{ backgroundColor: foodTypeFilter === "" ? theme.primaryColor : "transparent", color: foodTypeFilter === "" ? "#fff" : palette.text }}>All</button>
+                <button onClick={() => setFoodTypeFilter("veg")} className={`flex-1 rounded-md px-2 py-1 text-xs font-bold transition-all ${foodTypeFilter === "veg" ? "text-white shadow-md" : ""}`} style={{ backgroundColor: foodTypeFilter === "veg" ? "#16a34a" : "transparent", color: foodTypeFilter === "veg" ? "#fff" : palette.text }}>Veg</button>
+                <button onClick={() => setFoodTypeFilter("non_veg")} className={`flex-1 rounded-md px-2 py-1 text-xs font-bold transition-all ${foodTypeFilter === "non_veg" ? "text-white shadow-md" : ""}`} style={{ backgroundColor: foodTypeFilter === "non_veg" ? "#dc2626" : "transparent", color: foodTypeFilter === "non_veg" ? "#fff" : palette.text }}>Non-Veg</button>
+              </div>
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-2xl border px-3 py-3" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: palette.muted }}>Tray Items</p>
+              <p className="mt-1 text-xl font-black" style={{ color: palette.text }}>{itemCount}</p>
+              <p className="text-xs" style={{ color: palette.muted }}>Live basket sync across the page</p>
+            </div>
+            <div className="rounded-2xl border px-3 py-3" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: palette.muted }}>Order Flow</p>
+              <p className="mt-1 text-base font-black" style={{ color: palette.text }}>{orderMode === "dine_in" ? "Dine-in" : "Online"}</p>
+              <p className="text-xs" style={{ color: palette.muted }}>{orderMode === "dine_in" ? "Table-first checkout journey" : "Delivery or takeaway details"}</p>
+            </div>
+            <div className="rounded-2xl border px-3 py-3" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: palette.muted }}>Open Orders</p>
+              <p className="mt-1 text-xl font-black" style={{ color: palette.text }}>{orders.length}</p>
+              <p className="text-xs" style={{ color: palette.muted }}>Track active orders from the tray panel</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={goToTray}
+              className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-bold text-white shadow-sm"
+              style={{ backgroundColor: theme.primaryColor }}
+            >
+              <FiShoppingCart className="h-3.5 w-3.5" />
+              Open Tray ({itemCount})
+            </button>
+            <span className="rounded-full border px-3 py-2 text-[11px] font-semibold" style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}>
+              {orderMode === "dine_in" ? "Dine-in flow" : "Online order flow"}
+            </span>
           </div>
         </div>
       </section>
 
-      <div className="mx-auto mt-4 grid w-full max-w-[90rem] gap-4 px-4 md:px-8 xl:grid-cols-[1fr_360px]">
-        <div>
+      <div className="mx-auto mt-4 grid w-full max-w-[96rem] gap-4 px-3 md:px-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="min-w-0">
           <PublicMenuSections
             categories={menuData.categories}
             subCategories={menuData.subCategories}
@@ -391,11 +452,12 @@ const Customer_Menu = () => {
             onItemTap={openItemQuickView}
             cartItems={cart}
             showTrayActions
+            onGoToTray={goToTray}
           />
         </div>
 
-        <aside id="order-tray" className="space-y-3 scroll-mt-24 xl:sticky xl:top-24 self-start">
-          <section className="card-elevated overflow-hidden p-0" style={{ backgroundColor: palette.panelBg, boxShadow: palette.glassShadow }}>
+        <aside id="order-tray" className="space-y-3 scroll-mt-24 self-start xl:sticky xl:top-24 xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto xl:pr-1">
+          <section className="card-elevated overflow-hidden rounded-[1.8rem] border p-0" style={{ backgroundColor: palette.panelBg, borderColor: palette.border, boxShadow: palette.glassShadow }}>
             <div className="border-b px-4 py-3" style={{ borderColor: palette.border }}>
               <div className="flex items-center justify-between">
                 <h3 className="inline-flex items-center gap-2 text-sm font-extrabold" style={{ color: palette.text }}>
@@ -405,9 +467,9 @@ const Customer_Menu = () => {
                 <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ backgroundColor: palette.pageBg, color: palette.text }}>{itemCount} items</span>
               </div>
             </div>
-            <div className="max-h-[300px] space-y-2 overflow-auto p-3">
+            <div className="space-y-2 p-3 xl:max-h-[320px] xl:overflow-y-auto">
               {cart.map((item) => (
-                <div key={item.menuItem} className="rounded-xl border p-2.5" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
+                <div key={item.menuItem} className="rounded-2xl border p-2.5" style={{ borderColor: palette.border, backgroundColor: palette.cardBg }}>
                   <div className="flex items-start gap-2.5">
                     <img
                       src={item.image || "https://via.placeholder.com/64x64?text=Dish"}
@@ -417,18 +479,18 @@ const Customer_Menu = () => {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
                         <p className="line-clamp-2 text-xs font-bold leading-4" style={{ color: palette.text }}>{item.name}</p>
-                        <button onClick={() => removeCartItem(item.menuItem)} className="inline-flex items-center rounded-md bg-red-600 p-1 text-white hover:bg-red-700">
+                        <button onClick={() => removeCartItem(item.menuItem)} className="inline-flex items-center rounded-lg bg-red-600 p-1 text-white hover:bg-red-700">
                           <FiTrash2 className="h-3 w-3" />
                         </button>
                       </div>
                       <p className="mt-0.5 text-[11px] font-semibold" style={{ color: theme.primaryColor }}>Rs {Number(item.unitPrice).toFixed(2)} each</p>
                       <div className="mt-1.5 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1 rounded-lg px-1 py-0.5" style={{ backgroundColor: palette.pageBg }}>
-                          <button onClick={() => updateCartItem(item.menuItem, { quantity: Math.max(1, item.quantity - 1) })} className="inline-flex rounded p-1 text-slate-700 hover:bg-slate-200">
+                        <div className="flex items-center gap-1 rounded-xl px-1 py-0.5" style={{ backgroundColor: palette.pageBg }}>
+                          <button onClick={() => updateCartItem(item.menuItem, { quantity: Math.max(1, item.quantity - 1) })} className="inline-flex rounded p-1 hover:bg-slate-200" style={{ color: palette.text }}>
                             <FiMinus className="h-3 w-3" />
                           </button>
                           <span className="w-5 text-center text-xs font-bold">{item.quantity}</span>
-                          <button onClick={() => updateCartItem(item.menuItem, { quantity: item.quantity + 1 })} className="inline-flex rounded p-1 text-slate-700 hover:bg-slate-200">
+                          <button onClick={() => updateCartItem(item.menuItem, { quantity: item.quantity + 1 })} className="inline-flex rounded p-1 hover:bg-slate-200" style={{ color: palette.text }}>
                             <FiPlus className="h-3 w-3" />
                           </button>
                         </div>
@@ -438,14 +500,19 @@ const Customer_Menu = () => {
                       </div>
                     </div>
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Special request"
-                    value={item.notes}
-                    onChange={(e) => updateCartItem(item.menuItem, { notes: e.target.value })}
-                    className="mt-2 h-8 w-full rounded-lg border px-2 text-[11px]"
-                    style={{ borderColor: palette.border, backgroundColor: palette.pageBg, color: palette.text }}
-                  />
+                  <div className="mt-2">
+                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: palette.muted }}>
+                      Special Request
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Special request"
+                      value={item.notes}
+                      onChange={(e) => updateCartItem(item.menuItem, { notes: e.target.value })}
+                      className="h-8 w-full rounded-xl border px-2 text-[11px]"
+                      style={{ borderColor: palette.border, backgroundColor: palette.pageBg, color: palette.text }}
+                    />
+                  </div>
                 </div>
               ))}
               {!cart.length ? <p className="py-6 text-center text-xs" style={{ color: palette.muted }}>Order tray is empty. Add items from menu.</p> : null}
@@ -467,11 +534,14 @@ const Customer_Menu = () => {
             </div>
           </section>
 
-          <section className="card-elevated space-y-3 p-4" style={{ backgroundColor: palette.panelBg, boxShadow: palette.glassShadow }}>
+          <section className="card-elevated space-y-3 rounded-[1.8rem] border p-4" style={{ backgroundColor: palette.panelBg, borderColor: palette.border, boxShadow: palette.glassShadow }}>
             <h3 className="inline-flex items-center gap-2 text-sm font-extrabold" style={{ color: palette.text }}>
               <FiCreditCard className="h-4 w-4" />
               Quick Checkout
             </h3>
+            <div className="rounded-2xl border p-3 text-xs font-semibold" style={{ borderColor: palette.border, backgroundColor: accentSoft, color: palette.text }}>
+              Tray ready? Review details below, then place the order in one step.
+            </div>
             <div
               className="rounded-lg border px-3 py-2 text-xs font-semibold"
               style={{ borderColor: palette.border, backgroundColor: palette.cardBg, color: palette.text }}
@@ -488,7 +558,7 @@ const Customer_Menu = () => {
                 </span>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               <label className="text-[11px] font-semibold" style={{ color: palette.muted }}>
                 {orderMode === "dine_in" ? "Select Table *" : "Order Type"}
               </label>
@@ -545,7 +615,7 @@ const Customer_Menu = () => {
             {orderMode === "dine_in" && !checkout.qrToken ? (
               <p className="text-[11px] text-amber-700">For customer dine-in, scan table QR before checkout.</p>
             ) : null}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-[11px] font-semibold" style={{ color: palette.muted }}>Email</label>
                 <input
@@ -636,14 +706,14 @@ const Customer_Menu = () => {
             </button>
           </section>
 
-          <section className="card-elevated space-y-3 p-4" style={{ backgroundColor: palette.panelBg, boxShadow: palette.glassShadow }}>
+          <section className="card-elevated space-y-3 rounded-[1.8rem] border p-4" style={{ backgroundColor: palette.panelBg, borderColor: palette.border, boxShadow: palette.glassShadow }}>
             <div className="flex items-center justify-between">
               <h3 className="inline-flex items-center gap-2 text-sm font-extrabold" style={{ color: palette.text }}>
                 <FiClock className="h-4 w-4" />
                 Live Orders ({orders.length})
               </h3>
             </div>
-            <div className="max-h-[190px] space-y-1.5 overflow-auto">
+            <div className="space-y-1.5 xl:max-h-[220px] xl:overflow-y-auto">
               {orders.map((order) => {
                 const colors = statusMeta[order.status] || statusMeta.placed;
                 return (
@@ -680,8 +750,22 @@ const Customer_Menu = () => {
         onIncrementItem={incrementCartItem}
         onDecrementItem={decrementCartItem}
         onRemoveItem={removeCartItem}
+        onGoToTray={goToTray}
         cartItems={cart}
       />
+
+      {itemCount > 0 ? (
+        <button
+          type="button"
+          onClick={goToTray}
+          className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-bold text-white shadow-xl xl:hidden"
+          style={{ backgroundColor: theme.primaryColor }}
+        >
+          <FiShoppingCart className="h-4 w-4" />
+          Tray ({itemCount})
+          <FiArrowRight className="h-4 w-4" />
+        </button>
+      ) : null}
     </div>
   );
 };
