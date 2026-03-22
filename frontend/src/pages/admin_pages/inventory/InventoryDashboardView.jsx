@@ -31,7 +31,9 @@ const formatCompactDate = (value) => {
   });
 };
 
-const InventoryDashboardView = ({ summaryCards, categoryChartData, topValueItems, categoryValueData, stockHealthData, lowStockItems, draftsCount, recentTransactions, topMovingItems, procurementInsights, dashboardAlerts, onOpenScanner, onOpenAddItem, onOpenItems, canManageInventory }) => (
+const formatCurrency = (value = 0) => `Rs ${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+
+const InventoryDashboardView = ({ summaryCards, categoryChartData, topValueItems, categoryValueData, stockHealthData, lowStockItems, draftsCount, recentTransactions, topMovingItems, procurementInsights, dashboardAlerts, financeMetrics, financeFilters, setFinanceFilters, onOpenScanner, onOpenAddItem, onOpenItems, onOpenFinance, canManageInventory }) => (
   <div className="space-y-6">
     <section className="glass-panel animate-rise-in rounded-[2rem] p-6 md:p-8">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
@@ -45,6 +47,10 @@ const InventoryDashboardView = ({ summaryCards, categoryChartData, topValueItems
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
+          <button onClick={onOpenFinance} className="btn-outline inline-flex items-center gap-2">
+            <FiTrendingUp className="h-4 w-4" />
+            Finance
+          </button>
           <button onClick={onOpenScanner} className="btn-outline inline-flex items-center gap-2">
             <FiUploadCloud className="h-4 w-4" />
             Scan Image
@@ -75,6 +81,67 @@ const InventoryDashboardView = ({ summaryCards, categoryChartData, topValueItems
           </article>
         );
       })}
+    </section>
+
+    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <article className="card-elevated p-5">
+        <p className="text-sm font-semibold text-slate-500 dark:text-slate-300">Today Revenue</p>
+        <p className="mt-3 text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50">{formatCurrency(financeMetrics.today.revenue)}</p>
+        <p className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">{financeMetrics.today.orderCount} served orders today</p>
+      </article>
+      <article className="card-elevated p-5">
+        <p className="text-sm font-semibold text-slate-500 dark:text-slate-300">Today Profit</p>
+        <p className="mt-3 text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-300">{formatCurrency(financeMetrics.today.profit)}</p>
+        <p className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">Estimated margin {financeMetrics.today.marginPercent.toFixed(1)}%</p>
+      </article>
+      <article className="card-elevated p-5">
+        <p className="text-sm font-semibold text-slate-500 dark:text-slate-300">Selected Date Revenue</p>
+        <p className="mt-3 text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50">{formatCurrency(financeMetrics.selectedDate.revenue)}</p>
+        <p className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">{financeFilters.selectedDate || "No date selected"}</p>
+      </article>
+      <article className="card-elevated p-5">
+        <p className="text-sm font-semibold text-slate-500 dark:text-slate-300">Selected Month Profit</p>
+        <p className="mt-3 text-3xl font-black tracking-tight text-sky-600 dark:text-sky-300">{formatCurrency(financeMetrics.selectedMonth.profit)}</p>
+        <p className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">{financeFilters.selectedMonth || "No month selected"} • Coverage {financeMetrics.selectedMonth.recipeCoverage}%</p>
+      </article>
+    </section>
+
+    <section className="card-elevated p-6">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div>
+          <h3 className="text-xl font-black text-slate-900 dark:text-slate-50">Inventory Finance Snapshot</h3>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Check revenue and estimated ingredient-based profit directly from the inventory landing page.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="space-y-2">
+            <span className="form-label">Specific Date</span>
+            <input type="date" value={financeFilters.selectedDate} onChange={(event) => setFinanceFilters((prev) => ({ ...prev, selectedDate: event.target.value }))} className="input-base" />
+          </label>
+          <label className="space-y-2">
+            <span className="form-label">Specific Month</span>
+            <input type="month" value={financeFilters.selectedMonth} onChange={(event) => setFinanceFilters((prev) => ({ ...prev, selectedMonth: event.target.value }))} className="input-base" />
+          </label>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <article className="glass-subtle rounded-[1.2rem] p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Current Month Revenue</p>
+          <p className="mt-3 text-2xl font-black text-slate-900 dark:text-slate-50">{formatCurrency(financeMetrics.currentMonth.revenue)}</p>
+        </article>
+        <article className="glass-subtle rounded-[1.2rem] p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Current Month Profit</p>
+          <p className="mt-3 text-2xl font-black text-emerald-600 dark:text-emerald-300">{formatCurrency(financeMetrics.currentMonth.profit)}</p>
+        </article>
+        <article className="glass-subtle rounded-[1.2rem] p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Selected Date Orders</p>
+          <p className="mt-3 text-2xl font-black text-slate-900 dark:text-slate-50">{financeMetrics.selectedDate.orderCount}</p>
+        </article>
+        <article className="glass-subtle rounded-[1.2rem] p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Profit Estimate Coverage</p>
+          <p className="mt-3 text-2xl font-black text-slate-900 dark:text-slate-50">{financeMetrics.selectedMonth.recipeCoverage}%</p>
+        </article>
+      </div>
     </section>
 
     <section className="grid gap-6 xl:grid-cols-2">

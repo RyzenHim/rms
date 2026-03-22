@@ -34,6 +34,14 @@ const deriveOrderStatus = (items = [], requestedStatus = "draft") => {
     return "partially_received";
 };
 
+const buildAuditEntry = (req, action, note = "") => ({
+    action,
+    note: String(note || "").trim(),
+    actor: req.user?._id || null,
+    actorRoles: req.user?.roles || [],
+    createdAt: new Date(),
+});
+
 const normalizePurchaseItems = async (items = []) => {
     if (!Array.isArray(items) || !items.length) {
         throw new Error("Purchase order must include at least one item");
@@ -85,6 +93,8 @@ exports.getPurchaseOrders = async (req, res) => {
         const purchaseOrders = await PurchaseOrder.find(query)
             .populate("supplier", "name contactPerson phone email")
             .populate("createdBy", "name roles")
+            .populate("sourceRequest", "requestNumber priority requestedBy")
+            .populate("auditTrail.actor", "name roles")
             .sort({ createdAt: -1 });
 
         const summary = purchaseOrders.reduce(
@@ -108,8 +118,10 @@ exports.getPurchaseOrder = async (req, res) => {
     try {
         const purchaseOrder = await PurchaseOrder.findById(req.params.id)
             .populate("supplier", "name contactPerson phone email address taxId notes")
+            .populate("sourceRequest", "requestNumber priority status requestedBy approvedBy approvedAt managerNote")
             .populate("items.inventoryItem", "name category unit currentStock supplier")
             .populate("payments.recordedBy", "name roles")
+            .populate("auditTrail.actor", "name roles")
             .populate("createdBy", "name roles");
 
         if (!purchaseOrder) {
@@ -159,11 +171,18 @@ exports.createPurchaseOrder = async (req, res) => {
                     },
                 ]
                 : [],
+            auditTrail: [
+                buildAuditEntry(req, "purchase_order_created", "Purchase order created directly"),
+                ...(totalPaid > 0 ? [buildAuditEntry(req, "payment_confirmed", `Initial payment recorded: Rs ${totalPaid}`)] : []),
+            ],
+            lastPaymentConfirmedBy: totalPaid > 0 ? req.user?._id || null : null,
+            lastPaymentConfirmedAt: totalPaid > 0 ? (req.body.paymentDate || new Date()) : null,
             createdBy: req.user._id,
         });
 
         const populated = await PurchaseOrder.findById(purchaseOrder._id)
             .populate("supplier", "name contactPerson phone email")
+            .populate("sourceRequest", "requestNumber priority")
             .populate("createdBy", "name roles");
 
         return res.status(201).json({ message: "Purchase order created", purchaseOrder: populated });
@@ -204,6 +223,7 @@ exports.updatePurchaseOrder = async (req, res) => {
         existing.notes = String(req.body.notes ?? existing.notes ?? "").trim();
         existing.expectedDeliveryDate = req.body.expectedDeliveryDate ?? existing.expectedDeliveryDate ?? null;
         existing.orderedAt = req.body.orderedAt ?? existing.orderedAt;
+        existing.auditTrail.push(buildAuditEntry(req, "purchase_order_updated", "Purchase order details updated"));
         if (status === "received") {
             existing.receivedAt = existing.receivedAt || new Date();
         }
@@ -252,6 +272,9 @@ exports.recordPurchasePayment = async (req, res) => {
         purchaseOrder.totalPaid = nextTotalPaid;
         purchaseOrder.balanceDue = Number(Math.max(0, Number(purchaseOrder.subtotal || 0) - nextTotalPaid).toFixed(2));
         purchaseOrder.paymentStatus = derivePaymentStatus(Number(purchaseOrder.subtotal || 0), nextTotalPaid);
+        purchaseOrder.lastPaymentConfirmedBy = req.user?._id || null;
+        purchaseOrder.lastPaymentConfirmedAt = paidAt || new Date();
+        purchaseOrder.auditTrail.push(buildAuditEntry(req, "payment_confirmed", `Payment confirmed for Rs ${paymentAmount}`));
         await purchaseOrder.save();
 
         return res.status(200).json({ message: "Payment recorded", purchaseOrder });
@@ -331,6 +354,7 @@ exports.receivePurchaseOrderItems = async (req, res) => {
             if (order.status === "received") {
                 order.receivedAt = new Date();
             }
+            order.auditTrail.push(buildAuditEntry(req, "stock_received", "Purchase stock received into inventory"));
             await order.save({ session });
 
             return order;

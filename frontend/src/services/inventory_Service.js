@@ -46,6 +46,46 @@ const inventoryService = {
     return data;
   },
 
+  async getStockRequests(token, params = {}) {
+    const { data } = await api.get("/stock-requests", { ...withAuth(token), params });
+    return data;
+  },
+
+  async createStockRequest(token, payload) {
+    const { data } = await api.post("/stock-requests", payload, withAuth(token));
+    return data;
+  },
+
+  async approveStockRequest(token, id, payload) {
+    const { data } = await api.patch(`/stock-requests/${id}/approve`, payload, withAuth(token));
+    return data;
+  },
+
+  async rejectStockRequest(token, id, payload) {
+    const { data } = await api.patch(`/stock-requests/${id}/reject`, payload, withAuth(token));
+    return data;
+  },
+
+  async getExpenses(token, params = {}) {
+    const { data } = await api.get("/expenses", { ...withAuth(token), params });
+    return data;
+  },
+
+  async createExpense(token, payload) {
+    const { data } = await api.post("/expenses", payload, withAuth(token));
+    return data;
+  },
+
+  async updateExpense(token, id, payload) {
+    const { data } = await api.put(`/expenses/${id}`, payload, withAuth(token));
+    return data;
+  },
+
+  async deleteExpense(token, id) {
+    const { data } = await api.delete(`/expenses/${id}`, withAuth(token));
+    return data;
+  },
+
   async getPurchaseOrder(token, id) {
     const { data } = await api.get(`/purchase-orders/${id}`, withAuth(token));
     return data;
@@ -93,6 +133,11 @@ const inventoryService = {
 
   async updateStock(token, id, payload) {
     const { data } = await api.patch(`/inventory/${id}/stock`, payload, withAuth(token));
+    return data;
+  },
+
+  async recordWastage(token, id, payload) {
+    const { data } = await api.patch(`/inventory/${id}/wastage`, payload, withAuth(token));
     return data;
   },
 

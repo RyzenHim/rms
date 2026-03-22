@@ -41,6 +41,7 @@ export const navGroups = [
     id: "catalog",
     title: "Catalog",
     items: [
+      { id: "finance", label: "Finance", icon: "database" },
       { id: "planner", label: "Party Planner", icon: "calendar" },
       { id: "stock-history", label: "Stock History", icon: "bar" },
       { id: "categories", label: "Categories", icon: "layers" },
@@ -78,6 +79,20 @@ export const initialPurchaseOrderForm = {
   totalPaid: "",
   paymentMethod: "other",
   paymentNote: "",
+};
+
+export const initialStockRequestForm = {
+  priority: "normal",
+  justification: "",
+  items: [{ inventoryItem: "", requestedQuantity: "", notes: "" }],
+};
+
+export const initialExpenseForm = {
+  title: "",
+  category: "Utilities",
+  amount: "",
+  expenseDate: new Date().toISOString().slice(0, 10),
+  notes: "",
 };
 
 export const normalizeValue = (value = "") => value.toString().trim().toLowerCase().replace(/\s+/g, " ");

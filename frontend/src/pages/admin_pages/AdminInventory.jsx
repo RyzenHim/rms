@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FiArchive, FiBarChart2, FiBox, FiCalendar, FiCamera, FiChevronDown, FiChevronRight, FiDatabase, FiGrid, FiLayers, FiPackage } from "react-icons/fi";
 import inventoryService from "../../services/inventory_Service";
 import menuService from "../../services/menu_Service";
+import orderService from "../../services/order_Service";
 import InventoryDashboardView from "./inventory/InventoryDashboardView";
 import InventoryItemsView from "./inventory/InventoryItemsView";
 import { InventoryCategoriesView, InventoryUnitsView } from "./inventory/InventoryCatalogView";
@@ -9,7 +10,8 @@ import InventoryScannerView from "./inventory/InventoryScannerView";
 import InventoryPlannerView from "./inventory/InventoryPlannerView";
 import InventoryHistoryView from "./inventory/InventoryHistoryView";
 import { InventoryPurchaseOrdersView, InventorySuppliersView } from "./inventory/InventoryProcurementView";
-import { categoryRestockIdeas, createDraft, defaultCoursePortionFactor, getInventoryNameSimilarity, inferCourse, initialCategoryForm, initialItemForm, initialPurchaseOrderForm, initialSupplierForm, initialUnitForm, navGroups, normalizePartyType, parseDraftsFromScan, partyDemandMultipliers, partyTypes, plannerProfiles, serviceStyleMultipliers, serviceStyles, singularizeWord, titleize, toNumber } from "./inventory/inventoryUtils";
+import InventoryFinanceView from "./inventory/InventoryFinanceView";
+import { categoryRestockIdeas, createDraft, defaultCoursePortionFactor, getInventoryNameSimilarity, inferCourse, initialCategoryForm, initialExpenseForm, initialItemForm, initialPurchaseOrderForm, initialStockRequestForm, initialSupplierForm, initialUnitForm, navGroups, normalizePartyType, parseDraftsFromScan, partyDemandMultipliers, partyTypes, plannerProfiles, serviceStyleMultipliers, serviceStyles, singularizeWord, titleize, toNumber } from "./inventory/inventoryUtils";
 import { useAuth } from "../../context/AuthContext";
 
 const iconMap = {
@@ -32,12 +34,16 @@ const AdminInventory = () => {
   const canManageInventory = ["admin", "manager"].includes(primaryRole);
   const canAdjustStock = ["admin", "manager", "kitchen"].includes(primaryRole);
   const canRecordPayments = ["admin", "manager", "cashier"].includes(primaryRole);
+  const canRequestStock = ["admin", "manager", "kitchen"].includes(primaryRole);
   const [items, setItems] = useState([]);
   const [stats, setStats] = useState(null);
   const [categories, setCategories] = useState([]);
   const [units, setUnits] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [stockRequests, setStockRequests] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [purchaseSummary, setPurchaseSummary] = useState({ totalOrders: 0, totalValue: 0, totalPaid: 0, totalDue: 0 });
@@ -52,11 +58,14 @@ const AdminInventory = () => {
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [editingUnitId, setEditingUnitId] = useState(null);
   const [editingSupplierId, setEditingSupplierId] = useState(null);
+  const [editingExpenseId, setEditingExpenseId] = useState(null);
   const [itemForm, setItemForm] = useState(initialItemForm);
   const [categoryForm, setCategoryForm] = useState(initialCategoryForm);
   const [unitForm, setUnitForm] = useState(initialUnitForm);
   const [supplierForm, setSupplierForm] = useState(initialSupplierForm);
+  const [expenseForm, setExpenseForm] = useState(initialExpenseForm);
   const [purchaseOrderForm, setPurchaseOrderForm] = useState(initialPurchaseOrderForm);
+  const [stockRequestForm, setStockRequestForm] = useState(initialStockRequestForm);
   const [drafts, setDrafts] = useState([]);
   const [scanning, setScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
@@ -74,6 +83,15 @@ const AdminInventory = () => {
     repeatRate: 10,
     notes: "",
     selectedItems: [],
+  });
+  const [financeFilters, setFinanceFilters] = useState(() => {
+    const now = new Date();
+    const isoDate = now.toISOString().slice(0, 10);
+    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    return {
+      selectedDate: isoDate,
+      selectedMonth: monthKey,
+    };
   });
 
   const activeCategories = useMemo(() => categories.filter((category) => category.isActive !== false), [categories]);
@@ -160,6 +178,289 @@ const AdminInventory = () => {
         .slice(0, 6),
     [items]
   );
+
+  const servedFinancialOrders = useMemo(() => {
+    const menuMap = new Map(menuItems.map((item) => [String(item._id), item]));
+
+    return orders
+      .filter((order) => order.status === "served")
+      .map((order) => {
+        let ingredientCost = 0;
+        let recipeMappedCount = 0;
+        let totalOrderItems = 0;
+
+        (order.items || []).forEach((orderItem) => {
+          totalOrderItems += Number(orderItem.quantity || 0);
+          const menuItem = menuMap.get(String(orderItem.menuItem?._id || orderItem.menuItem));
+          if (!menuItem?.recipeIngredients?.length) return;
+          recipeMappedCount += Number(orderItem.quantity || 0);
+
+          menuItem.recipeIngredients.forEach((ingredient) => {
+            const inventoryItem = ingredient.inventoryItem;
+            ingredientCost += Number(ingredient.quantity || 0) * Number(orderItem.quantity || 0) * Number(inventoryItem?.unitCost || 0);
+          });
+        });
+
+        const revenue = Number(order.grandTotal || 0);
+        const netRevenue = Number(order.subTotal || 0);
+        const profit = revenue - ingredientCost;
+        const createdAt = new Date(order.createdAt);
+        return {
+          id: order._id,
+          orderNumber: order.orderNumber,
+          createdAt,
+          dateKey: createdAt.toISOString().slice(0, 10),
+          monthKey: `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, "0")}`,
+          serviceType: order.serviceType || "dine_in",
+          paymentStatus: order.paymentStatus || "pending",
+          revenue,
+          netRevenue,
+          ingredientCost,
+          profit,
+          coverage: totalOrderItems ? Math.round((recipeMappedCount / totalOrderItems) * 100) : 0,
+          itemCount: totalOrderItems,
+        };
+      })
+      .sort((left, right) => right.createdAt - left.createdAt);
+  }, [menuItems, orders]);
+
+  const financeMetrics = useMemo(() => {
+    const summarize = (entries = []) => {
+      const revenue = entries.reduce((sum, entry) => sum + entry.revenue, 0);
+      const netRevenue = entries.reduce((sum, entry) => sum + entry.netRevenue, 0);
+      const ingredientCost = entries.reduce((sum, entry) => sum + entry.ingredientCost, 0);
+      const profit = entries.reduce((sum, entry) => sum + entry.profit, 0);
+      const orderCount = entries.length;
+      const paidCount = entries.filter((entry) => entry.paymentStatus === "paid").length;
+      const averageOrderValue = orderCount ? revenue / orderCount : 0;
+      const recipeCoverage = orderCount ? Math.round(entries.reduce((sum, entry) => sum + entry.coverage, 0) / orderCount) : 0;
+      return {
+        revenue,
+        netRevenue,
+        ingredientCost,
+        profit,
+        orderCount,
+        paidCount,
+        averageOrderValue,
+        marginPercent: revenue > 0 ? (profit / revenue) * 100 : 0,
+        recipeCoverage,
+      };
+    };
+
+    const now = new Date();
+    const todayKey = now.toISOString().slice(0, 10);
+    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const selectedDateOrders = servedFinancialOrders.filter((entry) => entry.dateKey === financeFilters.selectedDate);
+    const selectedMonthOrders = servedFinancialOrders.filter((entry) => entry.monthKey === financeFilters.selectedMonth);
+    const todayOrders = servedFinancialOrders.filter((entry) => entry.dateKey === todayKey);
+    const monthOrders = servedFinancialOrders.filter((entry) => entry.monthKey === monthKey);
+
+    const last7DaysMap = new Map();
+    for (let offset = 6; offset >= 0; offset -= 1) {
+      const day = new Date(now);
+      day.setDate(now.getDate() - offset);
+      const key = day.toISOString().slice(0, 10);
+      last7DaysMap.set(key, {
+        label: day.toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+        revenue: 0,
+        profit: 0,
+      });
+    }
+    servedFinancialOrders.forEach((entry) => {
+      const bucket = last7DaysMap.get(entry.dateKey);
+      if (!bucket) return;
+      bucket.revenue += entry.revenue;
+      bucket.profit += entry.profit;
+    });
+
+    const monthTrendMap = new Map();
+    for (let offset = 5; offset >= 0; offset -= 1) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+      const key = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}`;
+      monthTrendMap.set(key, {
+        label: monthDate.toLocaleDateString("en-IN", { month: "short", year: "2-digit" }),
+        revenue: 0,
+        profit: 0,
+      });
+    }
+    servedFinancialOrders.forEach((entry) => {
+      const bucket = monthTrendMap.get(entry.monthKey);
+      if (!bucket) return;
+      bucket.revenue += entry.revenue;
+      bucket.profit += entry.profit;
+    });
+
+    const serviceMix = Object.entries(
+      servedFinancialOrders.reduce((acc, entry) => {
+        acc[entry.serviceType] = (acc[entry.serviceType] || 0) + entry.revenue;
+        return acc;
+      }, {})
+    ).map(([name, value]) => ({ name: titleize(name.replaceAll("_", " ")), value }));
+
+    const paymentMix = Object.entries(
+      servedFinancialOrders.reduce((acc, entry) => {
+        acc[entry.paymentStatus] = (acc[entry.paymentStatus] || 0) + 1;
+        return acc;
+      }, {})
+    ).map(([name, value]) => ({ name: titleize(name), value }));
+
+    const topProfitOrders = [...servedFinancialOrders]
+      .sort((left, right) => right.profit - left.profit)
+      .slice(0, 5);
+
+    const expenseEntries = expenses
+      .map((expense) => {
+        const expenseDate = new Date(expense.expenseDate || expense.createdAt || Date.now());
+        return {
+          ...expense,
+          amount: Number(expense.amount || 0),
+          dateKey: expenseDate.toISOString().slice(0, 10),
+          monthKey: `${expenseDate.getFullYear()}-${String(expenseDate.getMonth() + 1).padStart(2, "0")}`,
+        };
+      })
+      .sort((left, right) => new Date(right.expenseDate || right.createdAt) - new Date(left.expenseDate || left.createdAt));
+
+    const wastageEntries = transactions
+      .filter((transaction) => transaction.source === "wastage")
+      .map((transaction) => {
+        const createdAt = new Date(transaction.createdAt);
+        return {
+          id: transaction._id,
+          itemName: transaction.inventoryItem?.name || "Inventory item",
+          quantity: Number(transaction.quantity || 0),
+          unit: transaction.inventoryItem?.unit || "",
+          reason: transaction.reason || "Inventory wastage",
+          createdAt: transaction.createdAt,
+          dateKey: createdAt.toISOString().slice(0, 10),
+          monthKey: `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, "0")}`,
+          cost: Number(transaction.quantity || 0) * Number(transaction.inventoryItem?.unitCost || 0),
+        };
+      })
+      .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt));
+
+    const sumAmounts = (entries = [], key = "amount") => entries.reduce((sum, entry) => sum + Number(entry[key] || 0), 0);
+
+    const selectedDateExpenses = expenseEntries.filter((entry) => entry.dateKey === financeFilters.selectedDate);
+    const selectedMonthExpenses = expenseEntries.filter((entry) => entry.monthKey === financeFilters.selectedMonth);
+    const todayExpenses = expenseEntries.filter((entry) => entry.dateKey === todayKey);
+    const currentMonthExpenses = expenseEntries.filter((entry) => entry.monthKey === monthKey);
+
+    const selectedDateWastage = wastageEntries.filter((entry) => entry.dateKey === financeFilters.selectedDate);
+    const selectedMonthWastage = wastageEntries.filter((entry) => entry.monthKey === financeFilters.selectedMonth);
+    const todayWastage = wastageEntries.filter((entry) => entry.dateKey === todayKey);
+    const currentMonthWastage = wastageEntries.filter((entry) => entry.monthKey === monthKey);
+
+    const menuMap = new Map(menuItems.map((item) => [String(item._id), item]));
+    const categoryProfitMap = new Map();
+    const menuItemProfitMap = new Map();
+
+    orders
+      .filter((order) => order.status === "served")
+      .forEach((order) => {
+        (order.items || []).forEach((orderItem) => {
+          const menuItem = menuMap.get(String(orderItem.menuItem?._id || orderItem.menuItem));
+          const revenue = Number(orderItem.totalPrice || 0);
+          let totalCost = 0;
+
+          if (menuItem?.recipeIngredients?.length) {
+            menuItem.recipeIngredients.forEach((ingredient) => {
+              const inventoryItem = ingredient.inventoryItem;
+              const cost = Number(ingredient.quantity || 0) * Number(orderItem.quantity || 0) * Number(inventoryItem?.unitCost || 0);
+              totalCost += cost;
+
+              const categoryName = titleize(inventoryItem?.category || "Other");
+              const categoryEntry = categoryProfitMap.get(categoryName) || { name: categoryName, revenue: 0, cost: 0, profit: 0 };
+              categoryEntry.revenue += revenue / Math.max(menuItem.recipeIngredients.length, 1);
+              categoryEntry.cost += cost;
+              categoryEntry.profit = categoryEntry.revenue - categoryEntry.cost;
+              categoryProfitMap.set(categoryName, categoryEntry);
+            });
+          } else {
+            const categoryName = titleize(menuItem?.category?.name || "Unmapped");
+            const categoryEntry = categoryProfitMap.get(categoryName) || { name: categoryName, revenue: 0, cost: 0, profit: 0 };
+            categoryEntry.revenue += revenue;
+            categoryEntry.profit = categoryEntry.revenue - categoryEntry.cost;
+            categoryProfitMap.set(categoryName, categoryEntry);
+          }
+
+          const menuItemKey = String(orderItem.menuItem?._id || orderItem.menuItem || orderItem.name);
+          const menuEntry = menuItemProfitMap.get(menuItemKey) || {
+            id: menuItemKey,
+            name: orderItem.name,
+            quantity: 0,
+            revenue: 0,
+            cost: 0,
+            profit: 0,
+          };
+          menuEntry.quantity += Number(orderItem.quantity || 0);
+          menuEntry.revenue += revenue;
+          menuEntry.cost += totalCost;
+          menuEntry.profit = menuEntry.revenue - menuEntry.cost;
+          menuItemProfitMap.set(menuItemKey, menuEntry);
+        });
+      });
+
+    const selectedMonthPurchases = purchaseOrders
+      .filter((order) => String(order.createdAt || "").slice(0, 7) === financeFilters.selectedMonth)
+      .reduce((sum, order) => sum + Number(order.subtotal || 0), 0);
+    const selectedMonthPayments = purchaseOrders
+      .filter((order) => String(order.createdAt || "").slice(0, 7) === financeFilters.selectedMonth)
+      .reduce((sum, order) => sum + Number(order.totalPaid || 0), 0);
+
+    const selectedDateSummary = summarize(selectedDateOrders);
+    const todaySummary = summarize(todayOrders);
+    const currentMonthSummary = summarize(monthOrders);
+    const selectedMonthSummary = summarize(selectedMonthOrders);
+
+    return {
+      today: todaySummary,
+      selectedDate: selectedDateSummary,
+      currentMonth: currentMonthSummary,
+      selectedMonth: selectedMonthSummary,
+      todayExpenseTotal: sumAmounts(todayExpenses),
+      todayWastageCost: sumAmounts(todayWastage, "cost"),
+      selectedDateExpenseTotal: sumAmounts(selectedDateExpenses),
+      selectedDateWastageCost: sumAmounts(selectedDateWastage, "cost"),
+      currentMonthExpenseTotal: sumAmounts(currentMonthExpenses),
+      currentMonthWastageCost: sumAmounts(currentMonthWastage, "cost"),
+      selectedMonthExpenseTotal: sumAmounts(selectedMonthExpenses),
+      selectedMonthWastageCost: sumAmounts(selectedMonthWastage, "cost"),
+      dailyTrend: Array.from(last7DaysMap.values()).map((entry) => ({
+        ...entry,
+        revenue: Number(entry.revenue.toFixed(2)),
+        profit: Number(entry.profit.toFixed(2)),
+      })),
+      monthlyTrend: Array.from(monthTrendMap.values()).map((entry) => ({
+        ...entry,
+        revenue: Number(entry.revenue.toFixed(2)),
+        profit: Number(entry.profit.toFixed(2)),
+      })),
+      serviceMix,
+      paymentMix,
+      topProfitOrders,
+      recentServedOrders: servedFinancialOrders.slice(0, 8),
+      expenses: expenseEntries.slice(0, 12),
+      wastageEntries: wastageEntries.slice(0, 12),
+      purchaseVsSales: {
+        selectedMonthSales: selectedMonthSummary.revenue,
+        selectedMonthPurchases,
+        selectedMonthPayments,
+      },
+      categoryProfitRanking: Array.from(categoryProfitMap.values()).sort((left, right) => right.profit - left.profit).slice(0, 8),
+      menuItemProfitRanking: Array.from(menuItemProfitMap.values()).sort((left, right) => right.profit - left.profit).slice(0, 10),
+      dailyClosing: {
+        date: financeFilters.selectedDate,
+        revenue: selectedDateSummary.revenue,
+        ingredientCost: selectedDateSummary.ingredientCost,
+        grossProfit: selectedDateSummary.profit,
+        extraExpenses: sumAmounts(selectedDateExpenses),
+        wastageCost: sumAmounts(selectedDateWastage, "cost"),
+        netProfit: selectedDateSummary.profit - sumAmounts(selectedDateExpenses) - sumAmounts(selectedDateWastage, "cost"),
+        servedOrders: selectedDateSummary.orderCount,
+        paidOrders: selectedDateSummary.paidCount,
+      },
+    };
+  }, [expenses, financeFilters.selectedDate, financeFilters.selectedMonth, menuItems, orders, purchaseOrders, servedFinancialOrders, transactions]);
 
   const categoryValueData = useMemo(() => {
     const grouped = items.reduce((acc, item) => {
@@ -470,6 +771,21 @@ const AdminInventory = () => {
     setTransactions(data?.transactions || []);
   };
 
+  const loadOrders = async () => {
+    const data = await orderService.getOrders(token);
+    setOrders(data?.orders || []);
+  };
+
+  const loadExpenses = async () => {
+    const data = await inventoryService.getExpenses(token);
+    setExpenses(data?.expenses || []);
+  };
+
+  const loadStockRequests = async () => {
+    const data = await inventoryService.getStockRequests(token);
+    setStockRequests(data?.stockRequests || []);
+  };
+
   const loadSuppliers = async () => {
     const data = await inventoryService.getSuppliers(token);
     setSuppliers(data?.suppliers || []);
@@ -484,7 +800,7 @@ const AdminInventory = () => {
   const refreshAll = async () => {
     setLoading(true);
     try {
-      await Promise.all([loadInventory(), loadMetadata(), loadMenuItems(), loadTransactions(), loadSuppliers(), loadPurchaseOrders()]);
+      await Promise.all([loadInventory(), loadMetadata(), loadMenuItems(), loadTransactions(), loadSuppliers(), loadPurchaseOrders(), loadOrders(), loadExpenses(), loadStockRequests()]);
     } catch (err) {
       setMessage({ type: "error", text: err?.response?.data?.message || "Failed to load inventory workspace" });
     } finally {
@@ -514,6 +830,18 @@ const AdminInventory = () => {
   const resetSupplierForm = () => {
     setSupplierForm(initialSupplierForm);
     setEditingSupplierId(null);
+  };
+
+  const resetExpenseForm = () => {
+    setExpenseForm({
+      ...initialExpenseForm,
+      expenseDate: new Date().toISOString().slice(0, 10),
+    });
+    setEditingExpenseId(null);
+  };
+
+  const resetStockRequestForm = () => {
+    setStockRequestForm(initialStockRequestForm);
   };
 
   const resetPurchaseOrderForm = () => {
@@ -624,6 +952,160 @@ const AdminInventory = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleExpenseSubmit = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
+    try {
+      if (editingExpenseId) await inventoryService.updateExpense(token, editingExpenseId, expenseForm);
+      else await inventoryService.createExpense(token, expenseForm);
+      setMessage({ type: "success", text: `Expense ${editingExpenseId ? "updated" : "created"} successfully` });
+      resetExpenseForm();
+      await refreshAll();
+    } catch (err) {
+      setMessage({ type: "error", text: err?.response?.data?.message || "Failed to save expense" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const addStockRequestLine = () =>
+    setStockRequestForm((prev) => ({
+      ...prev,
+      items: [...prev.items, { inventoryItem: "", requestedQuantity: "", notes: "" }],
+    }));
+
+  const updateStockRequestLine = (index, key, value) =>
+    setStockRequestForm((prev) => ({
+      ...prev,
+      items: prev.items.map((line, lineIndex) => (lineIndex === index ? { ...line, [key]: value } : line)),
+    }));
+
+  const removeStockRequestLine = (index) =>
+    setStockRequestForm((prev) => ({
+      ...prev,
+      items: prev.items.filter((_, lineIndex) => lineIndex !== index),
+    }));
+
+  const handleStockRequestSubmit = async (event) => {
+    event.preventDefault();
+    if (!canRequestStock) {
+      setMessage({ type: "error", text: "You do not have permission to create stock requests" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const payload = {
+        priority: stockRequestForm.priority,
+        justification: stockRequestForm.justification,
+        items: stockRequestForm.items
+          .filter((line) => line.inventoryItem && line.requestedQuantity !== "")
+          .map((line) => ({
+            inventoryItem: line.inventoryItem,
+            requestedQuantity: Number(line.requestedQuantity),
+            notes: line.notes || "",
+          })),
+      };
+      await inventoryService.createStockRequest(token, payload);
+      setMessage({ type: "success", text: "Stock request created successfully" });
+      resetStockRequestForm();
+      await refreshAll();
+    } catch (err) {
+      setMessage({ type: "error", text: err?.response?.data?.message || "Failed to create stock request" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const approveStockRequest = async (request) => {
+    if (!canManageInventory) {
+      setMessage({ type: "error", text: "Only admin or manager accounts can approve stock requests" });
+      return;
+    }
+
+    const supplierPrompt = window.prompt(
+      `Enter supplier name for ${request.requestNumber}.\nAvailable: ${suppliers.map((supplier) => supplier.name).join(", ")}`,
+      suppliers[0]?.name || ""
+    );
+    if (!supplierPrompt) return;
+    const supplier = suppliers.find((entry) => entry.name.toLowerCase() === supplierPrompt.trim().toLowerCase());
+    if (!supplier) {
+      setMessage({ type: "error", text: "Supplier name did not match an active supplier" });
+      return;
+    }
+
+    const approvalItems = [];
+    for (const item of request.items || []) {
+      const orderedQuantityInput = window.prompt(`Approved quantity for ${item.itemName} (${item.requestedQuantity} ${item.unit} requested):`, String(item.requestedQuantity));
+      if (orderedQuantityInput === null) return;
+      const unitPriceInput = window.prompt(`Unit price for ${item.itemName}:`, "0");
+      if (unitPriceInput === null) return;
+      approvalItems.push({
+        inventoryItem: item.inventoryItem,
+        orderedQuantity: Number(orderedQuantityInput),
+        unitPrice: Number(unitPriceInput),
+        notes: item.notes || "",
+      });
+    }
+
+    const managerNote = window.prompt("Manager note for approval:", "") || "";
+    try {
+      await inventoryService.approveStockRequest(token, request._id, {
+        supplier: supplier._id,
+        items: approvalItems,
+        managerNote,
+        notes: managerNote,
+      });
+      setMessage({ type: "success", text: `Stock request ${request.requestNumber} approved and converted to purchase order` });
+      await refreshAll();
+    } catch (err) {
+      setMessage({ type: "error", text: err?.response?.data?.message || "Failed to approve stock request" });
+    }
+  };
+
+  const rejectStockRequest = async (request) => {
+    if (!canManageInventory) {
+      setMessage({ type: "error", text: "Only admin or manager accounts can reject stock requests" });
+      return;
+    }
+    const managerNote = window.prompt(`Reason for rejecting ${request.requestNumber}:`, "") || "";
+    try {
+      await inventoryService.rejectStockRequest(token, request._id, { managerNote });
+      setMessage({ type: "success", text: `Stock request ${request.requestNumber} rejected` });
+      await refreshAll();
+    } catch (err) {
+      setMessage({ type: "error", text: err?.response?.data?.message || "Failed to reject stock request" });
+    }
+  };
+
+  const handleEditExpense = (expense) => {
+    setEditingExpenseId(expense._id);
+    setExpenseForm({
+      title: expense.title || "",
+      category: expense.category || "Utilities",
+      amount: expense.amount ?? "",
+      expenseDate: String(expense.expenseDate || "").slice(0, 10),
+      notes: expense.notes || "",
+    });
+    setActiveView("finance");
+  };
+
+  const handleDeleteExpense = async (id) => {
+    if (!window.confirm("Delete this expense?")) return;
+    try {
+      await inventoryService.deleteExpense(token, id);
+      setMessage({ type: "success", text: "Expense deleted successfully" });
+      await refreshAll();
+    } catch (err) {
+      setMessage({ type: "error", text: err?.response?.data?.message || "Failed to delete expense" });
+    }
+  };
+
+  const handleRecordWastage = async ({ inventoryItemId, quantity, reason, notes }) => {
+    await inventoryService.recordWastage(token, inventoryItemId, { quantity, reason, notes });
+    setMessage({ type: "success", text: "Wastage recorded and stock updated successfully" });
+    await refreshAll();
   };
 
   const addPurchaseOrderLine = () =>
@@ -1044,7 +1526,10 @@ const AdminInventory = () => {
       return <p className="py-20 text-center text-sm font-semibold text-slate-600 dark:text-slate-300">Loading inventory workspace...</p>;
     }
     if (activeView === "dashboard") {
-      return <InventoryDashboardView summaryCards={summaryCards} categoryChartData={categoryChartData} topValueItems={topValueItems} categoryValueData={categoryValueData} stockHealthData={stockHealthData} lowStockItems={lowStockItems} draftsCount={drafts.length} recentTransactions={recentTransactions} topMovingItems={topMovingItems} procurementInsights={procurementInsights} dashboardAlerts={dashboardAlerts} onOpenScanner={() => setActiveView("scanner")} onOpenAddItem={() => { setActiveView("items"); setShowItemForm(true); }} onOpenItems={() => setActiveView("items")} canManageInventory={canManageInventory} />;
+      return <InventoryDashboardView summaryCards={summaryCards} categoryChartData={categoryChartData} topValueItems={topValueItems} categoryValueData={categoryValueData} stockHealthData={stockHealthData} lowStockItems={lowStockItems} draftsCount={drafts.length} recentTransactions={recentTransactions} topMovingItems={topMovingItems} procurementInsights={procurementInsights} dashboardAlerts={dashboardAlerts} financeMetrics={financeMetrics} financeFilters={financeFilters} setFinanceFilters={setFinanceFilters} onOpenScanner={() => setActiveView("scanner")} onOpenAddItem={() => { setActiveView("items"); setShowItemForm(true); }} onOpenItems={() => setActiveView("items")} onOpenFinance={() => setActiveView("finance")} canManageInventory={canManageInventory} />;
+    }
+    if (activeView === "finance") {
+      return <InventoryFinanceView financeMetrics={financeMetrics} financeFilters={financeFilters} setFinanceFilters={setFinanceFilters} expenseForm={expenseForm} setExpenseForm={setExpenseForm} editingExpenseId={editingExpenseId} submitting={submitting} handleExpenseSubmit={handleExpenseSubmit} resetExpenseForm={resetExpenseForm} onEditExpense={handleEditExpense} onDeleteExpense={handleDeleteExpense} inventoryItems={items} onRecordWastage={handleRecordWastage} />;
     }
     if (activeView === "items") {
       return <InventoryItemsView showItemForm={showItemForm} setShowItemForm={setShowItemForm} editingItemId={editingItemId} itemForm={itemForm} setItemForm={setItemForm} activeCategories={activeCategories} activeUnits={activeUnits} suppliers={activeSuppliers} submitting={submitting} handleItemSubmit={handleItemSubmit} resetItemForm={resetItemForm} filterCategory={filterCategory} setFilterCategory={setFilterCategory} filteredItems={filteredItems} updateStock={updateStock} handleEditItem={handleEditItem} handleDeleteItem={handleDeleteItem} getStockStatus={getStockStatus} canManageInventory={canManageInventory} canAdjustStock={canAdjustStock} />;
@@ -1065,7 +1550,7 @@ const AdminInventory = () => {
       return <InventorySuppliersView supplierForm={supplierForm} setSupplierForm={setSupplierForm} editingSupplierId={editingSupplierId} handleSupplierSubmit={handleSupplierSubmit} resetSupplierForm={resetSupplierForm} suppliers={suppliers} canManageInventory={canManageInventory} canRecordPayments={canRecordPayments} submitting={submitting} onEditSupplier={handleEditSupplier} onDeleteSupplier={handleDeleteSupplier} />;
     }
     if (activeView === "purchase-orders") {
-      return <InventoryPurchaseOrdersView purchaseOrderForm={purchaseOrderForm} setPurchaseOrderForm={setPurchaseOrderForm} suppliers={suppliers} items={items} purchaseOrders={purchaseOrders} purchaseSummary={purchaseSummary} canManageInventory={canManageInventory} canRecordPayments={canRecordPayments} submitting={submitting} handlePurchaseOrderSubmit={handlePurchaseOrderSubmit} addPurchaseOrderLine={addPurchaseOrderLine} updatePurchaseOrderLine={updatePurchaseOrderLine} removePurchaseOrderLine={removePurchaseOrderLine} recordPayment={recordPurchasePayment} receiveOrderStock={receivePurchaseOrder} deletePurchaseOrder={handleDeletePurchaseOrder} />;
+      return <InventoryPurchaseOrdersView stockRequestForm={stockRequestForm} setStockRequestForm={setStockRequestForm} stockRequests={stockRequests} purchaseOrderForm={purchaseOrderForm} setPurchaseOrderForm={setPurchaseOrderForm} suppliers={suppliers} items={items} purchaseOrders={purchaseOrders} purchaseSummary={purchaseSummary} canManageInventory={canManageInventory} canRecordPayments={canRecordPayments} canRequestStock={canRequestStock} primaryRole={primaryRole} submitting={submitting} handleStockRequestSubmit={handleStockRequestSubmit} addStockRequestLine={addStockRequestLine} updateStockRequestLine={updateStockRequestLine} removeStockRequestLine={removeStockRequestLine} approveStockRequest={approveStockRequest} rejectStockRequest={rejectStockRequest} handlePurchaseOrderSubmit={handlePurchaseOrderSubmit} addPurchaseOrderLine={addPurchaseOrderLine} updatePurchaseOrderLine={updatePurchaseOrderLine} removePurchaseOrderLine={removePurchaseOrderLine} recordPayment={recordPurchasePayment} receiveOrderStock={receivePurchaseOrder} deletePurchaseOrder={handleDeletePurchaseOrder} />;
     }
     if (activeView === "scanner") {
       return <InventoryScannerView scanning={scanning} selectedImageName={selectedImageName} scanProgress={scanProgress} handleScanImage={handleScanImage} addManualDraft={addManualDraft} saveAllDrafts={saveAllDrafts} drafts={drafts} submitting={submitting} updateDraft={updateDraft} activeCategories={activeCategories} activeUnits={activeUnits} saveDraft={saveDraft} removeDraft={removeDraft} scanText={scanText} canManageInventory={canManageInventory} getMatchingItem={findMatchingInventoryItem} getMatchingCandidates={getMatchingCandidates} />;

@@ -354,6 +354,55 @@ exports.updateStock = async (req, res) => {
   }
 };
 
+exports.recordWastage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const quantity = Number(req.body.quantity);
+    const reason = String(req.body.reason || "Inventory wastage").trim();
+    const notes = String(req.body.notes || "").trim();
+
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      return res.status(400).json({ message: "Valid wastage quantity is required" });
+    }
+
+    const updatedItem = await executeWithRetry(
+      async (session) => {
+        const item = await Inventory.findById(id).session(session);
+        if (!item) {
+          throw new Error("Inventory item not found");
+        }
+        if (Number(item.currentStock || 0) < quantity) {
+          throw new Error("Wastage quantity exceeds current stock");
+        }
+
+        item.currentStock = Number(item.currentStock || 0) - quantity;
+        await item.save({ session });
+
+        await createInventoryTransaction(
+          {
+            inventoryItem: item,
+            quantity,
+            direction: "out",
+            source: "wastage",
+            reason,
+            notes,
+            performedBy: req.user?._id || null,
+          },
+          session
+        );
+
+        return item;
+      },
+      3,
+      100
+    );
+
+    return res.status(200).json({ message: "Wastage recorded", item: updatedItem });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
 exports.getLowStockItems = async (req, res) => {
   try {
     const items = await Inventory.find({

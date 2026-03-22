@@ -81,6 +81,35 @@ const purchasePaymentSchema = new mongoose.Schema(
     { _id: false }
 );
 
+const purchaseAuditEntrySchema = new mongoose.Schema(
+    {
+        action: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+        note: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        actor: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            default: null,
+        },
+        actorRoles: {
+            type: [String],
+            default: [],
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now,
+        },
+    },
+    { _id: false }
+);
+
 const purchaseOrderSchema = new mongoose.Schema(
     {
         purchaseOrderNumber: {
@@ -93,6 +122,11 @@ const purchaseOrderSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "Supplier",
             required: true,
+        },
+        sourceRequest: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "StockRequest",
+            default: null,
         },
         items: {
             type: [purchaseOrderItemSchema],
@@ -146,6 +180,19 @@ const purchaseOrderSchema = new mongoose.Schema(
         },
         payments: {
             type: [purchasePaymentSchema],
+            default: [],
+        },
+        lastPaymentConfirmedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            default: null,
+        },
+        lastPaymentConfirmedAt: {
+            type: Date,
+            default: null,
+        },
+        auditTrail: {
+            type: [purchaseAuditEntrySchema],
             default: [],
         },
         createdBy: {

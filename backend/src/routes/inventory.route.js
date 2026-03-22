@@ -18,6 +18,7 @@ router.delete("/units/:id", authenticate, authorizeRoles("admin", "manager"), in
 router.get("/item/:id", authenticate, authorizeRoles("admin", "manager", "kitchen", "cashier"), inventoryController.getInventoryItem);
 router.put("/:id", authenticate, authorizeRoles("admin", "manager"), inventoryController.updateInventory);
 router.patch("/:id/stock", authenticate, authorizeRoles("admin", "manager", "kitchen"), inventoryController.updateStock);
+router.patch("/:id/wastage", authenticate, authorizeRoles("admin", "manager", "kitchen"), inventoryController.recordWastage);
 router.get("/low-stock", authenticate, authorizeRoles("admin", "manager", "kitchen", "cashier"), inventoryController.getLowStockItems);
 router.delete("/:id", authenticate, authorizeRoles("admin", "manager"), inventoryController.deleteInventory);
 

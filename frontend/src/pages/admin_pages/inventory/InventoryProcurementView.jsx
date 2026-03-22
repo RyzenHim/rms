@@ -103,6 +103,9 @@ export const InventorySuppliersView = ({
 );
 
 export const InventoryPurchaseOrdersView = ({
+  stockRequestForm,
+  setStockRequestForm,
+  stockRequests,
   purchaseOrderForm,
   setPurchaseOrderForm,
   suppliers,
@@ -111,7 +114,15 @@ export const InventoryPurchaseOrdersView = ({
   purchaseSummary,
   canManageInventory,
   canRecordPayments,
+  canRequestStock,
+  primaryRole,
   submitting,
+  handleStockRequestSubmit,
+  addStockRequestLine,
+  updateStockRequestLine,
+  removeStockRequestLine,
+  approveStockRequest,
+  rejectStockRequest,
   handlePurchaseOrderSubmit,
   addPurchaseOrderLine,
   updatePurchaseOrderLine,
@@ -140,6 +151,118 @@ export const InventoryPurchaseOrdersView = ({
       <div className="glass-subtle rounded-[1.3rem] p-4"><p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Total Value</p><p className="mt-3 text-2xl font-black text-slate-900 dark:text-slate-50">Rs {Number(purchaseSummary.totalValue || 0).toLocaleString()}</p></div>
       <div className="glass-subtle rounded-[1.3rem] p-4"><p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Paid</p><p className="mt-3 text-2xl font-black text-emerald-600 dark:text-emerald-300">Rs {Number(purchaseSummary.totalPaid || 0).toLocaleString()}</p></div>
       <div className="glass-subtle rounded-[1.3rem] p-4"><p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Due</p><p className="mt-3 text-2xl font-black text-rose-600 dark:text-rose-300">Rs {Number(purchaseSummary.totalDue || 0).toLocaleString()}</p></div>
+    </section>
+
+    <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+      <article className="card-elevated p-6">
+        <div className="flex items-center gap-3">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-400 text-white shadow-lg">
+            <FiPackage className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-slate-50">Stock Request Workflow</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-300">Kitchen can request stock, manager approves purchase, cashier confirms payment, and admin audits the chain.</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleStockRequestSubmit} className="mt-5 space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-2">
+              <span className="form-label">Priority</span>
+              <select value={stockRequestForm.priority} onChange={(event) => setStockRequestForm((prev) => ({ ...prev, priority: event.target.value }))} className="input-base">
+                <option value="low">Low</option>
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </label>
+            <label className="space-y-2">
+              <span className="form-label">Justification</span>
+              <input value={stockRequestForm.justification} onChange={(event) => setStockRequestForm((prev) => ({ ...prev, justification: event.target.value }))} className="input-base" placeholder="Why is this stock needed?" />
+            </label>
+          </div>
+
+          <div className="glass-subtle rounded-[1.4rem] p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-black text-slate-900 dark:text-slate-50">Request Lines</p>
+              <button type="button" onClick={addStockRequestLine} className="glass-pill rounded-full px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200">Add Line</button>
+            </div>
+            <div className="space-y-3">
+              {stockRequestForm.items.map((line, index) => (
+                <div key={`request-line-${index}`} className="grid gap-3 rounded-[1rem] border border-white/30 p-3 dark:border-white/10 lg:grid-cols-[1.4fr_120px_1fr_88px]">
+                  <label className="space-y-2">
+                    <span className="form-label">Inventory Item</span>
+                    <select value={line.inventoryItem} onChange={(event) => updateStockRequestLine(index, "inventoryItem", event.target.value)} className="input-base text-sm">
+                      <option value="">Select item</option>
+                      {items.map((item) => <option key={item._id} value={item._id}>{item.name} ({item.unit})</option>)}
+                    </select>
+                  </label>
+                  <label className="space-y-2">
+                    <span className="form-label">Qty</span>
+                    <input type="number" min="0.001" step="0.001" value={line.requestedQuantity} onChange={(event) => updateStockRequestLine(index, "requestedQuantity", event.target.value)} className="input-base text-sm" placeholder="Qty" />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="form-label">Notes</span>
+                    <input value={line.notes} onChange={(event) => updateStockRequestLine(index, "notes", event.target.value)} className="input-base text-sm" placeholder="Why this item is needed" />
+                  </label>
+                  <button type="button" onClick={() => removeStockRequestLine(index)} className="btn-danger mt-7 text-xs">Remove</button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button disabled={!canRequestStock || submitting} className="btn-primary">{canRequestStock ? (submitting ? "Submitting..." : "Submit Stock Request") : "Kitchen/Admin/Manager Only"}</button>
+        </form>
+      </article>
+
+      <article className="card-elevated p-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h3 className="text-xl font-black text-slate-900 dark:text-slate-50">Request Queue</h3>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Manager approval converts a request into a purchase order.</p>
+          </div>
+          <span className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-slate-700 dark:text-slate-200">{stockRequests.length} requests</span>
+        </div>
+
+        <div className="mt-5 space-y-3">
+          {stockRequests.map((request) => (
+            <article key={request._id} className="glass-subtle rounded-[1.3rem] p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <p className="text-base font-black text-slate-900 dark:text-slate-50">{request.requestNumber}</p>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    {request.priority} priority | {request.status} | Requested by {request.requestedBy?.name || "Staff"}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{request.justification || "No justification added."}</p>
+                  {request.linkedPurchaseOrder ? <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-300">Linked PO: {request.linkedPurchaseOrder.purchaseOrderNumber}</p> : null}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {canManageInventory && request.status === "pending" ? <button type="button" onClick={() => approveStockRequest(request)} className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300">Approve</button> : null}
+                  {canManageInventory && request.status === "pending" ? <button type="button" onClick={() => rejectStockRequest(request)} className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold text-rose-700 dark:text-rose-300">Reject</button> : null}
+                </div>
+              </div>
+              <div className="mt-3 space-y-2">
+                {request.items?.slice(0, 3).map((item) => (
+                  <p key={`${request._id}-${item.inventoryItem}`} className="text-xs text-slate-500 dark:text-slate-400">
+                    {item.itemName}: requested {Number(item.requestedQuantity || 0)} {item.unit}
+                  </p>
+                ))}
+                {request.auditTrail?.length ? <p className="text-xs text-slate-500 dark:text-slate-400">Latest audit: {request.auditTrail[request.auditTrail.length - 1]?.action?.replace(/_/g, " ")} by {request.auditTrail[request.auditTrail.length - 1]?.actor?.name || "System"}</p> : null}
+                {primaryRole === "admin" && request.auditTrail?.length ? (
+                  <div className="space-y-1">
+                    {request.auditTrail.slice(-3).map((entry, index) => (
+                      <p key={`${request._id}-audit-${index}`} className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {entry.action?.replace(/_/g, " ")} | {entry.actor?.name || "System"} | {entry.note || "No note"}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </article>
+          ))}
+          {!stockRequests.length ? <p className="text-sm text-slate-500 dark:text-slate-400">No stock requests yet.</p> : null}
+        </div>
+      </article>
     </section>
 
     <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -250,7 +373,7 @@ export const InventoryPurchaseOrdersView = ({
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Payment status: {order.paymentStatus}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {canRecordPayments ? <button type="button" onClick={() => recordPayment(order)} className="glass-pill inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300"><FiCreditCard className="h-3.5 w-3.5" />Payment</button> : null}
+                  {canRecordPayments ? <button type="button" onClick={() => recordPayment(order)} className="glass-pill inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300"><FiCreditCard className="h-3.5 w-3.5" />Confirm Payment</button> : null}
                   {canManageInventory ? <button type="button" onClick={() => receiveOrderStock(order)} className="glass-pill inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold text-sky-700 dark:text-sky-300"><FiTruck className="h-3.5 w-3.5" />Receive</button> : null}
                   {canManageInventory ? <button type="button" onClick={() => deletePurchaseOrder(order._id)} className="glass-pill inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold text-rose-700 dark:text-rose-300"><FiPackage className="h-3.5 w-3.5" />Delete</button> : null}
                 </div>
@@ -262,6 +385,17 @@ export const InventoryPurchaseOrdersView = ({
                   </p>
                 ))}
                 {order.items?.length > 3 ? <p className="text-xs text-slate-500 dark:text-slate-400">+ {order.items.length - 3} more lines</p> : null}
+                {order.sourceRequest?.requestNumber ? <p className="text-xs text-slate-500 dark:text-slate-400">Source request: {order.sourceRequest.requestNumber}</p> : null}
+                {order.auditTrail?.length ? <p className="text-xs text-slate-500 dark:text-slate-400">Latest audit: {order.auditTrail[order.auditTrail.length - 1]?.action?.replace(/_/g, " ")}</p> : null}
+                {primaryRole === "admin" && order.auditTrail?.length ? (
+                  <div className="space-y-1">
+                    {order.auditTrail.slice(-3).map((entry, index) => (
+                      <p key={`${order._id}-audit-${index}`} className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {entry.action?.replace(/_/g, " ")} | {entry.actor?.name || "System"} | {entry.note || "No note"}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </article>
           ))}
