@@ -63,7 +63,7 @@ const Visitor_Layout = () => {
   const roleLinks = isCustomer
     ? [
       { to: "/", label: "Home", end: true },
-      { to: "/menu", label: "Menu" },
+      { to: "/customer/menu", label: "Menu" },
       { to: "/customer/orders", label: "Orders" },
       { to: "/customer/my-reservations", label: "Reservations" },
       { to: "/customer/profile", label: "Profile" },

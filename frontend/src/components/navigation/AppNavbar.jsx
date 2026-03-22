@@ -22,7 +22,9 @@ const AppNavbar = ({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isTrayHovering, setIsTrayHovering] = useState(false);
   const [isTrayPreviewReady, setIsTrayPreviewReady] = useState(false);
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const hoverTimerRef = useRef(null);
+  const lastScrollYRef = useRef(0);
 
   const navLinks = useMemo(() => links.filter((link) => Boolean(link && link.to !== "/customer/menu")), [links]);
   const compactTrayItems = useMemo(() => trayItems.slice(0, 4), [trayItems]);
@@ -38,6 +40,41 @@ const AppNavbar = ({
       window.clearTimeout(hoverTimerRef.current);
     }
   }, []);
+
+  useEffect(() => {
+    setMobileOpen(false);
+    setIsTrayHovering(false);
+    setIsTrayPreviewReady(false);
+    setIsHeaderVisible(true);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    lastScrollYRef.current = window.scrollY;
+
+    const onScroll = () => {
+      const currentScrollY = window.scrollY;
+      const delta = currentScrollY - lastScrollYRef.current;
+
+      if (mobileOpen) {
+        setIsHeaderVisible(true);
+        lastScrollYRef.current = currentScrollY;
+        return;
+      }
+
+      if (currentScrollY <= 24) {
+        setIsHeaderVisible(true);
+      } else if (delta > 8) {
+        setIsHeaderVisible(false);
+      } else if (delta < -8) {
+        setIsHeaderVisible(true);
+      }
+
+      lastScrollYRef.current = currentScrollY;
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [mobileOpen]);
 
   const openTrayPage = () => {
     setIsTrayHovering(false);
@@ -67,8 +104,10 @@ const AppNavbar = ({
   };
 
   return (
+    <>
+    <div className="h-[7.2rem] md:h-[4.9rem]" />
     <header
-      className="sticky top-0 z-50 border-b backdrop-blur"
+      className={`fixed inset-x-0 top-0 z-50 border-b backdrop-blur transition-transform duration-300 ease-out ${isHeaderVisible ? "translate-y-0" : "-translate-y-full"}`}
       style={{ borderColor: palette.border, backgroundColor: palette.panelBg, backdropFilter: palette.backdrop, boxShadow: palette.glassShadow }}
     >
       <div className="mx-auto grid w-full max-w-[112rem] grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-3 md:px-5">
@@ -334,6 +373,7 @@ const AppNavbar = ({
         </div>
       ) : null}
     </header>
+    </>
   );
 };
 
